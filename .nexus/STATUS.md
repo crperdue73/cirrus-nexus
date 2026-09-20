@@ -1007,3 +1007,41 @@ COMMIT: 2390356
 REMAINING (next hour, smallest first): make the Dockerfile sed assert itself
 (fail the build if a daemon pattern didn't match), then ship a second image tag
 with bgpd enabled so BGP labs become deployable rather than correctly refused.
+
+---
+
+## 2026-09-20 18:0x EDT — DOCKERFILE SED NOW ASSERTS ITSELF (closed 17:2x NEXT item #1)
+
+Did NOT re-reproduce the exit bar for show. Closed the concrete NEXT item named
+last hour: "make the Dockerfile sed assert itself (fail the build if a daemon
+pattern didn't match)."
+
+DEFECT (silent, same class as the stale-digest bug): on the pinned substrate
+(FRR 10.5.3) /etc/frr/daemons has NO `zebra=` or `staticd=` lines (verified live:
+`docker run --rm aegis/frr:latest grep -nE '^(zebra|staticd)='` -> no output; the
+file's own header says zebra+staticd are ALWAYS started). So two of the four sed
+substitutions matched nothing and were no-ops: a Dockerfile that READS as if it
+enables zebra/staticd while asserting nothing.
+
+FIX (Dockerfile.frr): stop sed-ing patterns that may not exist; disable only what
+we intend (`s/^(ospfd|bgpd)=.*/\1=no/`), then ASSERT required daemon state and
+FAIL THE BUILD if absent. Disabled daemons asserted too, so a future FRR default
+flip cannot silently re-enable bgpd/ospfd. Pin/image id UNCHANGED (build-gate
+hardening, not a substrate change).
+
+VERIFIED BOTH DIRECTIONS:
+  POSITIVE: correct Dockerfile builds; log shows
+    "FRR daemon state asserted: ospfd=no bgpd=no (zebra+staticd always-on)" EXIT=0
+  NEGATIVE: `require bgpd yes` injected -> "BUILD ASSERT FAILED: expected
+    ^bgpd=yes$ in /etc/frr/daemons" + echoes `17:bgpd=no`, exit 1.
+  Test tags removed; /tmp scratch deleted; aegis/frr:latest untouched; Ethan's
+  containers untouched.
+
+ARTIFACT: Dockerfile.frr + .nexus/proofs/2026-09-20-dockerfile-daemon-assert.md
+
+STEP BOARD: exit-bar steps 1-5 + composite + race + gate-swallow + lab-04 grader
+  + VC + in-band discriminator + demo-lab unblock + sessions endpoint + startup
+  reconcile + ownership gate + substrate capability gate ALL DONE; Dockerfile
+  daemon assert DONE (this hour).
+REMAINING (next, smallest first): ship a SECOND image tag with bgpd enabled so
+  BGP labs (lab-04) become deployable rather than correctly refused.
