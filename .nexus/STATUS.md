@@ -968,3 +968,42 @@ STEP BOARD: exit-bar steps 1-5 + composite + race + gate-swallow + lab-04 grader
   reconcile + ownership gate ALL DONE; refusal vocabulary now consistent
   in-band across both observers (this hour).
 REMAINING: none blocking the exit bar.
+
+---
+
+## 2026-09-20 17:2x EDT — SUBSTRATE CAPABILITY GATE (Ethan's caveat, made real)
+
+Ethan answered the step-3 ask. His split: read his running lab, do NOT
+sessions/start against it (a start would redeploy/destroy his only 24h lab on
+current substrate — a decision, not a side effect). Took the read target.
+
+His caveat, INDEPENDENTLY reproduced off his own containers (read-only):
+  bgpd running on r1..r6 ?  ->  0 0 0 0 0 0.  vtysh: "bgpd is not running".
+  Substrate-wide, on the operator's own lab. NOT taken on trust.
+
+Found while verifying: /etc/frr/daemons has NO `zebra=` / `staticd=` lines, so
+the Dockerfile's `s/zebra=no/zebra=yes/` and `s/staticd=no/staticd=yes/` never
+matched — yet watchfrr starts zebra+staticd+mgmtd regardless (verified via ps on
+a live container). A gate trusting the file alone would UNDER-refuse good labs.
+
+FIX (backend/main.py + lab-04 yml):
+  LabDef.requires_daemons (default [] = old behaviour); _substrate_daemons()
+  reads the substrate AS RUN (live file + implicit watchfrr defaults), None =
+  unknown never capable; _capability_refusal() refuses BEFORE any deploy;
+  CapabilityRefusal -> HTTP 409 (same shape as the digest refusal). lab-04
+  declares requires_daemons: [bgpd].
+
+VERIFIED LIVE (:8000, new code):
+  lab-04-two-as-peering  -> HTTP 409 refusal, zero containers created
+  demo-01                -> HTTP 200, 3 nodes, aegis-less:4ab4e8d7...
+  tier-02-router-basics  -> HTTP 200, digest sha256:bb7ef23a... == pin MATCH
+  py_compile CLEAN; bash -n install.sh CLEAN
+  Ethan's d7776359 lab: all 6 Up, untouched. Proof-session leftovers: 0.
+
+ARTIFACT: backend/main.py ; lab-definitions/lab-04-two-as-peering.yml
+PROOF: .nexus/proofs/2026-09-20-substrate-capability-gate.md
+COMMIT: 2390356
+
+REMAINING (next hour, smallest first): make the Dockerfile sed assert itself
+(fail the build if a daemon pattern didn't match), then ship a second image tag
+with bgpd enabled so BGP labs become deployable rather than correctly refused.
