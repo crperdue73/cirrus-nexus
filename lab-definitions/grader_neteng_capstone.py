@@ -198,7 +198,7 @@ def grade_sw1(container):
     running_config = show_run
 
     # 1. Telnet works (3 pts) — check if telnet/SSH listener is up
-    telnet_test, _ = _exec(container, "ss -tlnp 2>/dev/null | grep -E ':(23|22)\s' || netstat -tlnp 2>/dev/null | grep -E ':(23|22)\s' || true")
+    telnet_test, _ = _exec(container, r"ss -tlnp 2>/dev/null | grep -E ':(23|22)\s' || netstat -tlnp 2>/dev/null | grep -E ':(23|22)\s' || true")
     if '23' in telnet_test or '22' in telnet_test:
         feedback.append("✅ Management access (telnet/SSH) is listening")
         score += 3
