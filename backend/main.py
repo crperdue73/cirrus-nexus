@@ -90,6 +90,18 @@ class GraderResult(BaseModel):
     competencies: list[str]
     # Step 5 — runtime pin: a grade is only citable with the substrate it ran on.
     runtime_digest: str = ""
+    # In-band discriminator. Three things can reach the client and they must
+    # NOT look alike:
+    #   "graded"  — the grader actually ran and judged the config. passed/score
+    #               are meaningful.
+    #   "error"   — the grader module raised. NOT a verdict on the student's
+    #               config; the read is void and must not be shown as a fail.
+    #   "refused" — no attributable substrate (no runtime digest). Emitted at the
+    #               route as HTTP 409, but mirrored here so any in-process caller
+    #               sees the same vocabulary.
+    # Before this field, a crash and a wrong answer were both rendered as
+    # "Not yet 0%", which told the student nothing and hid a broken grader.
+    status: str = "graded"
 
 
 # --- Step 5: Runtime digest pin -------------------------------------------
@@ -632,7 +644,14 @@ def grade_config(session_id: str, lab_id: str, node: str) -> GraderResult:
             competencies=result.competencies,
         )
     except Exception as e:
+        # Carry the digest. A grader crash is still an attributable read: we know
+        # the substrate it was attempted against. Dropping the digest here (as
+        # the previous revision did) produced an unattributed grade from the
+        # error path — the exact state Step 5 forbids. status="error" keeps this
+        # from being read as a verdict on the student's configuration.
         return GraderResult(
+            runtime_digest=digest,
+            status="error",
             passed=False, score=0,
             feedback=[f"❌ Grader error: {str(e)}"],
             competencies=[],
