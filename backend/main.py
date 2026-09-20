@@ -350,6 +350,117 @@ def _load_grader(module_name: str):
 
 # --- Topology helpers ---
 
+def _running_clab_containers() -> list[str]:
+    """List container names that belong to a ContainerLab topology (clab-*)."""
+    out = subprocess.run(
+        ["docker", "ps", "--format", "{{.Names}}"],
+        capture_output=True, text=True, timeout=15,
+    )
+    if out.returncode != 0:
+        return []
+    return [n for n in out.stdout.split() if n.startswith("clab-")]
+
+
+def _session_id_from_container(name: str) -> str | None:
+    """Extract the 8-char session id from `clab-<topo>-<sid>-<node>`.
+
+    Session ids are `uuid4().hex[:8]` (lowercase hex). Node names may contain
+    hyphens, and the session id is always an 8-char hex segment immediately
+    followed by `-<node>`. We scan for the LAST 8-char hex segment so topologies
+    whose base name itself contains hex-looking segments still parse right.
+    """
+    parts = name.split("-")
+    for i in range(len(parts) - 2, 0, -1):
+        seg = parts[i]
+        if len(seg) == 8 and all(c in "0123456789abcdef" for c in seg):
+            return seg
+    return None
+
+
+def reconcile_sessions() -> int:
+    """Rebuild SESSIONS from running containers on startup.
+
+    SESSIONS is in-memory, so a crash, restart, or systemd unit reload made the
+    app forget every lab it had deployed while the containers kept running and
+    consuming the host. `GET /api/sessions` then reported 0 sessions with dozens
+    of live clab containers on the box — the product's view of reality and the
+    host's actual state diverged, and the orphans were unaddressable (could not
+    be listed, graded, or stopped by id).
+
+    Reconcile by scanning `docker ps` for `clab-*` containers, grouping them by
+    the 8-char session id embedded in the name, and rebuilding each session the
+    same way start_lab builds it — including resolving the runtime digest OFF
+    THE RUNNING CONTAINERS, so a reconciled session still satisfies the Step 5
+    invariant (a state cannot be cited without its digest). Sessions whose
+    digest cannot be resolved are NOT silently adopted with an empty digest;
+    they are registered with runtime_digest="" and will refuse to grade, which
+    is the honest outcome (they are visible and stoppable, but unattributable).
+
+    Returns the number of sessions adopted.
+    """
+    names = _running_clab_containers()
+    if not names:
+        return 0
+
+    grouped: dict[str, dict] = {}
+    for name in names:
+        sid = _session_id_from_container(name)
+        if not sid:
+            continue
+        # `clab-<topo>-<sid>-<node>` -> node is the remainder after the sid
+        # segment. Split once on the sid boundary so hyphenated nodes survive.
+        marker = f"-{sid}-"
+        idx = name.find(marker)
+        if idx == -1:
+            continue
+        node = name[idx + len(marker):]
+        base = name[len("clab-"):idx]  # base topology name (may include hex-ish text)
+        grouped.setdefault(sid, {"base": base, "nodes": {}})["nodes"][node] = name
+
+    adopted = 0
+    for sid, info in grouped.items():
+        if sid in SESSIONS:
+            continue
+        # Map the base topology name back to a discovered lab id (best effort).
+        lab_id = ""
+        for lab in LABS:
+            if _get_topology_name(lab.topology_file) == info["base"]:
+                lab_id = lab.id
+                break
+        if not lab_id:
+            # Topology no longer corresponds to a lab definition (renamed or
+            # removed). Still adopt it so it is addressable and stoppable.
+            lab_id = info["base"]
+
+        try:
+            digest = resolve_runtime_digest(info["nodes"]) if info["nodes"] else ""
+        except Exception:
+            digest = ""
+
+        SESSIONS[sid] = {
+            "lab_id": lab_id,
+            "student_name": "(reconciled)",
+            "status": "running",
+            "created_at": time.time(),
+            "nodes": info["nodes"],
+            "ttyd_ports": [],
+            "runtime_digest": digest,
+            "reconciled": True,
+        }
+        adopted += 1
+    return adopted
+
+
+@app.on_event("startup")
+def _on_startup_reconcile():
+    """Adopt labs already running on the host so the product sees reality."""
+    try:
+        n = reconcile_sessions()
+        print(f"[reconcile] adopted {n} running session(s) from live containers")
+    except Exception as e:
+        print(f"[reconcile] failed: {e}")
+
+
 def _parse_topology_nodes(topology_file: str) -> list[str]:
     """Extract node names from a Containerlab YAML topology."""
     topo_path = LABS_DIR / topology_file
