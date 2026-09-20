@@ -1,0 +1,31 @@
+# AEGIS FRR Base Image
+# Alpine + FRR for static routing and switching labs.
+# NO dynamic routing (no ospfd, no bgpd) — these are high school
+# networking fundamentals labs, not CCNP.
+FROM alpine:latest
+
+RUN apk update && apk add --no-cache \
+    frr \
+    bash \
+    iproute2 \
+    iputils \
+    tcpdump \
+    bind-tools
+
+# Enable only the FRR daemons we need — zebra (core) and staticd (static routes).
+# No ospfd. No bgpd. Those are way beyond the scope of these classes.
+RUN sed -i \
+    -e 's/zebra=no/zebra=yes/' \
+    -e 's/ospfd=yes/ospfd=no/' \
+    -e 's/bgpd=yes/bgpd=no/' \
+    -e 's/staticd=no/staticd=yes/' \
+    /etc/frr/daemons
+
+# Create frr directory and set up vtysh
+RUN mkdir -p /etc/frr && \
+    chown -R frr:frr /etc/frr && \
+    echo 'export VTYSH_PAGER=more' >> /etc/profile.d/frr.sh && \
+    chmod +x /etc/profile.d/frr.sh
+
+WORKDIR /root
+CMD ["/bin/bash"]

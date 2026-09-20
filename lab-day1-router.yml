@@ -1,0 +1,88 @@
+# =============================================================================
+# AEGIS — Lab: Day 1 Router Configuration (IOS Basics)
+# Lab: Configure Your First Router 🖥️🔧
+#
+# Topology:
+#   [RTR] ─── [PC-A]
+#
+# Single FRR router with one connected Alpine PC. Students learn basic
+# IOS-style configuration via vtysh on FRR.
+#
+# Student tasks:
+#   1. Enter configuration mode (configure terminal)
+#   2. Set hostname to RTR
+#   3. Set MOTD banner
+#   4. Set enable secret (encrypted, IOS-style)
+#   5. Configure local username/password for console access
+#   6. Set interface IP address (interface eth1)
+#   7. Verify with show commands
+#   8. Save configuration (write memory)
+#   9. Configure PC-A IP and default gateway
+#  10. Verify end-to-end connectivity (ping)
+#
+# Skills: IOS CLI basics, interface configuration, password security,
+#         verification commands, configuration save
+# Prereqs: Tier 1 (Foundation)
+# =============================================================================
+name: aegis-lab-day1-router
+
+topology:
+  nodes:
+    rtr:
+      kind: linux
+      image: aegis/frr:latest
+      exec:
+        - /usr/lib/frr/frrinit.sh start
+        - sleep 2
+        - ip link set eth1 up
+        # ---- Student task area begins ----
+        # All configuration via vtysh.
+        #
+        # Step 1: Enter config mode
+        #   vtysh
+        #   configure terminal
+        #
+        # Step 2: Set hostname
+        #   hostname RTR
+        #
+        # Step 3: MOTD banner
+        #   banner motd line
+        #   Unauthorized Access Prohibited
+        #   end
+        #
+        # Step 4: Enable secret (encrypted, like real IOS)
+        #   enable secret cisco
+        #
+        # Step 5: Console access (username-based)
+        #   username admin password cisco
+        #
+        # Step 6: Interface IP
+        #   interface eth1
+        #    ip address 192.168.1.1/24
+        #    no shutdown
+        #   exit
+        #
+        # Step 7: Verify
+        #   do show running-config
+        #   do show ip interface brief
+        #
+        # Step 8: Save (IOS-ese: copy running-config startup-config)
+        #   write memory
+        #
+        # Step 9: Verify from PC side
+
+    pc-a:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - apk add iproute2 iputils -q
+        - ip link set eth1 up
+        # Student tasks:
+        #   ip addr add 192.168.1.10/24 dev eth1
+        #   ip route add default via 192.168.1.1
+        #
+        # Step 10: Verify connectivity
+        #   ping 192.168.1.1
+
+  links:
+    - endpoints: ["rtr:eth1", "pc-a:eth1"]     # Management/Data link

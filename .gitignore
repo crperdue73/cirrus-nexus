@@ -1,0 +1,33 @@
+# --- containerlab runtime state -------------------------------------------
+# clab writes per-deployment dirs (inventories, TLS keys, authorized_keys)
+# into the topology's directory. These are per-run artifacts, not source.
+lab-definitions/clab-*/
+clab-*/
+
+# --- build / transport artifacts -------------------------------------------
+# 20 MB FRR image tarball. Transported out-of-band; recorded by pin + sha256
+# in assets/frr-image.pin. Never version a binary blob whose identity is
+# already content-addressed in the pin.
+assets/*.tar.gz
+assets/*.tar
+assets/installed-image-id.txt
+
+# stray build/release tarballs anywhere in the tree (binaries, not source)
+*.tar.gz
+*.tgz
+
+# --- python ----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+
+# --- editor / backup cruft -------------------------------------------------
+*.bak
+*.bak-*
+*~
+*.swp
+
+# --- runtime ---------------------------------------------------------------
+*.log
+.pytest_cache/

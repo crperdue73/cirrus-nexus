@@ -1,0 +1,23 @@
+# aegis/frr runtime pin
+#
+# The image aegis/frr:latest must resolve to. install.sh loads the shipped
+# tarball, then VERIFIES the resulting image id equals this value. If it does
+# not, install fails loudly — no silent stale substrate, no hand steps.
+#
+# Produced 2026-09-19 (Cirrus-Nexus step 4 transport decision).
+# Transport = image tarball, because the image is local-only (RepoDigests: []).
+# This pin is the image ID read off a RUNNING container via docker inspect,
+# NOT a build log.
+
+# NOTE: image_id below is the DAEMON-LOCAL id on the build host. It is NOT the
+# verification key: `docker save | docker load` recomputes the config digest on
+# the target daemon, so the id changes across transport even for identical
+# content. install.sh verifies on dockerfile_sha256 + layers_sha256 instead.
+image_id=sha256:acb8d8dcd72a44c3389184bc168ee61444072566afaa59704eb1aa27250027b8
+# Content-addressed rootfs layer chain (sha256 over the ordered layer digests).
+# Transport-invariant: identical after save/load. THE identity key.
+layers_sha256=bb7ef23a07dcb6c6b34e225dd77fa2eb592700975843ad1f1aa0105f49f9220c
+dockerfile_sha256=cce15a8696ae045e8001f2b32107b1261fa7fc5ba30ad4cab5dfa8c7bc8f38cf
+tarball=aegis-frr-image.tar.gz
+tarball_sha256=9c6837d26d8dfb4bbbab62288cbb9f6528a48fd40b9e859b0cd7f4ecb43a1ff3
+built=2026-09-19T16:01:57-04:00

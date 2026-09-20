@@ -1,0 +1,71 @@
+metadata:
+  course: CI-04
+  competencies:
+  - BGP Peering
+  - AS Path Reasoning
+  - Origin Attribution
+  description: Two ASes, three routers each, one peering session. Prove that "Established"
+    is not a measurement — a prefix can be carried over the wrong session with no alarm.
+  difficulty: Advanced
+  duration_min: 60
+  gradeable_nodes:
+  - r1
+  - r2
+  - r3
+  - r4
+  - r5
+  - r6
+  grader: grader_lab_04_two_as_peering
+  id: lab-04-two-as-peering
+  instructions:
+  - Inspect the peering session between r3 (AS 65001) and r4 (AS 65002)
+  - 10.10.10.0/24 must originate in AS 65001 and be carried only over the 65001 side
+  - 10.20.20.0/24 must originate in AS 65002 and be carried only over the 65002 side
+  - Neither AS may originate the other's prefix
+  name: "Lab 04 \u2014 Two ASes, One Peering Session"
+  tip: "\"Established\" tells you the session is up, not that the right prefix crossed it."
+name: aegis-two-as-peering
+topology:
+  nodes:
+    r1:
+      kind: linux
+      image: aegis/frr:latest
+      exec:
+      - /usr/lib/frr/frrinit.sh start
+      - sleep 3
+    r2:
+      kind: linux
+      image: aegis/frr:latest
+      exec:
+      - /usr/lib/frr/frrinit.sh start
+      - sleep 3
+    r3:
+      kind: linux
+      image: aegis/frr:latest
+      exec:
+      - /usr/lib/frr/frrinit.sh start
+      - sleep 3
+    r4:
+      kind: linux
+      image: aegis/frr:latest
+      exec:
+      - /usr/lib/frr/frrinit.sh start
+      - sleep 3
+    r5:
+      kind: linux
+      image: aegis/frr:latest
+      exec:
+      - /usr/lib/frr/frrinit.sh start
+      - sleep 3
+    r6:
+      kind: linux
+      image: aegis/frr:latest
+      exec:
+      - /usr/lib/frr/frrinit.sh start
+      - sleep 3
+  links:
+  - endpoints: [r1:eth1, r2:eth1]
+  - endpoints: [r2:eth2, r3:eth1]
+  - endpoints: [r4:eth1, r5:eth1]
+  - endpoints: [r5:eth2, r6:eth1]
+  - endpoints: [r3:eth2, r4:eth2]

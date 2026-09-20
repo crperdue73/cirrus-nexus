@@ -1,0 +1,71 @@
+# =============================================================================
+# AEGIS — Tier 3: BGP Fundamentals
+# Lab: Two Routers, One Conversation 🌐
+#
+# Topology: Two FRR routers in different ASes, each with one Alpine host.
+# r1 (AS 65001) peers with r2 (AS 65002) via eBGP. Simple direct peering,
+# no route reflectors, no iBGP mesh.
+#
+# Student tasks:
+#   1. Examine BGP peering (vtysh > show bgp summary)
+#   2. Check advertised/learned routes (show bgp)
+#   3. Verify end-to-end connectivity (ping h2 from h1)
+#   4. Trace the AS path (show bgp, traceroute)
+#   5. What happens when a prefix is withdrawn? (shut down r2-h2 subnet)
+#
+# Skills: BGP concepts (AS, eBGP, prefix advertisement),
+#         AS-path, next-hop, routing policy fundamentals
+# Prereqs: Tier 2 (OSPF or static routing)
+# =============================================================================
+name: aegis-tier-03-bgp
+
+topology:
+  nodes:
+    r1:
+      kind: linux
+      image: aegis/frr:latest
+      binds:
+        - frr-configs/r1-frr.conf:/etc/frr/frr.conf
+      exec:
+        - chown frr:frr /etc/frr/frr.conf
+        - chmod 640 /etc/frr/frr.conf
+        - /usr/lib/frr/frrinit.sh start
+        - sleep 2
+        # Interface addresses are applied via FRR config bind-mount above.
+        # Student tasks are performed via vtysh.
+
+    r2:
+      kind: linux
+      image: aegis/frr:latest
+      binds:
+        - frr-configs/r2-frr.conf:/etc/frr/frr.conf
+      exec:
+        - chown frr:frr /etc/frr/frr.conf
+        - chmod 640 /etc/frr/frr.conf
+        - /usr/lib/frr/frrinit.sh start
+        - sleep 2
+
+    h1:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - apk add iproute2 iputils -q
+        # Student task:
+        #   ip addr add 192.168.1.10/24 dev eth1
+        #   ip link set eth1 up
+        #   ip route add default via 192.168.1.1
+
+    h2:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - apk add iproute2 iputils -q
+        # Student task:
+        #   ip addr add 192.168.2.10/24 dev eth1
+        #   ip link set eth1 up
+        #   ip route add default via 192.168.2.1
+
+  links:
+    - endpoints: ["r1:eth1", "r2:eth1"]     # eBGP peering link (10.0.0.0/31)
+    - endpoints: ["h1:eth1", "r1:eth2"]     # h1 subnet (192.168.1.0/24)
+    - endpoints: ["h2:eth1", "r2:eth2"]     # h2 subnet (192.168.2.0/24)

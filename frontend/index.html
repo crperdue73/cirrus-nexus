@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS — Network Education & User Simulation</title>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4/dist/ext/sse.js"></script>
+    <style>
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --surface-2: #242738;
+            --border: #2d3145;
+            --text: #e1e3eb;
+            --text-muted: #8b8fa3;
+            --accent: #00d4aa;
+            --accent-dim: #009977;
+            --success: #00d46a;
+            --warning: #ffb347;
+            --error: #ff4770;
+            --font: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .header {
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--surface);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--accent);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+            color: var(--bg);
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-sub {
+            font-size: 12px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .hero h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .hero p {
+            color: var(--text-muted);
+            font-size: 16px;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .lab-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            transition: border-color 0.2s;
+        }
+
+        .lab-card:hover {
+            border-color: var(--accent);
+        }
+
+        .lab-card h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+
+        .lab-desc {
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+
+        .lab-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        .lab-tag {
+            background: var(--surface-2);
+            padding: 4px 10px;
+            border-radius: 6px;
+            color: var(--text-muted);
+        }
+
+        .lab-tag.accent {
+            color: var(--accent);
+            border: 1px solid var(--accent-dim);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-dim);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: var(--surface-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent-dim);
+        }
+
+        .btn-danger {
+            background: var(--error);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            opacity: 0.9;
+        }
+
+        .student-input {
+            display: flex;
+            gap: 12px;
+            margin: 24px 0;
+            justify-content: center;
+        }
+
+        .student-input input {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 16px;
+            color: var(--text);
+            font-size: 14px;
+            width: 250px;
+            font-family: inherit;
+        }
+
+        .student-input input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .lab-session {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 24px;
+        }
+
+        .terminal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin: 16px 0;
+        }
+
+        .terminal-frame {
+            background: #000;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            height: 550px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .terminal-frame iframe {
+            width: 100%;
+            flex: 1;
+            border: none;
+        }
+
+        .terminal-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            padding: 8px 12px;
+            background: var(--surface-2);
+            border-bottom: 1px solid var(--border);
+            font-family: var(--font);
+            flex-shrink: 0;
+        }
+
+        .lab-instructions {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+            font-family: var(--font);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .lab-instructions code {
+            background: var(--bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .grade-result {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+
+        .grade-result.passed {
+            border-color: var(--success);
+        }
+
+        .grade-result.failed {
+            border-color: var(--error);
+        }
+
+        .grade-score {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .grade-feedback {
+            list-style: none;
+        }
+
+        .grade-feedback li {
+            padding: 6px 0;
+            font-size: 14px;
+        }
+
+        .competency-badge {
+            display: inline-block;
+            background: var(--accent-dim);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin: 4px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .hidden { display: none; }
+
+        @media (max-width: 768px) {
+            .terminal-grid {
+                grid-template-columns: 1fr;
+            }
+            .student-input {
+                flex-direction: column;
+                align-items: center;
+            }
+            .student-input input {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">Δ</div>
+            <div>
+                <div class="logo-text">NEXUS</div>
+                <div class="logo-sub">Network Education & User Simulation</div>
+            </div>
+        </div>
+        <div id="session-indicator"></div>
+    </div>
+
+    <div class="container">
+        <div class="hero">
+            <h1>Welcome to NEXUS</h1>
+            <p>Hands-on IT labs that grade themselves. Pick a lab, configure real network devices in your browser, and get instant feedback.</p>
+        </div>
+
+        <!-- Student Name -->
+        <div class="student-input" id="student-setup">
+            <input type="text" id="student-name" placeholder="Enter your name" value="Student" />
+            <button class="btn btn-primary" onclick="loadLabs()">Get Started →</button>
+        </div>
+
+        <!-- Lab Catalog -->
+        <div id="lab-catalog" class="hidden">
+            <!-- Course Filter Bar -->
+            <div id="course-filter" style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;justify-content:center;"></div>
+            <!-- Lab Cards Container -->
+            <div id="lab-cards"></div>
+        </div>
+
+        <!-- Active Session -->
+        <div id="active-session" class="hidden"></div>
+    </div>
+
+    <script>
+var currentSession = null;
+var currentLab = null;
+
+async function loadLabs() {
+    const name = document.getElementById('student-name').value.trim() || 'Student';
+    document.getElementById('student-setup').classList.add('hidden');
+
+    const resp = await fetch('/api/labs');
+    const data = await resp.json();
+    const catalog = document.getElementById('lab-catalog');
+    catalog.classList.remove('hidden');
+
+    var labs = data.labs;
+
+    // Build course filter buttons
+    var courses = {};
+    for (var i = 0; i < labs.length; i++) {
+        var c = labs[i].course || 'Uncategorized';
+        courses[c] = (courses[c] || 0) + 1;
+    }
+    var courseKeys = Object.keys(courses).sort();
+
+    var filterHtml = '<button class="btn btn-secondary filter-btn" data-course="all" onclick="filterLabs(\'all\')" style="font-size:13px;">\ud83d\udcca All</button>';
+    for (var i = 0; i < courseKeys.length; i++) {
+        var c = courseKeys[i];
+        var label = c === 'Uncategorized' ? '\ud83d\udfe2 Other' : c;
+        filterHtml += '<button class="btn btn-secondary filter-btn" data-course="' + escapeHtml(c) + '" onclick="filterLabs(\'' + escapeHtml(c).replace(/'/g, "\\'") + '\')" style="font-size:13px;">' + label + ' (' + courses[c] + ')</button>';
+    }
+    document.getElementById('course-filter').innerHTML = filterHtml;
+    // Highlight All as active
+    document.querySelectorAll('.filter-btn').forEach(function(b) {
+        if (b.getAttribute('data-course') === 'all') {
+            b.style.borderColor = 'var(--accent)';
+            b.style.color = 'var(--accent)';
+        }
+    });
+
+    // Render all lab cards with course badge
+    var activeFilter = window._activeFilter || 'all';
+    var cardHtml = labs.map(function(lab, index) {
+        var escapedId = lab.id.replace(/'/g, "\\'");
+        var escapedName = name.replace(/'/g, "\\'");
+        var courseBadge = (lab.course) ? '<span class="lab-tag" style="border-color:var(--accent-dim);color:var(--accent);">' + escapeHtml(lab.course) + '</span>' : '';
+        var show = (activeFilter === 'all' || (lab.course || 'Uncategorized') === activeFilter) ? '' : ' style="display:none;"';
+        return '<div class="lab-card" style="margin-bottom: 16px;" data-course="' + escapeHtml(lab.course || 'Uncategorized') + '"' + show + '>' +
+            '<h2>' + lab.name + '</h2>' +
+            '<p class="lab-desc">' + lab.description + '</p>' +
+            '<div class="lab-meta">' +
+            '<span class="lab-tag">\u23f1\ufe0f ' + lab.duration_min + ' min</span>' +
+            '<span class="lab-tag accent">' + lab.difficulty + '</span>' +
+            courseBadge +
+            (lab.competencies || []).map(function(c) {
+                return '<span class="lab-tag">\u{1f3af} ' + escapeHtml(c) + '</span>';
+            }).join('') +
+            '</div>' +
+            '<div class="actions">' +
+            '<button class="btn btn-primary" onclick="startLab(\'' + escapedId + '\', \'' + escapedName + '\')">' +
+            '\u25b6 Start Lab</button>' +
+            '<button class="btn btn-secondary" onclick="window.open(\'/api/labs/' + escapedId + '/topology\', \'_blank\')">' +
+            '\u{1f5fa} Topology</button>' +
+            '<button class="btn btn-secondary" onclick="openLabGuide(\'' + escapedId + '\')">' +
+            '\u{1f4d6} Lab Guide</button>' +
+            '</div>' +
+            '</div>';
+    }).join('');
+    document.getElementById('lab-cards').innerHTML = cardHtml;
+}
+
+function filterLabs(course) {
+    window._activeFilter = course;
+
+    // Update button highlights
+    document.querySelectorAll('.filter-btn').forEach(function(b) {
+        if (b.getAttribute('data-course') === course) {
+            b.style.borderColor = 'var(--accent)';
+            b.style.color = 'var(--accent)';
+        } else {
+            b.style.borderColor = '';
+            b.style.color = '';
+        }
+    });
+
+    // Show/hide lab cards
+    document.querySelectorAll('#lab-cards .lab-card').forEach(function(card) {
+        if (course === 'all' || card.getAttribute('data-course') === course) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+}
+
+function openLabGuide(labId) {
+    window.open('/api/labs/' + encodeURIComponent(labId) + '/guide', '_blank');
+}
+
+async function startLab(labId, studentName) {
+    const catalog = document.getElementById('lab-catalog');
+    catalog.innerHTML = '<p style="text-align:center;color:var(--text-muted);">\u23f3 Deploying your lab environment...</p>';
+
+    var resp, data;
+    try {
+        resp = await fetch('/api/sessions/start?lab_id=' + encodeURIComponent(labId) +
+            '&student_name=' + encodeURIComponent(studentName), { method: 'POST' });
+        data = await resp.json();
+    } catch (e) {
+        catalog.innerHTML = '<div style="text-align:center;color:var(--error);">' +
+            '\u274c Failed to start lab. Is the server running?</div>' +
+            '<div style="text-align:center;margin-top:16px;">' +
+            '<button class="btn btn-secondary" onclick="loadLabs()">\u2190 Back</button></div>';
+        return;
+    }
+
+    if (!resp.ok) {
+        var detail = data.detail || 'Unknown error';
+        catalog.innerHTML = '<div style="text-align:center;color:var(--error);">' +
+            '\u274c ' + escapeHtml(detail) + '</div>' +
+            '<div style="text-align:center;margin-top:16px;">' +
+            '<button class="btn btn-secondary" onclick="loadLabs()">\u2190 Back</button></div>';
+        return;
+    }
+
+    currentSession = data.session_id;
+    currentLab = data.lab;
+
+    catalog.classList.add('hidden');
+    const sessionDiv = document.getElementById('active-session');
+    sessionDiv.classList.remove('hidden');
+    sessionDiv.innerHTML = getSessionHTML(data);
+
+    // Add terminal iframes
+    setTimeout(function() {
+        const grid = document.getElementById('terminal-grid');
+        if (!grid) return;
+        var nodes = data.nodes || {};
+        var ttyd = data.ttyd || {};
+        var nodeEntries = Object.entries(nodes);
+        for (var i = 0; i < nodeEntries.length; i++) {
+            var name = nodeEntries[i][0];
+            var containerName = nodeEntries[i][1];
+            var url = (ttyd[name] && ttyd[name].url) ? ttyd[name].url : 'about:blank';
+            var frame = document.createElement('div');
+            frame.innerHTML = '<div class="terminal-frame"><div class="terminal-label">' +
+                escapeHtml(name) + ' - ' + escapeHtml(containerName) +
+                '</div><iframe src="' + url + '"></iframe></div>';
+            grid.appendChild(frame.firstElementChild);
+        }
+    }, 100);
+}
+
+function getSessionHTML(data) {
+    var lab = data.lab || {};
+    var instructions = lab.instructions || [];
+    var tip = lab.tip || '';
+    var gradeableNodes = lab.gradeable_nodes || [];
+
+    // Build dynamic instructions
+    var instructionsHtml = '';
+    if (instructions.length > 0) {
+        instructionsHtml = '<div class="lab-instructions">' +
+            '<strong>\u{1f4cb} Your Task:</strong><ol style="margin:8px 0 0 16px;padding:0;">';
+        for (var i = 0; i < instructions.length; i++) {
+            instructionsHtml += '<li style="padding:4px 0;">' + escapeHtml(instructions[i]) + '</li>';
+        }
+        instructionsHtml += '</ol>';
+        if (tip) {
+            instructionsHtml += '<p style="margin:8px 0 0 0;color:var(--accent);font-size:13px;">' +
+                '\u{1f4a1} Tip: ' + escapeHtml(tip) + '</p>';
+        }
+        instructionsHtml += '</div>';
+    }
+
+    // Build dynamic check buttons
+    var checkButtonsHtml = '';
+    if (gradeableNodes.length > 0) {
+        checkButtonsHtml = '<div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;">';
+        for (var i = 0; i < gradeableNodes.length; i++) {
+            var nodeName = gradeableNodes[i];
+            var label = 'Check ' + nodeName;
+            checkButtonsHtml += '<button class="btn btn-primary" onclick="submitGrade(\'' +
+                nodeName.replace(/'/g, "\\'") + '\')">' + escapeHtml(label) + '</button>';
+        }
+        checkButtonsHtml += '</div>';
+    }
+
+    return '<div class="lab-session">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
+        '<div><h2 style="font-size:18px;">\u{1f9ea} ' + escapeHtml(lab.name || '') + '</h2>' +
+        '<p style="font-size:13px;color:var(--text-muted);">Session: ' + escapeHtml(data.session_id || '') + '</p></div>' +
+        '<div><button class="btn btn-danger" onclick="stopSession()">\u2715 End Lab</button></div></div>' +
+
+        instructionsHtml +
+
+        '<div class="terminal-grid" id="terminal-grid"></div>' +
+
+        checkButtonsHtml +
+
+        '<div id="grade-result"></div></div>';
+}
+
+async function submitGrade(node) {
+    var resultDiv = document.getElementById('grade-result');
+    resultDiv.innerHTML = '<p style="color:var(--text-muted);">\u23f3 Grading...</p>';
+    var resp = await fetch('/api/sessions/' + currentSession + '/submit?node=' + encodeURIComponent(node), { method: 'POST' });
+    var data = await resp.json();
+    var grade = data.grade;
+    var passed = grade.passed;
+    var feedback = grade.feedback || [];
+    var competencies = grade.competencies || [];
+    var resultHTML = '<div class="grade-result ' + (passed ? 'passed' : 'failed') + '">' +
+        '<div class="grade-score">' + (passed ? '\u2705 Passed!' : '\u274c Not yet') +
+        '<span style="font-size:16px;font-weight:normal;color:var(--text-muted);margin-left:12px;">' +
+        Math.round(grade.score * 100) + '%</span></div>' +
+        '<ul class="grade-feedback">';
+    for (var j = 0; j < feedback.length; j++) {
+        resultHTML += '<li>' + feedback[j] + '</li>';
+    }
+    resultHTML += '</ul>';
+    if (competencies.length > 0) {
+        resultHTML += '<div style="margin-top:12px;"><strong style="font-size:13px;">Competencies Earned:</strong>';
+        for (var k = 0; k < competencies.length; k++) {
+            resultHTML += '<span class="competency-badge">' + escapeHtml(competencies[k]) + '</span>';
+        }
+        resultHTML += '</div>';
+    }
+    resultHTML += '</div>';
+    resultDiv.innerHTML = resultHTML;
+
+    if (passed) {
+        document.getElementById('session-indicator').innerHTML = 
+            '<span style="display:inline-flex;align-items:center;gap:8px;font-size:13px;">' +
+            '<span style="color:var(--success);">Lab Complete!</span>' +
+            '<button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="stopSession()">Close</button></span>';
+    }
+}
+
+async function stopSession() {
+    if (!currentSession) return;
+    await fetch('/api/sessions/' + currentSession + '/stop', { method: 'POST' });
+    currentSession = null;
+    currentLab = null;
+    document.getElementById('active-session').classList.add('hidden');
+    document.getElementById('session-indicator').innerHTML = '';
+    document.getElementById('lab-catalog').classList.remove('hidden');
+    loadLabs();
+}
+
+</script>
+</body>
+</html>

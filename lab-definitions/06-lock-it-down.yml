@@ -1,0 +1,76 @@
+metadata:
+  course: CI-10
+  grader: grader_lab_03_lock_it_down
+  competencies:
+  - SSH server configuration
+  - Port security (FRR switch)
+  - IPv4/IPv6 dual-stack
+  - SLAAC address assignment
+  - Subnetting (VLSM)
+  - End-to-end verification
+  description: 'Dress rehearsal for the Net Eng I Capstone. Students secure the router
+    (SSH), harden the switch (port security), deploy IPv4/IPv6 dual-stack with SLAAC,
+    and complete a subnetting exercise. End-to-end verification over both protocol
+    families.
+
+    '
+  difficulty: Intermediate
+  duration_min: 90
+  id: lab-03-lock-it-down
+  name: "Lab 03 \u2014 Lock It Down"
+  prerequisites:
+  - "AEGIS Lab 02 \u2014 The Switch in the Middle"
+name: aegis-lab-03-lock-it-down
+topology:
+  links:
+  - endpoints:
+    - rtr:eth2
+    - sw1:eth1
+  - endpoints:
+    - sw1:eth2
+    - pc-a:eth1
+  - endpoints:
+    - rtr:eth1
+    - pc-b:eth1
+  nodes:
+    pc-a:
+      exec:
+      - apk add iproute2 iputils -q
+      - ip link set eth1 up
+      - sh -c "echo 1 > /proc/sys/net/ipv6/conf/eth1/accept_ra"
+      image: alpine:latest
+      kind: linux
+    pc-b:
+      exec:
+      - apk add iproute2 iputils -q
+      - ip link set eth1 up
+      - sh -c "echo 1 > /proc/sys/net/ipv6/conf/eth1/accept_ra"
+      image: alpine:latest
+      kind: linux
+    rtr:
+      exec:
+      - /usr/lib/frr/frrinit.sh start
+      - sleep 2
+      - apk add openssh -q
+      - ssh-keygen -A
+      - mkdir -p /run/sshd
+      - /usr/sbin/sshd
+      - adduser -D ncadmin 2>/dev/null
+      - echo ncadmin:ncenskills | chpasswd
+      - ip link set eth1 up
+      - ip link set eth2 up
+      - sysctl -w net.ipv6.conf.all.forwarding=1 > /dev/null
+      image: aegis/frr:latest
+      kind: linux
+    sw1:
+      exec:
+      - /usr/lib/frr/frrinit.sh start
+      - sleep 2
+      - ip link add name br0 type bridge
+      - ip link set br0 up
+      - ip link set eth1 up
+      - ip link set eth1 master br0
+      - ip link set eth2 up
+      - ip link set eth2 master br0
+      image: aegis/frr:latest
+      kind: linux
