@@ -114,12 +114,37 @@ class GraderResult(BaseModel):
     #               are meaningful.
     #   "error"   — the grader module raised. NOT a verdict on the student's
     #               config; the read is void and must not be shown as a fail.
-    #   "refused" — no attributable substrate (no runtime digest). Emitted at the
-    #               route as HTTP 409, but mirrored here so any in-process caller
-    #               sees the same vocabulary.
+    #   "refused" — no attributable substrate (no runtime digest). Rendered to
+    #               the client as HTTP 409, but ALSO carried in-band here so any
+    #               in-process caller (batch grader, CLI, export) sees the same
+    #               three-state vocabulary instead of an exception it must catch.
     # Before this field, a crash and a wrong answer were both rendered as
     # "Not yet 0%", which told the student nothing and hid a broken grader.
     status: str = "graded"
+
+
+# Refusal vocabulary. One shape for one state, everywhere it is observed.
+# `grade_config` NEVER raises for a refused session: it returns a
+# GraderResult(status="refused"). The HTTP route translates that to 409 so the
+# wire contract is unchanged, but an in-process caller gets a value, not a
+# traceback. (2026-09-20: the docstring claimed a `refused` status that no code
+# path could actually produce — the 409 pre-empted every result construction.)
+REFUSAL_FEEDBACK = [
+    "⛔ Refused: this session has no runtime digest, so its state is "
+    "unattributable and cannot be graded. Re-deploy the lab to pin the substrate."
+]
+
+
+def _refused_result() -> "GraderResult":
+    """The single canonical refused-grade value (no digest, status='refused')."""
+    return GraderResult(
+        runtime_digest="",
+        status="refused",
+        passed=False,
+        score=0.0,
+        feedback=list(REFUSAL_FEEDBACK),
+        competencies=[],
+    )
 
 
 # --- Step 5: Runtime digest pin -------------------------------------------
@@ -850,13 +875,15 @@ def grade_config(session_id: str, lab_id: str, node: str) -> GraderResult:
         raise HTTPException(status_code=404, detail="Lab not found")
 
     # Step 5 invariant is enforced BEFORE any grader path and OUTSIDE the broad
-    # except below. `_require_runtime_digest` signals refusal with
-    # HTTPException(409); the previous layout called it INSIDE the try, so the
+    # except below. Refusal is returned as a value (GraderResult(status="refused")),
+    # NOT raised, so in-process callers see the same three-state vocabulary the
+    # route does. The route then translates status="refused" to HTTP 409, keeping
+    # the wire contract identical. (Earlier layout raised inside the try, so
     # `except Exception` swallowed the refusal and returned a 200 with an EMPTY
-    # runtime_digest instead. That silently defeated the gate: an unattributable
-    # session produced a citable-looking grade carrying no identity. (Found live
-    # 2026-09-20.) Resolve/refuse here so the 409 propagates untouched.
-    digest = _require_runtime_digest(session)
+    # runtime_digest — silently defeating the gate. Found live 2026-09-20.)
+    digest = _session_runtime_digest(session)
+    if not digest:
+        return _refused_result()
 
     grader = _load_grader(lab.grader_module)
     if not grader:
@@ -891,14 +918,28 @@ def grade_config(session_id: str, lab_id: str, node: str) -> GraderResult:
         )
 
 
-def _require_runtime_digest(session: dict) -> str:
-    """Return the session's runtime digest, or refuse to produce a grade.
+def _session_runtime_digest(session: dict) -> str:
+    """The session's runtime digest, or "" when the session is unattributable.
 
-    Step 5 invariant: a state cannot be cited without its digest. If a session
-    has no resolved substrate identity, grading is refusable — no unattributed
-    reads, ever.
+    Step 5 invariant: a state cannot be cited without its digest. This is a pure
+    read — it does NOT raise. Callers decide the shape of the refusal:
+      - grade_config   -> returns GraderResult(status="refused")
+      - the HTTP route -> translates that to 409
+    Keeping the read pure is what lets the in-process and over-the-wire callers
+    observe the SAME refusal state instead of two different ones.
     """
-    digest = session.get("runtime_digest") or ""
+    return session.get("runtime_digest") or ""
+
+
+def _require_runtime_digest(session: dict) -> str:
+    """Deprecated shim: digest or HTTPException(409).
+
+    Retained for the few call sites that still want the hard-fail behaviour
+    (`_fallback_grade`, and any pre-existing external caller). New code should
+    prefer `_session_runtime_digest` + `_refused_result` so refusals travel as
+    values rather than exceptions.
+    """
+    digest = _session_runtime_digest(session)
     if not digest:
         raise HTTPException(
             status_code=409,
@@ -1018,6 +1059,13 @@ def start_lab(lab_id: str, student_name: str = "Student"):
 @app.post("/api/sessions/{session_id}/submit")
 def submit_config(session_id: str, node: str):
     grade = grade_config(session_id, SESSIONS.get(session_id, {}).get("lab_id", ""), node)
+    # Refusal travels in-band as a value; render it to the wire as 409 so the
+    # HTTP contract is unchanged. One state, one shape, both observers.
+    if grade.status == "refused":
+        raise HTTPException(
+            status_code=409,
+            detail=grade.feedback[0] if grade.feedback else "Refused: no runtime digest",
+        )
     return {"session_id": session_id, "node": node, "grade": grade}
 
 

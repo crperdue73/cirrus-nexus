@@ -909,3 +909,62 @@ REMAINING: none blocking the exit bar. The exit bar itself remains met and
   re-verified; the cron stays retireable by its stated definition.
 
 Not touched: Ethan's lab containers.
+
+---
+
+## 2026-09-20 15:0x EDT — REFUSAL VOCABULARY MADE REAL (in-band, both observers)
+
+Did NOT re-reproduce the exit bar for show. Closed a real, documented-but-false
+behaviour found by reading the code against its own docstring.
+
+DEFECT: `GraderResult.status` documents three states — graded | error | refused —
+and claims "refused" is "mirrored here so any in-process caller sees the same
+vocabulary." FALSE: the only refusal path was `_require_runtime_digest()` raising
+HTTPException(409) at the top of `grade_config`, which pre-empted every
+GraderResult construction. NO code path could produce status="refused". The
+frontend read the refusal from the 409 *status code*, not the field. So one state
+had two shapes: HTTP 409+detail over the wire, a raised exception in-process. Any
+batch grader / CLI / citation tool calling grade_config() directly could not
+produce a value matching the documented vocabulary. Same class of bug the
+discriminator field exists to prevent — fixed for only one observer.
+
+FIX (backend/main.py):
+  - `_session_runtime_digest(session)` — pure read, never raises. Single source
+    of truth for "does this session have an identity".
+  - `_refused_result()` — the one canonical refusal value (status="refused",
+    digest="", passed=False, score=0.0, REFUSAL_FEEDBACK). One factory => every
+    caller's refusal identical by construction.
+  - `grade_config()` returns `_refused_result()` instead of raising; still outside
+    the broad except, so the 2026-09-20 gate-swallow regression stays closed.
+  - `submit_config()` (HTTP route) translates status=="refused" -> 409. Wire
+    contract byte-for-byte unchanged.
+  - `_require_runtime_digest()` kept as a documented deprecated shim.
+
+VERIFIED:
+  in-process: digest-less session -> grade_config returns a GraderResult VALUE
+    (type GraderResult, NOT an exception), status='refused', digest='',
+    factory model_dump() == grade_config model_dump()  OK
+  wire: same session -> HTTP 409 (unchanged)
+  with-digest: grade_config -> status='graded', digest sha256:bb7ef23a... carried
+  LIVE HTTP: start lab-04 -> session 789dfcfb digest sha256:bb7ef23a...
+    submit?node=r1 -> status=graded score=0.35 digest carried ; stop -> destroyed
+  py_compile CLEAN; py_compile -W error::SyntaxWarning CLEAN; bash -n install.sh CLEAN.
+  Cleanup: 0 proof-session leftovers; Ethan's d7776359 6 containers Up, untouched.
+
+ALSO THIS HOUR — ledger NEXT item CLOSED (not a new step, a re-verification):
+  the 05:0x composite named "first-grade digest race (runtime_digest=None right
+  after start)" as the smallest open item. Chased it: three consecutive
+  start-then-immediate-grade cycles (52bd571c, db2479f9, 954d8aa4) all resolved
+  the digest eagerly and graded with it present. The None was already closed
+  structurally — start_lab resolves the digest eagerly with a bounded retry, and
+  a digest-less grade is now unrepresentable. Recorded so it stops being carried
+  as "open".
+
+ARTIFACT: backend/main.py
+PROOF: .nexus/proofs/2026-09-20-refusal-vocabulary-inband.md
+
+STEP BOARD: exit-bar steps 1-5 + composite + race + gate-swallow + lab-04 grader
+  + VC + in-band discriminator + demo-lab unblock + sessions endpoint + startup
+  reconcile + ownership gate ALL DONE; refusal vocabulary now consistent
+  in-band across both observers (this hour).
+REMAINING: none blocking the exit bar.
