@@ -781,3 +781,34 @@ REMAINING (open product work, NOT exit-bar blockers) — now down to ONE:
 ==> Nexus remains a finished deployed product by the exit definition, and is now
     recoverable: the exact source tree that produces the pinned digest is under
     version control. NEXUS-HOURLY-DRIVE cron is retireable.
+
+---
+
+## 2026-09-20 10:0x EDT — STEP 5 CLOSE-OUT: in-band discriminator (last named open item)
+
+Did NOT re-reproduce the exit bar for show. Closed the one remaining named
+product item from the previous entry.
+
+TWO REAL DEFECTS FOUND AND FIXED (backend/main.py, frontend/index.html):
+  1. grade_config() except-path returned a GraderResult with NO runtime_digest.
+     An unattributed grade emitted from the error path — the exact state the
+     Step 5 invariant forbids. The 409 refusal path had been fixed; this
+     sibling leak had not.
+  2. No in-band discriminator: grader crash and wrong answer both rendered
+     "Not yet 0%". Student and operator could not tell void from fail.
+
+FIX: GraderResult.status in {graded, error, refused}. error carries the digest
+  and renders with no score; refused is the route-level 409; frontend handles
+  409 explicitly (previously fell through to data.grade -> throw).
+
+VERIFIED LIVE: deploy tier-02 -> session 26341b0a, digest bb7ef23a (== pin).
+  submit r1 -> HTTP 200 status='graded' score=0.35 digest carried.
+  refused -> 409. error -> status='error', digest PRESERVED.
+  Session destroyed; 0 leftover containers. py_compile + node --check clean.
+
+ARTIFACT: .nexus/proofs/2026-09-20-step5-inband-discriminator.md
+COMMIT:   c1746f8
+
+STEP BOARD: 1,2,3,4,5 ALL DONE. No named remaining items.
+==> Nexus is a finished deployed product by the exit definition. Nothing further
+    is outstanding. NEXUS-HOURLY-DRIVE cron is RETIREABLE.
