@@ -1,0 +1,19 @@
+# NEXUS live-deployment verification — 2026-09-20
+
+Deployed against real topology via the running backend (:8000).
+
+session_id           = ffdb88e1
+lab_id               = tier-02-router-basics
+topology             = clab-aegis-tier-02-router-basics-ffdb88e1
+nodes                = r1 (aegis/frr:latest), pc-a (alpine:latest)
+ttyd                 = r1 :8784, pc-a :8783
+runtime_digest       = sha256:bb7ef23a07dcb6c6b34e225dd77fa2eb592700975843ad1f1aa0105f49f9220c
+container_image_id   = sha256:acb8d8dcd72a44c3389184bc168ee61444072566afaa59704eb1aa27250027b8 (read off running container)
+dockerfile_sha256    = cce15a8696ae045e8001f2b32107b1261fa7fc5ba30ad4cab5dfa8c7bc8f38cf
+
+KEY: app-cited runtime_digest == assets/frr-image.pin layers_sha256 == bb7ef23a...
+     The app's digest and the installer's verified digest are identical.
+
+Build gate (install.sh step 7) now hashes Dockerfile.frr into a label
+aegis.frr.dockerfile.sha256 and rebuilds on mismatch; absent label => rebuild.
+Live image label matches on-disk Dockerfile hash. Stale substrate fixed.
