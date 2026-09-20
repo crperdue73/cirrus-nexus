@@ -1,0 +1,36 @@
+# AEGIS FRR BGP Image
+#
+# Substrate for labs that require a dynamic-routing daemon (currently bgpd, for
+# lab-04-two-as-peering). The base substrate (Dockerfile.frr) deliberately ships
+# with ospfd/bgpd disabled, and the app's capability gate REFUSES to deploy a
+# lab the substrate cannot run. That refusal is correct — but it left BGP labs
+# permanently undeployable. This second substrate is the answer: same base,
+# bgpd enabled, so capability and deployability agree.
+#
+# IMPORTANT: this derives FROM the pinned base tag rather than repeating the
+# apk install, so the base layers (and their transport-invariant layer chain)
+# are byte-identical. Only one small layer is added on top, which changes the
+# layer-chain digest — that is intended and is what the app records.
+FROM aegis/frr:latest
+
+# Enable bgpd; keep ospfd disabled (no OSPF lab exists yet — enabling it would
+# widen the substrate's blast radius for no product reason). Then ASSERT the
+# resulting daemon state and FAIL THE BUILD if it is not what we intend. Same
+# discipline as the base image: never ship a substrate that only *reads* as
+# configured.
+#
+# On FRR 10.x /etc/frr/daemons DOES carry an explicit `bgpd=yes|no` line (unlike
+# zebra/staticd), so the sed below is a real edit, not a no-op — and the assert
+# proves it.
+RUN set -eu; \
+    f=/etc/frr/daemons; \
+    sed -i -E 's/^bgpd=.*/bgpd=yes/' "$f"; \
+    sed -i -E 's/^ospfd=.*/ospfd=no/' "$f"; \
+    require() { \
+        grep -qE "^$1=$2$" "$f" \
+            || { echo "BUILD ASSERT FAILED: expected ^$1=$2$ in $f" >&2; \
+                 grep -nE "^$1=" "$f" >&2 || true; exit 1; }; \
+    }; \
+    require bgpd yes; \
+    require ospfd no; \
+    echo 'FRR daemon state asserted: bgpd=yes ospfd=no (zebra+staticd always-on)'

@@ -165,6 +165,8 @@ cp -r "${SCRIPT_DIR}/backend"     "${AEGIS_DIR}/backend"
 cp -r "${SCRIPT_DIR}/frontend"    "${AEGIS_DIR}/frontend"
 cp -r "${SCRIPT_DIR}/lab-definitions" "${AEGIS_DIR}/lab-definitions"
 cp    "${SCRIPT_DIR}/Dockerfile.frr"  "${AEGIS_DIR}/Dockerfile.frr"
+cp    "${SCRIPT_DIR}/Dockerfile.frr-bgp" "${AEGIS_DIR}/Dockerfile.frr-bgp" 2>/dev/null || \
+    warn "No Dockerfile.frr-bgp to ship"
 cp    "${SCRIPT_DIR}/README.md"       "${AEGIS_DIR}/README.md"
 
 # Ship the pinned FRR image tarball + its pin file (step-4 transport).
@@ -373,6 +375,59 @@ if [[ "${NEED_FRR_BUILD}" -eq 1 ]]; then
         echo "installed_dockerfile_sha256=${INSTALLED_LABEL}"
         echo "installed_layers_sha256=${INSTALLED_LAYERS_SHA}"
     } > "${AEGIS_DIR}/assets/installed-image-id.txt" 2>/dev/null || true
+fi
+
+# --- Step 7b: BGP substrate (aegis/frr-bgp:latest) ---------------------------
+# The base substrate disables bgpd, and the app correctly REFUSES to deploy a
+# lab the substrate cannot run (lab-04 two-AS peering requires bgpd). Shipping a
+# second substrate with bgpd enabled is what turns that refusal into a deploy.
+#
+# Built FROM the pinned base tag, so the base layers are reused byte-for-byte;
+# only one small layer is added, which is why this substrate has its OWN
+# transport-invariant layer chain. Both digests are published in the install
+# record, and the app accepts a grade on either.
+BGP_DOCKERFILE="${AEGIS_DIR}/Dockerfile.frr-bgp"
+if [[ -f "${BGP_DOCKERFILE}" ]]; then
+    log "Step 7b: Building BGP substrate (aegis/frr-bgp:latest)..."
+    # Rebuild when the base layer chain or the BGP Dockerfile changed. Same
+    # fingerprint discipline as the base: a stale tag must not survive.
+    BGP_SRC_SHA=$(sha256sum "${BGP_DOCKERFILE}" | awk '{print $1}')
+    BGP_NEED_BUILD=1
+    if docker image inspect aegis/frr-bgp:latest &>/dev/null; then
+        BGP_BASE_LAYERS=$(docker image inspect aegis/frr:latest \
+            --format '{{range .RootFS.Layers}}{{.}} {{end}}' 2>/dev/null | tr -d ' ')
+        BGP_BASE_SHA=$(printf '%s' "${BGP_BASE_LAYERS}" | sha256sum | awk '{print $1}')
+        BGP_IMG_LABEL=$(docker image inspect aegis/frr-bgp:latest \
+            --format '{{index .Config.Labels "aegis.frr-bgp.dockerfile.sha256"}}' 2>/dev/null)
+        if [[ "${BGP_SRC_SHA}" == "${BGP_IMG_LABEL}" && \
+              "${BGP_BASE_SHA}" == "${INSTALLED_LAYERS_SHA:-}" ]]; then
+            log "BGP substrate is up to date (fingerprint + base layers match), skipping"
+            BGP_NEED_BUILD=0
+        else
+            warn "aegis/frr-bgp:latest is stale — rebuilding"
+        fi
+    fi
+    if [[ "${BGP_NEED_BUILD}" -eq 1 ]]; then
+        docker build --no-cache \
+            --label "aegis.frr-bgp.dockerfile.sha256=${BGP_SRC_SHA}" \
+            -f "${BGP_DOCKERFILE}" -t aegis/frr-bgp:latest "${AEGIS_DIR}" \
+            || { err "BGP substrate build FAILED"; exit 1; }
+        log "BGP substrate built (fingerprint ${BGP_SRC_SHA:0:16}...)"
+    fi
+    BGP_LAYERS=$(docker image inspect aegis/frr-bgp:latest \
+        --format '{{range .RootFS.Layers}}{{.}} {{end}}' 2>/dev/null | tr -d ' ')
+    BGP_LAYERS_SHA=$(printf '%s' "${BGP_LAYERS}" | sha256sum | awk '{print $1}')
+else
+    warn "No Dockerfile.frr-bgp — BGP labs will be correctly refused, not deployable"
+    BGP_LAYERS_SHA=""
+fi
+
+# Append the extra substrate digest(s) to the install record. The app accepts a
+# grade on ANY published substrate digest; lab-04 runs on the BGP one.
+if [[ -n "${BGP_LAYERS_SHA:-}" ]]; then
+    printf 'installed_substrate_digests=sha256:%s sha256:%s\n' \
+        "${INSTALLED_LAYERS_SHA}" "${BGP_LAYERS_SHA}" \
+        >> "${AEGIS_DIR}/assets/installed-image-id.txt" 2>/dev/null || true
 fi
 
 # --- Step 8: Systemd Service (optional) --------------------------------------

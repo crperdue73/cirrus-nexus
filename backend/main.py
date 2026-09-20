@@ -101,11 +101,18 @@ class LabDef(BaseModel):
     gradeable_nodes: list[str] = []
     # FRR daemons this lab REQUIRES to be running on the substrate
     # (e.g. ["bgpd"]). Empty means "no dynamic-routing requirement" and keeps
-    # historical behaviour. Enforced at deploy time against the pinned
-    # substrate's /etc/frr/daemons so a lab can never be deployed onto a
-    # substrate that can only grade it red forever (found 2026-09-20: lab-04
-    # two-AS peering vs. a `bgpd=no` image).
+    # historical behaviour. Enforced at deploy time against the substrate's
+    # OWN /etc/frr/daemons so a lab can never be deployed onto a substrate that
+    # can only grade it red forever (found 2026-09-20: lab-04 two-AS peering vs.
+    # a `bgpd=no` image).
     requires_daemons: list[str] = []
+    # The substrate image THIS lab's routers run. Defaults to the pinned base
+    # substrate. A lab that requires a daemon the base disables (e.g. bgpd) must
+    # name a substrate that enables it (aegis/frr-bgp:latest) — otherwise the
+    # capability gate below will (correctly) refuse it. The gate reads the image
+    # the lab actually deploys, not a global default, so capability and
+    # deployability can never disagree.
+    substrate_image: str = ""
 
 
 class GraderResult(BaseModel):
@@ -296,6 +303,30 @@ def _parse_yaml_metadata(path: Path) -> dict | None:
     return None
 
 
+def _substrate_image_for(topology_file: str) -> str:
+    """Detect which AEGIS substrate a lab's routers run, from its topology.
+
+    Scans node specs for the first `aegis/frr...` image. Falls back to the
+    pinned base. This makes the topology the source of truth for capability:
+    the gate reads exactly the image the lab will deploy, so a lab and its
+    substrate cannot drift apart (lab-04 vs. a bgpd=no base was that drift).
+    """
+    try:
+        with open(LABS_DIR / topology_file) as f:
+            data = yaml.safe_load(f) or {}
+    except (OSError, yaml.YAMLError):
+        return AEGIS_SUBSTRATE_IMAGE
+    nodes = (data.get("topology") or {}).get("nodes") or {}
+    if isinstance(nodes, dict):
+        for spec in nodes.values():
+            if not isinstance(spec, dict):
+                continue
+            image = spec.get("image")
+            if isinstance(image, str) and image.startswith("aegis/frr"):
+                return image
+    return AEGIS_SUBSTRATE_IMAGE
+
+
 def _discover_labs() -> list[dict]:
     """Scan lab-definitions/ for YAML files with metadata sections."""
     labs = []
@@ -322,6 +353,7 @@ def _discover_labs() -> list[dict]:
             "tip": meta.get("tip", ""),
             "gradeable_nodes": meta.get("gradeable_nodes", []),
             "requires_daemons": meta.get("requires_daemons", []),
+            "substrate_image": _substrate_image_for(f.name),
         })
     return labs
 
@@ -643,18 +675,20 @@ def _allocate_port() -> int:
 _FRR_IMPLICIT_ON = {"zebra", "staticd", "mgmtd"}
 
 
-def _substrate_daemons() -> dict[str, bool] | None:
-    """Read the pinned substrate's enabled FRR daemons from a throwaway container.
+def _substrate_daemons(image: str | None = None) -> dict[str, bool] | None:
+    """Read a substrate's enabled FRR daemons from a throwaway container.
 
     Source of truth is the substrate AS RUN — read by starting it and asking
     the file plus FRR's implicit watchfrr defaults. Not a build log, not a
-    label. Returns None when the substrate cannot be read (no image, docker
-    error); callers must treat None as "unknown", never as "capable".
+    label. `image` selects which substrate to read; None means the pinned base.
+    Returns None when the substrate cannot be read (no image, docker error);
+    callers must treat None as "unknown", never as "capable".
     """
+    image = image or AEGIS_SUBSTRATE_IMAGE
     try:
         proc = subprocess.run(
             ["docker", "run", "--rm", "--entrypoint", "cat",
-             AEGIS_SUBSTRATE_IMAGE, "/etc/frr/daemons"],
+             image, "/etc/frr/daemons"],
             capture_output=True, text=True, timeout=30
         )
     except (OSError, subprocess.SubprocessError):
@@ -697,16 +731,17 @@ def _capability_refusal(lab: LabDef) -> str | None:
     required = [d for d in (lab.requires_daemons or []) if d]
     if not required:
         return None
-    daemons = _substrate_daemons()
+    image = lab.substrate_image or AEGIS_SUBSTRATE_IMAGE
+    daemons = _substrate_daemons(image)
     if daemons is None:
         return ("substrate capability unknown: could not read /etc/frr/daemons "
-                f"from {AEGIS_SUBSTRATE_IMAGE}; refusing to deploy "
+                f"from {image}; refusing to deploy "
                 f"{lab.id} which requires {required}")
     missing = [d for d in required if not daemons.get(d, False)]
     if not missing:
         return None
     return (f"substrate cannot run {lab.id}: requires daemons {missing}, "
-            f"but {AEGIS_SUBSTRATE_IMAGE} enables only "
+            f"but {image} enables only "
             f"{sorted(d for d, on in daemons.items() if on)}. "
             "Redeploy on a substrate built with those daemons enabled.")
 
@@ -859,14 +894,36 @@ def _resolve_runtime_digest_once(containers: dict) -> str:
     live = substrate_digests.pop()
 
     pin = _installed_pin()
-    expected = pin.get("installed_layers_sha256", "")
+    expected = _pinned_substrate_digests(pin)
     if not expected:
         # No installer-published identity on this host: unattributable.
         return ""
-    if live != f"sha256:{expected}":
-        # Live substrate is not the one the installer verified.
+    if live not in expected:
+        # Live substrate is not one the installer verified.
         return ""
     return live
+
+
+def _pinned_substrate_digests(pin: dict) -> set[str]:
+    """The set of substrate layer-chain digests the installer verified.
+
+    AEGIS ships more than one substrate: the base (static routing) and the
+    BGP variant (bgpd enabled, for lab-04). Each is a legitimate, install-verified
+    substrate with its OWN transport-invariant layer chain, so the install record
+    publishes a SET of accepted digests. A grade on any of them is citable.
+
+    Reads `installed_substrate_digests` (space-separated) when present, and
+    always folds in the legacy single `installed_layers_sha256` for
+    backward-compatibility with records written by older installers.
+    """
+    digests: set[str] = set()
+    multi = pin.get("installed_substrate_digests", "").split()
+    for d in multi:
+        digests.add(d if d.startswith("sha256:") else f"sha256:{d}")
+    legacy = pin.get("installed_layers_sha256", "")
+    if legacy:
+        digests.add(legacy if legacy.startswith("sha256:") else f"sha256:{legacy}")
+    return digests
 
 
 def _aegis_less_identity(containers: dict) -> str:
