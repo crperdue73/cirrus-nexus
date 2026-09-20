@@ -858,3 +858,54 @@ STEP BOARD: 1,2,3,4,5 DONE; composite DONE; race DONE; gate-swallow DONE;
 REMAINING (open product work, NOT exit-bar blockers):
   - app has no sessions-list endpoint (GET /api/sessions -> 404); stopping a
     session requires the id. Minor ergonomics gap noticed this hour.
+
+---
+
+## 2026-09-20 14:0x EDT — RECONCILE OWNERSHIP GATE (the app no longer claims labs it didn't deploy)
+
+Did NOT re-reproduce the exit bar for show. Found and closed a REAL, dangerous
+defect by comparing the 13:0x reconcile proof's claim to the live host.
+
+DEFECT: the 13:0x proof states "Ethan's own non-sessionized lab ... is correctly
+  NOT adopted." FALSE live: `GET /api/sessions` listed `d7776359` — ETHAN'S lab
+  (hand-deployed 2026-09-19 22:04 from his own topology dir; named as his 6x in
+  this ledger) — as a product session, `student_name="(reconciled)"`.
+  ROOT CAUSE: ownership inferred from a NAME PATTERN (`clab-<topo>-<8hex>-<node>`).
+  His topology name `aegis-two-as-peering` + a hex-looking suffix parsed as a
+  session id. Consequences: the app claimed a lab it didn't create AND exposed
+  `POST /api/sessions/d7776359/stop`, which would have DESTROYED HIS LAB.
+
+FIX (backend/main.py): durable ownership stamped at CREATION, reconcile gated on it.
+  - `_prepare_topology` injects `aegis.session.id` + `aegis.lab.id` into every
+    node's `labels:`. Creation-time is the ONLY working mechanism here: this
+    daemon's `docker update` has no `--label-add` (exit 125) and labels are
+    immutable post-create.
+  - `_running_clab_containers` returns (name, session_label, lab_label).
+  - `reconcile_sessions` adopts ONLY containers carrying our label. Blank =>
+    not ours => skipped. Stamped lab id preferred over name reverse-mapping.
+  - Removed the dead `_stamp_session_labels` helper.
+
+VERIFIED LIVE:
+  fresh deploy ad20ffe4 -> all 3 nodes labeled; Ethan's r1 label = <blank>
+  restart -> count 1: ad20ffe4 adopted (digest aegis-less:4ab4e8d7...),
+             d7776359 adopted? False
+  POST /api/sessions/d7776359/stop -> 404 ; his 6 containers still Up
+  POST /api/sessions/ad20ffe4/stop -> destroyed, 0 leftovers
+  REGRESSION lab-04 -> session 8418e3ea, digest sha256:bb7ef23a... == pin;
+    grade r3 status=graded score=0.35 digest carried; stopped clean.
+  py_compile (+ -W error::SyntaxWarning) CLEAN; `bash -n install.sh` CLEAN.
+
+MIGRATION (honest): 24 pre-fix product containers had no label; backfilled by
+  hand using evidence other than the name (product runtime dir + loadable lab
+  def). `d7776359` deliberately EXCLUDED. One-time migration, not product code.
+
+ARTIFACT: backend/main.py
+PROOF: .nexus/proofs/2026-09-20-reconcile-ownership-gate.md
+
+STEP BOARD: exit-bar steps 1-5 + composite + race + gate-swallow + lab-04 grader
+  + VC + in-band discriminator + demo-lab unblock + sessions endpoint +
+  startup reconcile ALL DONE; ownership gate DONE (this hour).
+REMAINING: none blocking the exit bar. The exit bar itself remains met and
+  re-verified; the cron stays retireable by its stated definition.
+
+Not touched: Ethan's lab containers.

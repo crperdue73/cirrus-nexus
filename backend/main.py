@@ -350,15 +350,37 @@ def _load_grader(module_name: str):
 
 # --- Topology helpers ---
 
-def _running_clab_containers() -> list[str]:
-    """List container names that belong to a ContainerLab topology (clab-*)."""
+SESSION_LABEL = "aegis.session.id"
+LAB_LABEL = "aegis.lab.id"
+
+
+def _running_clab_containers() -> list[tuple[str, str, str]]:
+    """List `clab-*` containers as (name, session-label, lab-label).
+
+    Labels are "" for containers the product did not deploy — those are
+    someone else's (a hand-run lab, Ethan's labs) and must not be adopted.
+    """
     out = subprocess.run(
-        ["docker", "ps", "--format", "{{.Names}}"],
+        ["docker", "ps",
+         "--format",
+         f"{{{{.Names}}}}\t{{{{.Label \"{SESSION_LABEL}\"}}}}"
+         f"\t{{{{.Label \"{LAB_LABEL}\"}}}}"],
         capture_output=True, text=True, timeout=15,
     )
     if out.returncode != 0:
         return []
-    return [n for n in out.stdout.split() if n.startswith("clab-")]
+    rows = []
+    for line in out.stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = line.split("\t")
+        if len(parts) < 3:
+            parts += [""] * (3 - len(parts))
+        name, session_label, lab_label = parts[0], parts[1], parts[2]
+        if name.startswith("clab-"):
+            rows.append((name, session_label.strip(), lab_label.strip()))
+    return rows
 
 
 def _session_id_from_container(name: str) -> str | None:
@@ -387,14 +409,24 @@ def reconcile_sessions() -> int:
     host's actual state diverged, and the orphans were unaddressable (could not
     be listed, graded, or stopped by id).
 
-    Reconcile by scanning `docker ps` for `clab-*` containers, grouping them by
-    the 8-char session id embedded in the name, and rebuilding each session the
-    same way start_lab builds it — including resolving the runtime digest OFF
-    THE RUNNING CONTAINERS, so a reconciled session still satisfies the Step 5
-    invariant (a state cannot be cited without its digest). Sessions whose
-    digest cannot be resolved are NOT silently adopted with an empty digest;
-    they are registered with runtime_digest="" and will refuse to grade, which
-    is the honest outcome (they are visible and stoppable, but unattributable).
+    Reconcile by scanning `docker ps` for `clab-*` containers THAT CARRY OUR
+    OWNERSHIP LABEL (`aegis.session.id`, stamped at deploy time by
+    _stamp_session_labels). A container without the label was not deployed by
+    this product — a hand-run lab, or another agent's (Ethan's) lab — and is
+    deliberately NOT adopted: the product must never claim, grade, or offer to
+    destroy a lab it did not create. (Before this gate, reconcile matched any
+    `clab-<topo>-<8hex>-<node>` name, which swept in hand-deployed labs whose
+    topology name happened to carry a hex-looking suffix — a real defect: it
+    exposed a STOP route that would have torn down someone else's lab.)
+
+    Group the adopted containers by the label's session id and rebuild each
+    session the same way start_lab builds it — including resolving the runtime
+    digest OFF THE RUNNING CONTAINERS, so a reconciled session still satisfies
+    the Step 5 invariant (a state cannot be cited without its digest). Sessions
+    whose digest cannot be resolved are NOT silently adopted with an empty
+    digest; they are registered with runtime_digest="" and will refuse to grade,
+    which is the honest outcome (they are visible and stoppable, but
+    unattributable).
 
     Returns the number of sessions adopted.
     """
@@ -403,33 +435,48 @@ def reconcile_sessions() -> int:
         return 0
 
     grouped: dict[str, dict] = {}
-    for name in names:
-        sid = _session_id_from_container(name)
-        if not sid:
+    for name, owner_label, lab_label in names:
+        # Ownership gate: only containers WE stamped. A blank label means the
+        # product did not deploy this container (e.g. Ethan's lab) => not ours.
+        if not owner_label:
             continue
+        sid = owner_label
         # `clab-<topo>-<sid>-<node>` -> node is the remainder after the sid
         # segment. Split once on the sid boundary so hyphenated nodes survive.
         marker = f"-{sid}-"
         idx = name.find(marker)
-        if idx == -1:
-            continue
-        node = name[idx + len(marker):]
-        base = name[len("clab-"):idx]  # base topology name (may include hex-ish text)
-        grouped.setdefault(sid, {"base": base, "nodes": {}})["nodes"][node] = name
+        if idx != -1:
+            node = name[idx + len(marker):]
+            base = name[len("clab-"):idx]
+        else:
+            # Label present but the name does not embed the sid. Still adopt so
+            # the containers stay addressable; node = trailing name segment.
+            cut = name.rfind("-")
+            if cut == -1:
+                continue
+            node = name[cut + 1:]
+            base = name[len("clab-"):cut]
+        entry = grouped.setdefault(
+            sid, {"base": base, "lab_label": lab_label, "nodes": {}}
+        )
+        entry["nodes"][node] = name
+        if lab_label:
+            entry["lab_label"] = lab_label
 
     adopted = 0
     for sid, info in grouped.items():
         if sid in SESSIONS:
             continue
-        # Map the base topology name back to a discovered lab id (best effort).
-        lab_id = ""
-        for lab in LABS:
-            if _get_topology_name(lab.topology_file) == info["base"]:
-                lab_id = lab.id
-                break
+        # Prefer the lab id stamped at deploy (authoritative). Fall back to
+        # reverse-mapping the topology name, then to the base name itself so a
+        # renamed/removed lab is still addressable and stoppable.
+        lab_id = info.get("lab_label") or ""
         if not lab_id:
-            # Topology no longer corresponds to a lab definition (renamed or
-            # removed). Still adopt it so it is addressable and stoppable.
+            for lab in LABS:
+                if _get_topology_name(lab.topology_file) == info["base"]:
+                    lab_id = lab.id
+                    break
+        if not lab_id:
             lab_id = info["base"]
 
         try:
@@ -507,6 +554,24 @@ def _prepare_topology(lab: LabDef, session_id: str) -> tuple[Path, str]:
     base_name = data.get("name", Path(lab.topology_file).stem)
     unique_name = f"{base_name}-{session_id}"
     data["name"] = unique_name
+
+    # Stamp durable ownership on every node, at container-CREATION time.
+    # Docker labels are immutable after creation (`docker update` on this daemon
+    # has no --label-add), so this is the only way to mark a container as ours.
+    # A durable label is what lets `reconcile_sessions` tell OUR labs from a
+    # hand-deployed lab (e.g. Ethan's) after a restart, when SESSIONS is gone.
+    topo = data.get("topology")
+    nodes = topo.get("nodes") if isinstance(topo, dict) else None
+    if isinstance(nodes, dict):
+        for _node, spec in nodes.items():
+            if not isinstance(spec, dict):
+                continue
+            labels = spec.get("labels")
+            if not isinstance(labels, dict):
+                labels = {}
+            labels[SESSION_LABEL] = session_id
+            labels[LAB_LABEL] = lab.id
+            spec["labels"] = labels
 
     clean_path = LABS_DIR / f"._clean_{lab.topology_file}_{session_id}.yml"
     with open(clean_path, "w") as f:
@@ -598,6 +663,9 @@ def deploy_lab(lab: LabDef, session_id: str) -> dict:
             capture_output=True, timeout=15
         )
 
+    # Ownership is stamped at CREATION time by _prepare_topology (docker
+    # labels are immutable after creation on this daemon), so nothing to do
+    # here. reconcile_sessions reads the label to decide what is ours.
     return containers
 
 
