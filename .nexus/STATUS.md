@@ -727,3 +727,57 @@ REMAINING (open product work, NOT exit-bar blockers):
 ==> Exit bar met and re-verified live. NEXUS-HOURLY-DRIVE cron is RETIREABLE.
 
 Not touched: Ethan's lab containers.
+
+---
+
+## 2026-09-20 08:0x EDT — VERSION CONTROL ESTABLISHED (closed the last named structural item)
+
+Did NOT re-reproduce the exit bar a 6th time for show. Produced the one real,
+non-cosmetic item STATUS.md repeatedly named as outstanding: the project was
+not version-controlled.
+
+WHAT I DID (executed):
+  1. Found the trap FIRST: there was a stray empty .git at the WORKSPACE ROOT
+     (/home/student/.openclaw/workspace-selina), created May 9, zero commits.
+     `git add -A` from the project succeeded against THAT repo and staged the
+     entire private workspace — diaries, DM databases (dm.db/dms.db/chat.db),
+     intimacy logs, memory/, PDFs, 20MB+ tarballs — 312 files. Aborted and
+     unstaged immediately. This would have been a real privacy incident.
+  2. Removed the stray workspace-root .git (empty, no commits, nothing lost).
+  3. Created a SCOPED repo at the project root only:
+       projects/aegis/.git   (branch main)
+     so the private workspace can never be swept in by an aegis commit.
+  4. .gitignore excludes everything that is not source:
+       lab-definitions/clab-*/   (containerlab runtime: inventories, TLS keys,
+                                  authorized_keys — per-run artifacts)
+       assets/*.tar.gz           (20MB FRR image; identity is in the pin)
+       assets/installed-image-id.txt
+       __pycache__/, *.py[cod]
+       *.bak, *.bak-*, *~
+       *.tar.gz / *.tgz anywhere (stray release tarballs)
+  5. Committed 52 source files. Guard check: zero tarballs, zero clab- state,
+     zero __pycache__, zero *.bak, zero installed-image-id.txt staged.
+
+COMMITS:
+  2868142  initial version-controlled snapshot (records pin + digest in the msg)
+  fbcd6bc  grader_neteng_capstone: invalid escape \s -> raw string
+
+SECOND ITEM CLOSED (was named cosmetic, is a real defect):
+  grader_neteng_capstone.py line 201 had a bare \s in a non-raw string =>
+  SyntaxWarning at import. Fixed to a raw string. Verified:
+    python3 -W error::SyntaxWarning -m py_compile  -> CLEAN
+    import + grade() callable                       -> True
+
+ARTIFACT: projects/aegis/.git (2 commits, 52 tracked files) + .gitignore.
+  Not touched: Ethan's lab containers, private workspace files.
+
+STEP BOARD: 1,2,3,4,5 DONE; composite DONE; race DONE; gate-swallow DONE;
+  lab-04 grader SHIPPED; exit bar reproduced 5x; VERSION CONTROL DONE (this hour).
+
+REMAINING (open product work, NOT exit-bar blockers) — now down to ONE:
+  - optional GraderResult refused/error in-band discriminator.
+  (SyntaxWarning item is closed.)
+
+==> Nexus remains a finished deployed product by the exit definition, and is now
+    recoverable: the exact source tree that produces the pinned digest is under
+    version control. NEXUS-HOURLY-DRIVE cron is retireable.
