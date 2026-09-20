@@ -49,6 +49,24 @@ TTYD_PROCS: dict = {}  # port -> subprocess.Popen
 # images (e.g. alpine PCs) are deliberately NOT part of the substrate identity.
 AEGIS_SUBSTRATE_IMAGE = "aegis/frr:latest"
 
+# Attributed-lab identity prefixes.
+#
+# `sha256:`      — the lab includes the pinned AEGIS substrate; the value is that
+#                  substrate's transport-invariant layer-chain digest, comparable
+#                  to install.sh's published `installed_layers_sha256`.
+# `aegis-less:`  — the lab runs NO AEGIS substrate at all (e.g. the shipping
+#                  two-PC demo: three alpine nodes, no FRR, no BGP). There is
+#                  nothing pinned to verify, so the honest identity is a
+#                  deterministic hash over the images the nodes ACTUALLY run.
+#                  This is still an identity: it is derived off the running
+#                  containers, is stable across a redeploy of the same lab, and
+#                  changes if any node's image changes. It is NOT a refusal and
+#                  NOT a pass — it is provenance for a lab that has no substrate.
+#                  (Found 2026-09-20: the demo lab was refused outright because
+#                  the guard conflated "no pinned substrate" with "unattributable",
+#                  so the shipping demo could not start through the product.)
+AEGIS_LESS_PREFIX = "aegis-less:"
+
 
 # --- No-cache middleware (prevents browser caching during dev) ---
 
@@ -488,6 +506,12 @@ def resolve_runtime_digest(containers: dict) -> str:
     the session is genuinely mixed and we refuse ("") — that is a real ambiguity,
     unlike an alpine PC.
 
+    A lab running NO AEGIS substrate at all (e.g. the shipping two-PC demo: three
+    alpine nodes, no FRR) is not ambiguous — it is a legitimate unpinned lab. It
+    is attributed with `aegis-less:<sha256>`, a deterministic identity over the
+    node images actually in use, rather than refused. Only a lab whose identity
+    cannot be read off the running containers returns "" (hard refusal).
+
     Additionally cross-check the live substrate against the identity install.sh
     PUBLISHED for this host (`installed_layers_sha256`). A grade may only cite a
     substrate that is the one the installer verified. If the host publishes a
@@ -530,8 +554,13 @@ def _resolve_runtime_digest_once(containers: dict) -> str:
         substrate_digests.add(d)
 
     if not substrate_digests:
-        # No node runs the pinned substrate — nothing to attribute.
-        return ""
+        # No node runs the pinned AEGIS substrate. This is NOT automatically
+        # unattributable: a legitimate lab may run no substrate at all (the
+        # shipping two-PC demo is three alpines with no routing protocol).
+        # Attribute it honestly instead of refusing: a deterministic identity
+        # over the node images actually in use. Blank is reserved for a lab we
+        # truly cannot resolve (see below).
+        return _aegis_less_identity(containers)
     if len(substrate_digests) != 1:
         # Two different AEGIS substrates in one lab: genuinely ambiguous.
         return ""
@@ -546,6 +575,31 @@ def _resolve_runtime_digest_once(containers: dict) -> str:
         # Live substrate is not the one the installer verified.
         return ""
     return live
+
+
+def _aegis_less_identity(containers: dict) -> str:
+    """Content identity for a lab that runs NO pinned AEGIS substrate.
+
+    Returns "" when it cannot be computed from the RUNNING containers (an
+    unresolvable image => genuinely unattributable => refuse). Otherwise returns
+    `aegis-less:<sha256>`, a deterministic hash over each node's sorted
+    `name=layer-chain` pair. Derived off the same running-container reads as the
+    substrate path (never a build log, never a tag), so it survives a redeploy
+    of the same lab and changes the moment any node's image changes.
+    """
+    node_layers = []
+    for name, container in sorted(containers.items()):
+        image_ref = _container_image(container)
+        if not image_ref:
+            return ""
+        layers = _image_layers_sha(image_ref)
+        if not layers:
+            return ""
+        node_layers.append(f"{name}={layers}")
+    if not node_layers:
+        return ""
+    h = hashlib.sha256("\n".join(node_layers).encode()).hexdigest()
+    return f"{AEGIS_LESS_PREFIX}{h}"
 
 
 def _container_image(container: str) -> str:

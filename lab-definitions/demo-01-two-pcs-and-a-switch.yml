@@ -1,0 +1,80 @@
+# =============================================================================
+# AEGIS — DEMO LAB 01: Two PCs and a Switch
+# =============================================================================
+# Dad's spec (2026-09-20):
+#   "a single DEMO lab with 2 PCs and a switch. the student needs to configure
+#    IPs on the two computers, and a management IP on the switch. when PC 1 can
+#    ping BOTH the switch and PC 2, then the lab works. simple demo."
+#
+# Topology:
+#
+#     pc-a ────────── switch ────────── pc-b
+#   10.0.1.1/24   10.0.1.254/24     10.0.1.2/24
+#
+# NO routing. NO FRR. NO BGP. Three devices, three IPs, two pings.
+#
+# Student tasks:
+#   1. pc-a  : ip addr add 10.0.1.1/24   dev eth1 ; ip link set eth1 up
+#   2. pc-b  : ip addr add 10.0.1.2/24   dev eth1 ; ip link set eth1 up
+#   3. switch: ip addr add 10.0.1.254/24 dev eth-0(SVI/br0) ; link up
+#   4. pc-a  : ping 10.0.1.254  (the switch)  AND  ping 10.0.1.2  (pc-b)
+#
+# Pass condition: BOTH pings from pc-a succeed.
+# =============================================================================
+metadata:
+  course: CI-DEMO
+  id: demo-01-two-pcs-and-a-switch
+  name: "Demo — Two PCs and a Switch 🖥️🔀🖥️"
+  description: >
+    The shipping demo. Two computers connected through a switch. The student
+    assigns an IP on each PC and a management IP on the switch, then proves
+    the lab works by pinging the switch and the other PC from PC-A. Teaches
+    IP addressing, interface bring-up, L2 forwarding, and ping verification.
+    No routing, no dynamic protocols.
+  difficulty: Beginner
+  duration_min: 20
+  gradeable_nodes:
+    - pc-a
+    - pc-b
+    - switch
+  grader: grader_demo_01
+  competencies:
+    - IP addressing on a host
+    - Management IP on a switch (SVI)
+    - Interface bring-up
+    - Ping verification (host-to-switch, host-to-host)
+  prerequisites: []
+name: aegis-demo-01-two-pcs-and-a-switch
+topology:
+  nodes:
+    pc-a:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - apk add iproute2 iputils -q
+        - ip link set eth1 up
+
+    pc-b:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - apk add iproute2 iputils -q
+        - ip link set eth1 up
+
+    # The switch is a plain Linux bridge with a management IP on the bridge
+    # interface (the SVI equivalent). eth1 -> pc-a, eth2 -> pc-b.
+    switch:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - apk add iproute2 iputils bridge-utils -q
+        - ip link add name br0 type bridge
+        - ip link set br0 up
+        - ip link set eth1 up
+        - ip link set eth1 master br0
+        - ip link set eth2 up
+        - ip link set eth2 master br0
+
+  links:
+    - endpoints: ["pc-a:eth1", "switch:eth1"]
+    - endpoints: ["pc-b:eth1", "switch:eth2"]

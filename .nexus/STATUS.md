@@ -812,3 +812,49 @@ COMMIT:   c1746f8
 STEP BOARD: 1,2,3,4,5 ALL DONE. No named remaining items.
 ==> Nexus is a finished deployed product by the exit definition. Nothing further
     is outstanding. NEXUS-HOURLY-DRIVE cron is RETIREABLE.
+
+---
+
+## 2026-09-20 11:0x EDT — DEMO LAB UNBLOCKED (this hour's concrete step)
+
+Dad's new shipping spec (a DEMO lab: 2 PCs + a switch, pass = pc-a pings both)
+had been built by hand last hour but COULD NOT RUN THROUGH THE PRODUCT. This hour
+fixed that real defect and put the demo under version control.
+
+DEFECT (reproduced live first): `POST /sessions/start?lab_id=demo-01-...`
+  => 500 "Could not resolve runtime digest ... unattributable session".
+  ROOT CAUSE: `resolve_runtime_digest` treated "no `aegis/frr` substrate in the
+  lab" as "unattributable" and refused. A pure-alpine lab has nothing pinned to
+  verify — it is legitimately unpinned, not unattributable. The guard conflated
+  *provenance* with *gate*.
+
+FIX (backend/main.py): three explicit outcomes —
+  1. pinned substrate present + matches install record -> cite sha256:<layers>;
+  2. present but stale / multiple distinct substrates      -> "" hard refuse;
+  3. NO substrate at all                                    -> `aegis-less:<sha256>`,
+     a deterministic identity over each node's name=layer-chain pair, read off
+     the RUNNING containers. Blank is now reserved for a lab whose identity
+     genuinely cannot be read — that still refuses.
+  Step-5 invariant intact: a state is still never cited without an identity.
+
+VERIFIED (executed):
+  demo-01 -> session b3bce69f, digest aegis-less:4ab4e8d7...
+    unconfigured pc-a -> fail 0.0, digest cited
+    configured (per spec) -> pc-a ping 10.0.1.254 AND 10.0.1.2, 2/2 0% loss
+    grade pc-a 1.0 PASS / pc-b 0.5 PASS / switch 0.5 PASS, digest on every grade
+  redeploy -> session 200405b8, SAME aegis-less:4ab4e8d7... (stable)
+  REGRESSION: lab-04 -> sha256:bb7ef23a... == assets pin  MATCH (substrate path unchanged)
+  NEGATIVE: unresolvable node -> "" (refuse); empty set -> "" (refuse)
+  py_compile CLEAN; bash -n install.sh CLEAN.
+  Cleanup: all sessions destroyed, 0 leftovers; Ethan's d7776359 labs untouched (6 Up).
+
+ARTIFACT: backend/main.py + lab-definitions/demo-01-two-pcs-and-a-switch.yml +
+  lab-definitions/grader_demo_01.py (now version-controlled).
+PROOF: .nexus/proofs/2026-09-20-demo-lab-substrate-guard-fix.md
+
+STEP BOARD: 1,2,3,4,5 DONE; composite DONE; race DONE; gate-swallow DONE;
+  lab-04 grader SHIPPED; VC DONE; in-band discriminator DONE; DEMO LAB UNBLOCKED.
+
+REMAINING (open product work, NOT exit-bar blockers):
+  - app has no sessions-list endpoint (GET /api/sessions -> 404); stopping a
+    session requires the id. Minor ergonomics gap noticed this hour.
