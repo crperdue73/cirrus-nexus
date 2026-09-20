@@ -99,6 +99,13 @@ class LabDef(BaseModel):
     instructions: list[str] = []
     tip: str = ""
     gradeable_nodes: list[str] = []
+    # FRR daemons this lab REQUIRES to be running on the substrate
+    # (e.g. ["bgpd"]). Empty means "no dynamic-routing requirement" and keeps
+    # historical behaviour. Enforced at deploy time against the pinned
+    # substrate's /etc/frr/daemons so a lab can never be deployed onto a
+    # substrate that can only grade it red forever (found 2026-09-20: lab-04
+    # two-AS peering vs. a `bgpd=no` image).
+    requires_daemons: list[str] = []
 
 
 class GraderResult(BaseModel):
@@ -314,6 +321,7 @@ def _discover_labs() -> list[dict]:
             "instructions": meta.get("instructions", []),
             "tip": meta.get("tip", ""),
             "gradeable_nodes": meta.get("gradeable_nodes", []),
+            "requires_daemons": meta.get("requires_daemons", []),
         })
     return labs
 
@@ -628,10 +636,90 @@ def _allocate_port() -> int:
 
 # --- Core Functions ---
 
+# FRR daemons that watchfrr starts even when `/etc/frr/daemons` does not carry
+# an explicit `<name>=yes` line. Verified 2026-09-20 on aegis/frr:latest: the
+# file has no `zebra=`/`staticd=` line at all, yet both run under watchfrr.
+# Trusting the file alone would under-report capability and refuse good labs.
+_FRR_IMPLICIT_ON = {"zebra", "staticd", "mgmtd"}
+
+
+def _substrate_daemons() -> dict[str, bool] | None:
+    """Read the pinned substrate's enabled FRR daemons from a throwaway container.
+
+    Source of truth is the substrate AS RUN — read by starting it and asking
+    the file plus FRR's implicit watchfrr defaults. Not a build log, not a
+    label. Returns None when the substrate cannot be read (no image, docker
+    error); callers must treat None as "unknown", never as "capable".
+    """
+    try:
+        proc = subprocess.run(
+            ["docker", "run", "--rm", "--entrypoint", "cat",
+             AEGIS_SUBSTRATE_IMAGE, "/etc/frr/daemons"],
+            capture_output=True, text=True, timeout=30
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    daemons: dict[str, bool] = {}
+    for line in proc.stdout.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, _, value = line.partition("=")
+        name = name.strip()
+        if name.endswith("_options"):
+            continue
+        daemons[name] = value.strip().lower() == "yes"
+    if not daemons:
+        return None
+    # watchfrr starts its always-on core daemons regardless of an explicit
+    # `<name>=yes` line (the file does not list zebra/staticd at all).
+    for name in _FRR_IMPLICIT_ON:
+        daemons.setdefault(name, True)
+    return daemons
+
+
+class CapabilityRefusal(RuntimeError):
+    """The substrate cannot run the lab's required daemons. A refusal, not an
+    error: the request is well-formed and the answer is 'no', with a reason.
+    Rendered to the wire as 409, matching the digest-refusal convention."""
+
+
+def _capability_refusal(lab: LabDef) -> str | None:
+    """Return a refusal reason when the substrate cannot run the lab's daemons.
+
+    A refusal here is the honest outcome: deploying would put a lab on a
+    substrate that can only ever grade it red, so every red would be the
+    substrate's, not the student's. Better to refuse with a reason than to
+    emit a green-looking deploy and an unexplained failure.
+    """
+    required = [d for d in (lab.requires_daemons or []) if d]
+    if not required:
+        return None
+    daemons = _substrate_daemons()
+    if daemons is None:
+        return ("substrate capability unknown: could not read /etc/frr/daemons "
+                f"from {AEGIS_SUBSTRATE_IMAGE}; refusing to deploy "
+                f"{lab.id} which requires {required}")
+    missing = [d for d in required if not daemons.get(d, False)]
+    if not missing:
+        return None
+    return (f"substrate cannot run {lab.id}: requires daemons {missing}, "
+            f"but {AEGIS_SUBSTRATE_IMAGE} enables only "
+            f"{sorted(d for d, on in daemons.items() if on)}. "
+            "Redeploy on a substrate built with those daemons enabled.")
+
+
 def deploy_lab(lab: LabDef, session_id: str) -> dict:
     """Deploy a ContainerLab topology with a session-unique name, return node info."""
     if not (LABS_DIR / lab.topology_file).exists():
         raise FileNotFoundError(f"Topology file not found: {lab.topology_file}")
+
+    # Capability gate: never deploy a lab the pinned substrate cannot run.
+    refusal = _capability_refusal(lab)
+    if refusal:
+        raise CapabilityRefusal(refusal)
 
     nodes = _parse_topology_nodes(lab.topology_file)
     clean_path, unique_name = _prepare_topology(lab, session_id)
@@ -1052,6 +1140,9 @@ def start_lab(lab_id: str, student_name: str = "Student"):
             "status": "running",
             "message": f"Lab '{lab.name}' is ready! Open the terminal below to start.",
         }
+    except CapabilityRefusal as e:
+        # A refusal, not a server fault: 409 with a reason the operator can act on.
+        raise HTTPException(status_code=409, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

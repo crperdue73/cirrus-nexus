@@ -17,6 +17,8 @@ metadata:
   - r6
   grader: grader_lab_04_two_as_peering
   id: lab-04-two-as-peering
+  requires_daemons:
+  - bgpd
   instructions:
   - Inspect the peering session between r3 (AS 65001) and r4 (AS 65002)
   - 10.10.10.0/24 must originate in AS 65001 and be carried only over the 65001 side
