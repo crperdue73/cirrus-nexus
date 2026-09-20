@@ -377,6 +377,9 @@
             <div id="lab-cards"></div>
         </div>
 
+        <!-- Live Sessions (server truth; survives reload / different tab) -->
+        <div id="live-sessions" class="hidden" style="margin:24px 0;"></div>
+
         <!-- Active Session -->
         <div id="active-session" class="hidden"></div>
     </div>
@@ -384,6 +387,56 @@
     <script>
 var currentSession = null;
 var currentLab = null;
+
+// Live-sessions panel: the app's session list, not this tab's memory.
+// Lets an operator see and stop sessions it did not personally start.
+async function loadLiveSessions() {
+    var panel = document.getElementById('live-sessions');
+    var resp;
+    try {
+        resp = await fetch('/api/sessions');
+    } catch (e) {
+        panel.classList.add('hidden');
+        return;
+    }
+    if (!resp.ok) { panel.classList.add('hidden'); return; }
+    var data = await resp.json();
+    var sessions = data.sessions || [];
+    if (sessions.length === 0) { panel.classList.add('hidden'); panel.innerHTML = ''; return; }
+
+    var rows = sessions.map(function(s) {
+        var digest = (s.runtime_digest || '').slice(0, 24);
+        return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;' +
+            'padding:10px 14px;border:1px solid var(--border,#333);border-radius:8px;margin-bottom:8px;">' +
+            '<div style="text-align:left;min-width:0;">' +
+            '<div style="font-size:14px;font-weight:600;">' + escapeHtml(s.lab_id) + '</div>' +
+            '<div style="font-size:12px;opacity:0.7;">' + escapeHtml(s.student_name || '') +
+            ' \u00b7 ' + (s.nodes ? s.nodes.length : 0) + ' nodes \u00b7 id ' +
+            escapeHtml(s.session_id) + '</div>' +
+            '<div style="font-size:11px;opacity:0.55;font-family:monospace;">' +
+            escapeHtml(digest || '(no digest)') + '</div></div>' +
+            '<button class="btn btn-danger" style="padding:4px 12px;font-size:12px;white-space:nowrap;" ' +
+            'onclick="stopSessionById(\'' + escapeHtml(s.session_id) + '\')">\u2715 Stop</button>' +
+            '</div>';
+    }).join('');
+
+    panel.innerHTML = '<h3 style="font-size:15px;margin-bottom:12px;text-align:left;">\u23f1 Running sessions (' +
+        sessions.length + ')</h3>' + rows;
+    panel.classList.remove('hidden');
+}
+
+async function stopSessionById(sid) {
+    await fetch('/api/sessions/' + encodeURIComponent(sid) + '/stop', { method: 'POST' });
+    if (currentSession === sid) {
+        currentSession = null;
+        currentLab = null;
+        document.getElementById('active-session').classList.add('hidden');
+        document.getElementById('session-indicator').innerHTML = '';
+        document.getElementById('lab-catalog').classList.remove('hidden');
+    }
+    loadLiveSessions();
+    loadLabs();
+}
 
 async function loadLabs() {
     const name = document.getElementById('student-name').value.trim() || 'Student';
@@ -658,7 +711,13 @@ async function stopSession() {
     document.getElementById('active-session').classList.add('hidden');
     document.getElementById('session-indicator').innerHTML = '';
     document.getElementById('lab-catalog').classList.remove('hidden');
+    loadLiveSessions();
     loadLabs();
+}
+
+// Surface live sessions on first paint too (not just after an action).
+if (typeof window !== 'undefined') {
+    window.addEventListener('DOMContentLoaded', function() { loadLiveSessions(); });
 }
 
 </script>

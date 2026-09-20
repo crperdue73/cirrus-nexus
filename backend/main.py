@@ -842,6 +842,33 @@ def submit_config(session_id: str, node: str):
     return {"session_id": session_id, "node": node, "grade": grade}
 
 
+@app.get("/api/sessions")
+def list_sessions():
+    """Enumerate live sessions.
+
+    Without this, the only way to stop or grade a session was to already know
+    its id. An operator looking at running containers (the "who is on this host"
+    question) had no in-app path to the id. This is the read side of the session
+    lifecycle: start -> list -> get -> submit -> stop.
+
+    Each entry carries the session's runtime_digest (may be "" only if a session
+    is mid-teardown); a state is never cited without its identity.
+    """
+    sessions = []
+    for sid, s in SESSIONS.items():
+        sessions.append({
+            "session_id": sid,
+            "lab_id": s.get("lab_id", ""),
+            "student_name": s.get("student_name", ""),
+            "status": s.get("status", ""),
+            "created_at": s.get("created_at", 0),
+            "nodes": list(s.get("nodes", {}).keys()),
+            "runtime_digest": s.get("runtime_digest", ""),
+        })
+    sessions.sort(key=lambda x: x["created_at"], reverse=True)
+    return {"sessions": sessions, "count": len(sessions)}
+
+
 @app.get("/api/sessions/{session_id}")
 def get_session(session_id: str):
     session = SESSIONS.get(session_id)
