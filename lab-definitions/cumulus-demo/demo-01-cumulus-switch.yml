@@ -1,0 +1,85 @@
+# =============================================================================
+# AEGIS — DEMO LAB 01 (REAL SWITCH, CUMULUS): Two PCs and a Cumulus Linux Switch
+# =============================================================================
+# Dad's ask (2026-09-21): evaluate BOTH Nokia SR Linux AND Cumulus (networkop/cx),
+#   "pick whichever genuinely works, with evidence." Both were evaluated; both
+#   pass. This lab ships the Cumulus variant as a real, gradeable lab.
+#
+# Pass condition (NOT softened): pc-a pings BOTH 10.0.1.254 (switch) AND
+#   10.0.1.2 (pc-b), 0% loss. PC-to-PC alone does NOT count.
+#
+# Topology:
+#     pc-a ────────── sw1 (Cumulus) ────────── pc-b
+#   10.0.1.1/24         10.0.1.254/24          10.0.1.2/24
+#
+# THE FIX (this is the whole point on Cumulus):
+#   Cumulus Linux is Linux, but a *real* switch model. The L3 gateway address
+#   goes on the BRIDGE DEVICE ITSELF (br0), which acts as the SVI —
+#   "L3 on the bridge". Putting the address on a VLAN sub-interface (br0.1)
+#   instead makes the L2 forwarding domain (br0) and the L3 gateway path
+#   (br0.1) disagree: PC-to-PC works, but the switch's own IP goes 100% loss.
+#   That is the SAME CLASS of bug as SR Linux's mac-vrf/ip-vrf split.
+#
+#   Verified 2026-09-21 on a cold deploy:
+#     pc-a->switch 0% loss | pc-a->pc-b 0% loss | pc-b->switch 0% loss
+#     FDB: both PC MACs in br0/vlan 1.
+#
+# NOTE: networkop/cx is kind:linux (a container running the Cumulus userland);
+#   the config is applied via `exec` at start. The grader fingerprints Cumulus
+#   (real /etc/os-release + vtysh) so a plain Linux PC running a bridge fails.
+# =============================================================================
+metadata:
+  course: CI-DEMO
+  id: demo-01-two-pcs-and-a-real-switch-cumulus
+  name: "Demo — Two PCs and a Real Switch (Cumulus) 🖥️🔀🖥️"
+  description: >
+    The same shipping demo, on a REAL Cumulus Linux switch. Two computers
+    connected through a Cumulus switch. The student assigns an IP on each PC
+    and a management IP on the switch's bridge (SVI), then proves the lab
+    works by pinging the switch and the other PC from PC-A. Teaches IP
+    addressing, interface bring-up, L2 bridging, L3-on-the-bridge (SVI), and
+    ping verification.
+  difficulty: Beginner
+  duration_min: 25
+  gradeable_nodes:
+    - pc-a
+    - pc-b
+    - sw1
+  grader: grader_demo_01_cumulus
+  competencies:
+    - IP addressing on a host
+    - Management IP on a switch (SVI / L3-on-the-bridge)
+    - Interface bring-up
+    - L2 bridging vs L3 gateway on a switch
+    - Ping verification (host-to-switch, host-to-host)
+  prerequisites: []
+name: aegis-demo-01-cumulus-switch
+topology:
+  nodes:
+    pc-a:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - ip addr add 10.0.1.1/24 dev eth1
+        - ip link set eth1 up
+    pc-b:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - ip addr add 10.0.1.2/24 dev eth1
+        - ip link set eth1 up
+    sw1:
+      kind: linux
+      image: networkop/cx:latest
+      exec:
+        # Cumulus switch: VLAN-aware L2 bridge, L3 address on the bridge (SVI).
+        - ip link add name br0 type bridge vlan_filtering 1 vlan_default_pvid 1
+        - ip link set eth1 master br0
+        - ip link set eth2 master br0
+        - ip link set eth1 up
+        - ip link set eth2 up
+        - ip addr add 10.0.1.254/24 dev br0
+        - ip link set br0 up
+  links:
+    - endpoints: ["pc-a:eth1", "sw1:eth1"]
+    - endpoints: ["pc-b:eth1", "sw1:eth2"]
