@@ -1,0 +1,80 @@
+# =============================================================================
+# AEGIS — DEMO LAB 01 (REAL SWITCH): Two PCs and a Nokia SR Linux Switch
+# =============================================================================
+# Dad's spec (2026-09-20):
+#   "a single DEMO lab with 2 PCs and a switch... when PC 1 can ping BOTH the
+#    switch and PC 2, then the lab works."
+# Dad's correction (2026-09-21): the switch must be a REAL switch, not a Linux
+#   PC running a bridge. PC-to-PC is known-working low-hanging fruit and does
+#   NOT count as done. Target: a student can ping BOTH the switch and the PC.
+#
+# Topology:
+#     pc-a ────────── sw1 (SR Linux) ────────── pc-b
+#   10.0.1.1/24        10.0.1.254/24          10.0.1.2/24
+#
+# THE FIX (this is the whole point):
+#   An SR Linux switch routes on an IRB. irb0.0 MUST be a member of BOTH:
+#     - mac-vrf-1 (mac-vrf) — so the IRB participates in the L2 bridge domain
+#       alongside the bridged access ports ethernet-1/1.0 and ethernet-1/2.0
+#     - ip-vrf-1  (ip-vrf)  — so the IRB holds the L3 gateway address
+#   If irb0.0 is only in the ip-vrf (the naive config), the L2 bridge and the
+#   L3 gateway live in DIFFERENT network instances: PC-to-PC works, but the
+#   switch's own IP never answers ARP (100% loss). That was the observed bug.
+#
+#   Also required on a fresh switch: the access subinterfaces default to
+#   `type routed`; they must be explicitly `type bridged` to join a mac-vrf.
+#
+# Pass condition (NOT softened): pc-a pings BOTH 10.0.1.254 (switch) AND
+#   10.0.1.2 (pc-b), 0% loss.
+#
+# Verified 2026-09-21 15:09 EDT on a cold `containerlab deploy`:
+#   pc-a->switch 0% loss | pc-a->pc-b 0% loss | pc-b->switch 0% loss
+#   FDB shows the IRB MAC in the bridge table with both PCs.
+# =============================================================================
+metadata:
+  course: CI-DEMO
+  id: demo-01-two-pcs-and-a-real-switch
+  name: "Demo — Two PCs and a Real Switch (SR Linux) 🖥️🔀🖥️"
+  description: >
+    The shipping demo, on a REAL switch. Two computers connected through a
+    Nokia SR Linux switch. The student assigns an IP on each PC and a
+    management IP on the switch's IRB, then proves the lab works by pinging
+    the switch and the other PC from PC-A. Teaches IP addressing, interface
+    bring-up, L2 bridging, IRB/SVI L3 on a switch, and ping verification.
+  difficulty: Beginner
+  duration_min: 25
+  gradeable_nodes:
+    - pc-a
+    - pc-b
+    - sw1
+  grader: grader_demo_01_srl
+  competencies:
+    - IP addressing on a host
+    - Management IP on a switch (IRB/SVI)
+    - Interface bring-up
+    - L2 bridging vs L3 gateway on a switch
+    - Ping verification (host-to-switch, host-to-host)
+  prerequisites: []
+name: aegis-demo-01-srl-switch
+topology:
+  nodes:
+    pc-a:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - ip addr add 10.0.1.1/24 dev eth1
+        - ip link set eth1 up
+    pc-b:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - ip addr add 10.0.1.2/24 dev eth1
+        - ip link set eth1 up
+    sw1:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux:latest
+      type: ixrd2l
+      startup-config: assets/sw1.cfg
+  links:
+    - endpoints: ["pc-a:eth1", "sw1:e1-1"]
+    - endpoints: ["pc-b:eth1", "sw1:e1-2"]

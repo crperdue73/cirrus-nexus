@@ -107,11 +107,10 @@ class LabDef(BaseModel):
     # a `bgpd=no` image).
     requires_daemons: list[str] = []
     # The substrate image THIS lab's routers run. Defaults to the pinned base
-    # substrate. A lab that requires a daemon the base disables (e.g. bgpd) must
-    # name a substrate that enables it (aegis/frr-bgp:latest) — otherwise the
-    # capability gate below will (correctly) refuse it. The gate reads the image
-    # the lab actually deploys, not a global default, so capability and
-    # deployability can never disagree.
+    # substrate. The capability gate below reads the image the lab ACTUALLY
+    # deploys (not a global default), so capability and deployability can never
+    # disagree: a lab that needs a daemon the substrate disables is (correctly)
+    # refused rather than deployed onto an image that can only grade it red.
     substrate_image: str = ""
 
 
@@ -328,10 +327,21 @@ def _substrate_image_for(topology_file: str) -> str:
 
 
 def _discover_labs() -> list[dict]:
-    """Scan lab-definitions/ for YAML files with metadata sections."""
+    """Scan lab-definitions/ for YAML files with metadata sections.
+
+    Scans the top level AND one level of subdirectories, so a lab can keep
+    its topology plus its `assets/` (e.g. switch startup configs) together in
+    its own folder. `topology_file` is stored as a path RELATIVE to
+    LABS_DIR so every `LABS_DIR / topology_file` join still resolves, and
+    containerlab resolves in-YAML `startup-config` paths relative to the
+    topology file's own directory.
+    """
     labs = []
     seen_ids = set()
-    for f in sorted(LABS_DIR.glob("*.yml")):
+    candidates = list(LABS_DIR.glob("*.yml"))
+    for sub in sorted(p for p in LABS_DIR.iterdir() if p.is_dir()):
+        candidates.extend(sorted(sub.glob("*.yml")))
+    for f in sorted(candidates):
         meta = _parse_yaml_metadata(f)
         if not meta or "id" not in meta:
             continue
@@ -339,6 +349,7 @@ def _discover_labs() -> list[dict]:
         if lab_id in seen_ids:
             continue
         seen_ids.add(lab_id)
+        rel = f.relative_to(LABS_DIR)
         labs.append({
             "id": lab_id,
             "name": meta.get("name", lab_id),
@@ -347,13 +358,13 @@ def _discover_labs() -> list[dict]:
             "duration_min": meta.get("duration_min", 45),
             "competencies": meta.get("competencies", []),
             "course": meta.get("course", ""),
-            "topology_file": f.name,
+            "topology_file": str(rel),
             "grader_module": meta.get("grader", f"grader_{lab_id}"),
             "instructions": meta.get("instructions", []),
             "tip": meta.get("tip", ""),
             "gradeable_nodes": meta.get("gradeable_nodes", []),
             "requires_daemons": meta.get("requires_daemons", []),
-            "substrate_image": _substrate_image_for(f.name),
+            "substrate_image": _substrate_image_for(str(rel)),
         })
     return labs
 
@@ -639,6 +650,13 @@ def _prepare_topology(lab: LabDef, session_id: str) -> tuple[Path, str]:
             spec["labels"] = labels
 
     clean_path = LABS_DIR / f"._clean_{lab.topology_file}_{session_id}.yml"
+    # For labs in a subdirectory (lab.topology_file contains a '/'), write the
+    # session copy INTO that same subdirectory so containerlab still resolves
+    # the lab's `assets/` (e.g. switch startup-configs) relative to the copy.
+    # Flatten the filename so we never depend on a nested temp dir existing.
+    clean_path = LABS_DIR / Path(lab.topology_file).parent / (
+        f"._clean_{Path(lab.topology_file).name}_{session_id}.yml"
+    )
     with open(clean_path, "w") as f:
         yaml.dump(data, f, default_flow_style=False)
 
@@ -647,7 +665,9 @@ def _prepare_topology(lab: LabDef, session_id: str) -> tuple[Path, str]:
 
 def _remove_clean_copy(topology_file: str, session_id: str):
     """Remove the session-specific cleaned temp YAML."""
-    clean_path = LABS_DIR / f"._clean_{topology_file}_{session_id}.yml"
+    clean_path = LABS_DIR / Path(topology_file).parent / (
+        f"._clean_{Path(topology_file).name}_{session_id}.yml"
+    )
     if clean_path.exists():
         clean_path.unlink()
 

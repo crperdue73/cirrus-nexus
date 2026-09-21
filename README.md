@@ -6,6 +6,22 @@
 
 ---
 
+## Quick Start
+
+```bash
+git clone <repo-url> aegis && cd aegis
+sudo ./install.sh
+```
+
+`install.sh` is a one-shot setup for a clean Debian/Ubuntu host. It installs
+Docker, ContainerLab, ttyd, and the Python dependencies, copies the app to
+`/opt/aegis`, loads the pinned FRR image, and verifies it against the shipped
+pin file. Run it as root (or with `sudo`).
+
+Then start the server per **Running the Server** below.
+
+---
+
 ## Lab Progression
 
 | # | Lab | Devices | Core Skills | Duration |
@@ -19,22 +35,34 @@
 
 ## Topology Files
 
-Topologies live in Ethan's workspace at `/home/student/.openclaw/workspace-ethan/aegis-topologies/`.
+Everything needed to run a lab ships in this repository:
 
-Lab definitions and graders in Selina's workspace at `projects/aegis/lab-definitions/`.
+- Lab topologies: `lab-definitions/*.yml`
+- Graders: `lab-definitions/grader_*.py`
+
+No external directories are required.
 
 ## Running a Lab
 
 ```bash
-# Deploy
-sudo containerlab deploy --topo /path/to/lab-XX-name.yml
+# Deploy (from the repo root, or /opt/aegis after install)
+sudo containerlab deploy --topo lab-definitions/demo-01-two-pcs-and-a-switch.yml
 
 # Access a node
 docker exec -it clab-<lab-name>-<node> bash
 
 # Tear down
-sudo containerlab destroy --topo /path/to/lab-XX-name.yml
+sudo containerlab destroy --topo lab-definitions/demo-01-two-pcs-and-a-switch.yml
 ```
+
+## Running the Server
+
+```bash
+cd /opt/aegis
+python3 start_server.py          # serves on :8000
+```
+
+The API is at `http://localhost:8000/api`; the UI is at `http://localhost:8000/`.
 
 ## FRR Image
 
@@ -42,6 +70,9 @@ sudo containerlab destroy --topo /path/to/lab-XX-name.yml
 - No OSPF, no BGP — those daemons are disabled in `/etc/frr/daemons`.
 - Students configure routers via `vtysh` (Cisco IOS-like CLI).
 - Source: `Dockerfile.frr`
+- The pinned image ships as `assets/aegis-frr-image.tar.gz` with its pin in
+  `assets/frr-image.pin`. The installer loads and verifies it; a cold host does
+  not need a registry.
 
 ## Capstone — Net Eng I PBM
 
@@ -55,4 +86,5 @@ The Capstone switch uses **Alpine bridge-utils** (not FRR-as-switch). Cleaner L2
 
 ## Scratch / Archive
 
-Anything removed from the active lab set is in `10-archive/` — BGP configs, EVPN topologies, and old FRR configs with dynamic routing. Kept for reference, not deployed.
+Anything removed from the active lab set is in `10-archive/` — old FRR configs
+and retired topologies. Kept for reference, not deployed and not installed.

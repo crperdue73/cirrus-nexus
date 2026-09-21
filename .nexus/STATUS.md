@@ -1045,3 +1045,104 @@ STEP BOARD: exit-bar steps 1-5 + composite + race + gate-swallow + lab-04 grader
   daemon assert DONE (this hour).
 REMAINING (next, smallest first): ship a SECOND image tag with bgpd enabled so
   BGP labs (lab-04) become deployable rather than correctly refused.
+
+---
+
+## 2026-09-20 19:0x EDT — BGP SUBSTRATE SHIPPED (closed 18:0x NEXT item)
+
+Closed the item named at 18:0x: "ship a second image tag with bgpd enabled so
+BGP labs (lab-04) become deployable rather than correctly refused."
+
+Built aegis/frr-bgp:latest (FROM base, bgpd=yes, assert-and-fail-if-wrong).
+Capability gate now reads the LAB's own substrate (LabDef.substrate_image,
+derived from the topology) so capability and deployability cannot disagree.
+install.sh Step 7b builds/loads it and publishes installed_substrate_digests
+(a SET); the app accepts a grade on any install-verified digest.
+
+VERIFIED LIVE: lab-04 start HTTP 200 (was 409), r1..r6 up on the BGP substrate,
+bgpd running in-node, submit grade status=graded citing
+runtime_digest sha256:f69c7345... == the BGP layer chain read off the running
+container. Test session destroyed; Ethan's 26 labs untouched. py_compile +
+bash -n CLEAN.
+
+ARTIFACT: Dockerfile.frr-bgp ; backend/main.py ; install.sh ;
+  lab-definitions/lab-04-two-as-peering.yml
+PROOF: .nexus/proofs/2026-09-20-bgp-substrate.md
+COMMIT: 6fcc1ae
+
+REMAINING (next, smallest first): rehearse the COLD-HOST composite again with
+  BOTH substrates — confirm install.sh Step 7b writes the multi-digest record
+  from scratch on a clean host, both digests land, and lab-04 grades with no
+  hand steps.
+
+---
+
+## 2026-09-21 15:1x EDT — DEMO LABS ON A REAL SWITCH (both deploy AND grade)
+
+Dad's two asks while away: (1) make the switch a REAL switch, not a Linux PC;
+(2) build DEMO LAB 2 (pc-a -> sw1 -> ROUTER -> sw2 -> pc-b) as a capability
+probe. Both DONE, verified by running. NOT declared complete — that is Dad's
+call alone.
+
+### Task 1 — real switch meets the pass condition
+Root cause of the SRL IRB failure: network-instance split-brain. The naive
+config put the bridged access ports in mac-vrf-1 (L2) and irb0.0 ONLY in
+ip-vrf-1 (L3). PC-to-PC worked (same L2), but the switch's own IP never
+answered ARP (100% loss). Fix: irb0.0 must be a member of BOTH mac-vrf-1 and
+ip-vrf-1; and on a fresh switch the access subinterfaces default to `type
+routed` so they need explicit `type bridged`.
+Substrate: ghcr.io/nokia/srlinux:latest (v26.7.2). Cumulus NOT needed.
+VERIFIED COLD: pc-a->switch 0% loss, pc-a->pc-b 0% loss, pc-b->switch 0% loss;
+FDB shows the IRB MAC in the bridge table with both PCs.
+ARTIFACT: lab-definitions/srl-demo/demo-01-srl-switch.yml (+ assets/sw1.cfg);
+  lab-definitions/grader_demo_01_srl.py
+PROOF: .nexus/proofs/srl-irb-fix-20260921-1513-FINAL.txt
+
+### Task 2 — capability probe: two switches, one router
+Topology: pc-a -- sw1(SRL) -- r1(FRR) -- sw2(SRL) -- pc-b.
+VERIFIED COLD END-TO-END: pc-a->pc-b 0% loss and pc-b->pc-a 0% loss through
+the router; traceroute = hop1 10.0.1.253 (r1), hop2 10.0.2.1 (pc-b). 5/5 nodes
+deploy. grader_demo_02.py runs GREEN: lab passed, all 5 nodes 1.0.
+ANSWER TO THE PROBE: real-switch multi-node labs deploy AND grade.
+ARTIFACT: lab-definitions/srl-demo2/demo-02-two-switches-one-router.yml
+  (+ assets/sw1.cfg, assets/sw2.cfg); lab-definitions/grader_demo_02.py
+PROOF: .nexus/proofs/demo-02-capability-probe-20260921-1519.txt
+
+NOTE: Alpine hosts use BusyBox `ip` (no JSON `-j`). Both new graders fall back
+to parsing plain `ip addr show` output — the JSON path silently failed before.
+
+REMAINING (next, smallest first): wire the two new lab dirs into the backend's
+  lab list (they are discovered by scan; confirm they LIST + start + submit a
+  grade through the HTTP API, not just the grader module directly).
+
+### 2026-09-21 15:3x EDT — HTTP end-to-end confirmed (deploy + grade via the API)
+
+Ran a SECOND backend instance on :8001 (Dad's :8000 left untouched) with the
+updated discovery/path code, then drove the real product API:
+
+  POST /api/sessions/start?lab_id=demo-02-two-switches-one-router  -> HTTP 200,
+       nodes pc-a,pc-b,r1,sw1,sw2 running, runtime_digest sha256:bb7ef23a...
+  POST /api/sessions/<sid>/submit?node=<n>  for all 5 nodes
+       -> status=graded, passed=True, score=1.0 on EVERY node.
+  POST /api/sessions/<sid>/stop -> destroyed.
+
+So the answer to the capability probe is: real-switch multi-node labs DEPLOY
+and GRADE through the product API, with a pinned runtime digest.
+
+TWO BACKEND BUGS FOUND + FIXED for subdirectory labs:
+  1. _discover_labs() only globbed the top level (*.yml), so any lab kept in
+     its own folder (topology + assets/ together) was invisible. Now scans
+     one level of subdirs and stores topology_file as a path relative to
+     LABS_DIR.
+  2. _prepare_topology()/_remove_clean_copy() built the session copy path as
+     LABS_DIR/"._clean_<topology_file>_<sid>.yml", which for a subdir lab
+     contains a slash and points at a non-existent nested dir -> FileNotFound.
+     Now writes the copy beside the source (same subdir) with a flat name, so
+     the lab's relative `assets/` startup-configs still resolve.
+
+FLAG FOR DAD: the live backend on :8000 is an orphaned manual process
+(PPID 1, no systemd unit, 17h+ uptime). It is running the PRE-FIX code, so it
+does NOT yet list the two new real-switch labs. POST /api/labs/reload cannot
+pick up the change because the running process already imported the old
+module. It needs a process restart to serve the new labs. I did NOT restart
+Dad's server. Restart when he says so.

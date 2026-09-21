@@ -1,0 +1,49 @@
+======================================================================
+PROOF — TASK 2 CAPABILITY PROBE: pc-a -> sw1 -> ROUTER -> sw2 -> pc-b
+Date: 2026-09-21 15:19 EDT
+======================================================================
+
+DELIVERABLE: two REAL switches (Nokia SR Linux) with one REAL router
+(FRR) between them. Capability probe: what actually deploys and grades.
+
+--- NODES (cold 'containerlab deploy') ---
+clab-aegis-demo-02-srl-two-switch-router-sw2	ghcr.io/nokia/srlinux:latest	Up 2 minutes
+clab-aegis-demo-02-srl-two-switch-router-r1	aegis/frr:latest	Up 2 minutes
+clab-aegis-demo-02-srl-two-switch-router-sw1	ghcr.io/nokia/srlinux:latest	Up 2 minutes
+clab-aegis-demo-02-srl-two-switch-router-pc-a	alpine:latest	Up 2 minutes
+clab-aegis-demo-02-srl-two-switch-router-pc-b	alpine:latest	Up 2 minutes
+
+--- SWITCH IRBs (real switches, dual mac-vrf/ip-vrf membership) ---
+sw1:     IPv4 addr    : 10.0.1.254/24 (static, preferred, primary)
+sw2:     IPv4 addr    : 10.0.2.254/24 (static, preferred, primary)
+
+--- ROUTER r1 (FRR) ---
+eth1@if1099      UP             10.0.1.253/24 fe80::a8c1:abff:fe5c:bc3/64 
+eth2@if1102      UP             10.0.2.253/24 fe80::a8c1:abff:fe0f:c9b/64 
+ip_forward=1
+
+--- END-TO-END (the probe) ---
+pc-a -> pc-b : 3 packets transmitted, 3 packets received, 0% packet loss
+pc-b -> pc-a : 3 packets transmitted, 3 packets received, 0% packet loss
+
+--- REAL PATH (traceroute pc-a -> pc-b) ---
+ 1  10.0.1.253  0.343 ms  0.208 ms  0.251 ms
+ 2  10.0.2.1  0.594 ms  0.529 ms  0.565 ms
+  hop1 = r1 (10.0.1.253), hop2 = pc-b (10.0.2.1) — path is sw1 -> r1 -> sw2
+
+--- PER-HOP REACHABILITY ---
+pc-a -> sw1 IRB  : 0% packet loss
+pc-a -> r1 left  : 0% packet loss
+pc-b -> sw2 IRB  : 0% packet loss
+r1   -> sw2 IRB  : 0% packet loss
+
+--- KNOWN PROPERTY (not a defect) ---
+A far-segment switch IRB (pc-a -> 10.0.2.254) does NOT answer: each
+switch is L2 + its own subnet gateway only; it does not route between
+subnets. Inter-subnet routing is r1's job. Same-segment IRB pings pass.
+
+--- CAPABILITY VERDICT ---
+DEPLOYS: YES — 5/5 nodes (2x SRL switches + FRR router + 2 PCs).
+ROUTES : YES — pc-a <-> pc-b 0% loss through the router, 2-hop path.
+This confirms a 5-node two-switch-one-router lab is deployable.
+NOT declaring complete — completion is Dad's call.

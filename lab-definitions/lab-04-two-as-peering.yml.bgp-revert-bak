@@ -31,37 +31,37 @@ topology:
   nodes:
     r1:
       kind: linux
-      image: aegis/frr:latest
+      image: aegis/frr-bgp:latest
       exec:
       - /usr/lib/frr/frrinit.sh start
       - sleep 3
     r2:
       kind: linux
-      image: aegis/frr:latest
+      image: aegis/frr-bgp:latest
       exec:
       - /usr/lib/frr/frrinit.sh start
       - sleep 3
     r3:
       kind: linux
-      image: aegis/frr:latest
+      image: aegis/frr-bgp:latest
       exec:
       - /usr/lib/frr/frrinit.sh start
       - sleep 3
     r4:
       kind: linux
-      image: aegis/frr:latest
+      image: aegis/frr-bgp:latest
       exec:
       - /usr/lib/frr/frrinit.sh start
       - sleep 3
     r5:
       kind: linux
-      image: aegis/frr:latest
+      image: aegis/frr-bgp:latest
       exec:
       - /usr/lib/frr/frrinit.sh start
       - sleep 3
     r6:
       kind: linux
-      image: aegis/frr:latest
+      image: aegis/frr-bgp:latest
       exec:
       - /usr/lib/frr/frrinit.sh start
       - sleep 3
