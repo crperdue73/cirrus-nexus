@@ -1,0 +1,38 @@
+metadata:
+  course: CI-00
+  competencies:
+  - FRR/vtysh CLI Basics
+  - Router Password Security
+  - Interface Configuration
+  - Connectivity Verification
+  description: Log into an FRR router via vtysh and configure hostname, passwords,
+    and an interface IP. Then configure a PC and verify connectivity.
+  difficulty: Beginner
+  duration_min: 45
+  gradeable_nodes:
+  - r1
+  - pc-a
+  grader: grader_tier02_router_basics
+  id: tier-02-router-basics
+  instructions: []
+  name: "Router Basics \u2014 Configure Your First Router \U0001F5A5\uFE0F\U0001F527"
+  tip: Use show running-config to verify your settings
+name: aegis-tier-02-router-basics
+topology:
+  links:
+  - endpoints:
+    - r1:eth1
+    - pc-a:eth1
+  nodes:
+    pc-a:
+      exec:
+      - apk add iproute2 iputils -q
+      - ip link set eth1 up
+      image: alpine:latest
+      kind: linux
+    r1:
+      exec:
+      - /usr/lib/frr/frrinit.sh start
+      - sleep 3
+      image: aegis/frr:latest
+      kind: linux

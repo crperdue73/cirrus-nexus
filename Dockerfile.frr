@@ -1,0 +1,51 @@
+# AEGIS FRR Base Image
+# Alpine + FRR for static routing and switching labs.
+# NO dynamic routing (no ospfd, no bgpd) — these are high school
+# networking fundamentals labs, not CCNP.
+FROM alpine:latest
+
+RUN apk update && apk add --no-cache \
+    frr \
+    bash \
+    iproute2 \
+    iputils \
+    tcpdump \
+    bind-tools
+
+# Enable only the FRR daemons we need — zebra (core) and staticd (static routes).
+# No ospfd. No bgpd. Those are way beyond the scope of these classes.
+#
+# IMPORTANT (fixed 2026-09-20): on FRR 10.x /etc/frr/daemons contains NO
+# `zebra=` or `staticd=` lines. zebra+mgmtd+staticd are ALWAYS started by
+# watchfrr regardless of this file (see the file's own header comment). So the
+# old `s/zebra=no/zebra=yes/` and `s/staticd=no/staticd=yes/` substitutions
+# silently matched nothing and were no-ops — a build that *looks* configured
+# while asserting nothing. A silent no-op sed is exactly how a wrong substrate
+# ships unnoticed (same class as the stale-digest bug).
+#
+# So: do NOT sed on patterns that may not exist. Write the daemon state we
+# intend, then ASSERT it. Every required pattern must be present after the
+# write or the BUILD FAILS. A disabled daemon is asserted too, so a future FRR
+# that flips a default cannot silently re-enable bgpd/ospfd.
+RUN set -eu; \
+    f=/etc/frr/daemons; \
+    # disable dynamic routing we never want in these labs
+    sed -i -E 's/^(ospfd|bgpd)=.*/\1=no/' "$f"; \
+    # assert every required daemon state is explicit and correct
+    require() { \
+        grep -qE "^$1=$2$" "$f" \
+            || { echo "BUILD ASSERT FAILED: expected ^$1=$2$ in $f" >&2; \
+                 grep -nE "^$1=" "$f" >&2 || true; exit 1; }; \
+    }; \
+    require ospfd no; \
+    require bgpd no; \
+    echo 'FRR daemon state asserted: ospfd=no bgpd=no (zebra+staticd always-on)'
+
+# Create frr directory and set up vtysh
+RUN mkdir -p /etc/frr && \
+    chown -R frr:frr /etc/frr && \
+    echo 'export VTYSH_PAGER=more' >> /etc/profile.d/frr.sh && \
+    chmod +x /etc/profile.d/frr.sh
+
+WORKDIR /root
+CMD ["/bin/bash"]

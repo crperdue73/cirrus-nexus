@@ -1,0 +1,117 @@
+# =============================================================================
+# AEGIS — Tier 3: Introducing the Switch
+# Lab: Router, Switch, and a PC 🖥️🔗🖧
+#
+# Topology:
+#   [RTR] ─── [SW1] ─── [PC-A]
+#
+# FRR router connected to an FRR-as-switch (with bridge + SVI), which connects
+# to a PC. Students learn the separation of Layer 3 (routing) and Layer 2
+# (switching) — and reinforce their vtysh CLI skills from Lab 01.
+#
+# Student tasks:
+#   1. Configure RTR basics: hostname, enable secret, MOTD banner
+#   2. Configure RTR interface eth1 (10.0.1.1/24)
+#   3. Configure SW1 via vtysh: hostname, enable secret, SVI (interface br0)
+#   4. Set SW1 default gateway from shell
+#   5. Configure PC-A IP (10.0.1.10/24) and default gateway (10.0.1.1)
+#   6. Ping through the switch to the router, then across subnets
+#   7. (Optional) Observe MAC address learning on SW1 (bridge fdb show)
+#
+# Skills: Router vs switch roles, L2 forwarding, MAC learning,
+#         vtysh CLI repetition, SVI configuration,
+#         end-to-end connectivity through intermediate device
+# Prereqs: T2 (Crossing Subnets), T1 (Foundation)
+# =============================================================================
+name: aegis-tier-03-router-switch-pc
+metadata:
+  course: CI-01
+  id: tier-03-router-switch-pc
+  name: "Tier 3 — Router, Switch, and a PC 🖥️🔗🖧"
+  description: >
+    Configure a router, an FRR-as-switch (with bridge + SVI), and a PC on the
+    same subnet. Understand how traffic flows through a switch and how a
+    router forwards between networks. Reinforces vtysh CLI skills from Lab 01.
+  difficulty: Beginner–Intermediate
+  duration_min: 75
+  competencies:
+    - Multi-device topology configuration
+    - FRR switch configuration (SVI, bridge)
+    - L2 vs L3 forwarding concepts
+    - Default gateway configuration
+    - vtysh CLI repetition (conscious practice)
+  grader: grader_tier03_switch
+
+topology:
+  nodes:
+    rtr:
+      kind: linux
+      image: aegis/frr:latest
+      exec:
+        - /usr/lib/frr/frrinit.sh start
+        - sleep 2
+        - ip link set eth1 up
+        # Student tasks:
+        #   vtysh
+        #   configure terminal
+        #   hostname RTR
+        #   enable secret cisco
+        #   banner motd line
+        #   Unauthorized Access Prohibited
+        #   end
+        #   interface eth1
+        #    ip address 10.0.1.1/24
+        #   exit
+        #   exit
+        #   write memory
+
+    sw1:
+      kind: linux
+      image: aegis/frr:latest
+      exec:
+        - /usr/lib/frr/frrinit.sh start
+        - sleep 2
+        # Platform plumbing: bridge and port attachments (done for the student)
+        - ip link add name br0 type bridge
+        - ip link set br0 up
+        - ip link set eth1 up      # Uplink to RTR
+        - ip link set eth1 master br0
+        - ip link set eth2 up      # Access port to PC-A
+        - ip link set eth2 master br0
+        # Student tasks (vtysh):
+        #   vtysh
+        #   configure terminal
+        #   hostname SW1
+        #   enable secret cisco
+        #   banner motd line
+        #   Unauthorized Access Prohibited
+        #   end
+        #   interface br0
+        #    ip address 10.0.1.2/24
+        #    no shutdown
+        #    description Management SVI
+        #   exit
+        #   exit
+        #   write memory
+        #
+        # From shell (after vtysh config):
+        #   ip route add default via 10.0.1.1
+
+    pc-a:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - apk add iproute2 iputils -q
+        - ip link set eth1 up
+        # Student tasks:
+        #   ip addr add 10.0.1.10/24 dev eth1
+        #   ip route add default via 10.0.1.1
+        #
+        # Verification:
+        #   ping 10.0.1.2         # ping switch SVI
+        #   ping 10.0.1.1         # ping router through switch
+        #   traceroute -n 10.0.1.1  # switches are invisible at L3
+
+  links:
+    - endpoints: ["rtr:eth1", "sw1:eth1"]     # Router → Switch uplink
+    - endpoints: ["sw1:eth2", "pc-a:eth1"]    # Switch → PC access port

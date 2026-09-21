@@ -1,0 +1,32 @@
+# --- containerlab runtime state -------------------------------------------
+# clab writes per-deployment dirs (inventories, TLS keys, authorized_keys)
+# into the topology's directory. These are per-run artifacts, not source.
+lab-definitions/clab-*/
+clab-*/
+
+# --- python ----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+
+# --- editor / backup cruft -------------------------------------------------
+*.bak
+*.bak-*
+*.bgp-revert-bak
+*.orig
+*.rej
+*~
+*.swp
+
+# --- runtime ---------------------------------------------------------------
+*.log
+.pytest_cache/
+
+# --- build output ----------------------------------------------------------
+# NOTE: assets/aegis-frr-image.tar.gz IS intentionally tracked. See
+# assets/frr-image.pin — the FRR image is local-only (no registry), so the
+# image tarball is the supported transport. install.sh verifies it against the
+# pin's layer-chain sha256 before loading.
+frontend/*.tar.gz
+assets/installed-image-id.txt
