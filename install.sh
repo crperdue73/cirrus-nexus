@@ -432,11 +432,12 @@ log ""
 log "  OR run manually: python3 ${AEGIS_DIR}/backend/main.py"
 log ""
 log "  Default labs auto-discovered:"
-for f in "${AEGIS_DIR}"/lab-definitions/*.yml; do
-    if [[ -f "$f" ]]; then
-        name=$(grep -m1 'name:' "$f" 2>/dev/null | head -1 | sed 's/name: *//')
-        id=$(grep -m1 'id:' "$f" 2>/dev/null | head -1 | sed 's/id: *//')
-        [[ -n "$id" ]] && echo "    - ${id}: ${name}"
-    fi
-done
+# Scan the top level AND one level of subdirectories, so labs kept in their
+# own folder (topology + assets/ together) are listed too — matches the
+# backend's lab discovery.
+while IFS= read -r f; do
+    name=$(grep -m1 'name:' "$f" 2>/dev/null | head -1 | sed 's/name: *//')
+    id=$(grep -m1 'id:' "$f" 2>/dev/null | head -1 | sed 's/id: *//')
+    [[ -n "$id" ]] && echo "    - ${id}: ${name}"
+done < <(find "${AEGIS_DIR}/lab-definitions" -maxdepth 2 -name '*.yml' | sort)
 log "═══════════════════════════════════════════════════════════"

@@ -103,8 +103,8 @@ class LabDef(BaseModel):
     # (e.g. ["bgpd"]). Empty means "no dynamic-routing requirement" and keeps
     # historical behaviour. Enforced at deploy time against the substrate's
     # OWN /etc/frr/daemons so a lab can never be deployed onto a substrate that
-    # can only grade it red forever (found 2026-09-20: a lab requiring a daemon
-    # the pinned substrate disables).
+    # can only grade it red forever (found 2026-09-20: lab-04 two-AS peering vs.
+    # a `bgpd=no` image).
     requires_daemons: list[str] = []
     # The substrate image THIS lab's routers run. Defaults to the pinned base
     # substrate. The capability gate below reads the image the lab ACTUALLY
@@ -308,8 +308,7 @@ def _substrate_image_for(topology_file: str) -> str:
     Scans node specs for the first `aegis/frr...` image. Falls back to the
     pinned base. This makes the topology the source of truth for capability:
     the gate reads exactly the image the lab will deploy, so a lab and its
-    substrate cannot drift apart (a lab and a substrate that disables its
-    daemon was exactly that drift).
+    substrate cannot drift apart (lab-04 vs. a bgpd=no base was that drift).
     """
     try:
         with open(LABS_DIR / topology_file) as f:
@@ -435,7 +434,7 @@ def _running_clab_containers() -> list[tuple[str, str, str]]:
     """List `clab-*` containers as (name, session-label, lab-label).
 
     Labels are "" for containers the product did not deploy — those are
-    someone else's (a hand-run lab, or a lab deployed outside this product) and must not be adopted.
+    someone else's (a hand-run lab, Ethan's labs) and must not be adopted.
     """
     out = subprocess.run(
         ["docker", "ps",
@@ -489,7 +488,7 @@ def reconcile_sessions() -> int:
     Reconcile by scanning `docker ps` for `clab-*` containers THAT CARRY OUR
     OWNERSHIP LABEL (`aegis.session.id`, stamped at deploy time by
     _stamp_session_labels). A container without the label was not deployed by
-    this product — a hand-run lab, or a lab deployed by other tooling — and is
+    this product — a hand-run lab, or another agent's (Ethan's) lab — and is
     deliberately NOT adopted: the product must never claim, grade, or offer to
     destroy a lab it did not create. (Before this gate, reconcile matched any
     `clab-<topo>-<8hex>-<node>` name, which swept in hand-deployed labs whose
@@ -514,7 +513,7 @@ def reconcile_sessions() -> int:
     grouped: dict[str, dict] = {}
     for name, owner_label, lab_label in names:
         # Ownership gate: only containers WE stamped. A blank label means the
-        # product did not deploy this container => not ours.
+        # product did not deploy this container (e.g. Ethan's lab) => not ours.
         if not owner_label:
             continue
         sid = owner_label
@@ -636,7 +635,7 @@ def _prepare_topology(lab: LabDef, session_id: str) -> tuple[Path, str]:
     # Docker labels are immutable after creation (`docker update` on this daemon
     # has no --label-add), so this is the only way to mark a container as ours.
     # A durable label is what lets `reconcile_sessions` tell OUR labs from a
-    # hand-deployed lab after a restart, when SESSIONS is gone.
+    # hand-deployed lab (e.g. Ethan's) after a restart, when SESSIONS is gone.
     topo = data.get("topology")
     nodes = topo.get("nodes") if isinstance(topo, dict) else None
     if isinstance(nodes, dict):
@@ -650,6 +649,7 @@ def _prepare_topology(lab: LabDef, session_id: str) -> tuple[Path, str]:
             labels[LAB_LABEL] = lab.id
             spec["labels"] = labels
 
+    clean_path = LABS_DIR / f"._clean_{lab.topology_file}_{session_id}.yml"
     # For labs in a subdirectory (lab.topology_file contains a '/'), write the
     # session copy INTO that same subdirectory so containerlab still resolves
     # the lab's `assets/` (e.g. switch startup-configs) relative to the copy.
@@ -842,11 +842,11 @@ def resolve_runtime_digest(containers: dict) -> str:
 
     The AEGIS substrate is the `aegis/frr` image — the thing install.sh pins and
     verifies. Labs legitimately mix substrates: a router node runs the pinned
-    `aegis/frr` image while a student PC runs stock `alpine:latest`. Requiring
-    EVERY node image to be
+    `aegis/frr` image while a student PC runs stock `alpine:latest` (see
+    tier-02-router-basics.yml, lab-04, etc.). Requiring EVERY node image to be
     identical therefore made any mixed lab permanently unresolvable — the pin
     refused to cite a perfectly well-pinned substrate because an auxiliary PC
-    image differed. (Found live 2026-09-19 on a mixed lab.)
+    image differed. (Found live 2026-09-19: lab-04 resolved, tier-02 refused.)
 
     Correct rule: identify the node(s) running the pinned substrate and pin THAT
     identity. If multiple distinct AEGIS-substrate images are live in one lab,
@@ -927,10 +927,10 @@ def _resolve_runtime_digest_once(containers: dict) -> str:
 def _pinned_substrate_digests(pin: dict) -> set[str]:
     """The set of substrate layer-chain digests the installer verified.
 
-    AEGIS ships the pinned base substrate (static routing). A lab pack may
-    declare additional substrates, each install-verified with its OWN
-    transport-invariant layer chain, so the install record publishes a SET of
-    accepted digests. A grade on any of them is citable.
+    AEGIS ships more than one substrate: the base (static routing) and the
+    BGP variant (bgpd enabled, for lab-04). Each is a legitimate, install-verified
+    substrate with its OWN transport-invariant layer chain, so the install record
+    publishes a SET of accepted digests. A grade on any of them is citable.
 
     Reads `installed_substrate_digests` (space-separated) when present, and
     always folds in the legacy single `installed_layers_sha256` for
@@ -1482,16 +1482,38 @@ def get_lab_topology(lab_id: str):
 
 @app.get("/api/labs/{lab_id}/guide")
 def get_lab_guide(lab_id: str):
-    """Serve a lab's markdown guide file if it exists.
+    """Serve a lab's markdown guide file if it exists."""
+    # Map lab IDs to likely guide filenames
+    # Map lab IDs to guide markdown files
+    guide_map = {
+        "tier-01-foundation": "tier-01-foundation.md",
+        "tier-02-router-basics": "tier-02-router-basics.md",
+        "lab-01-crossing-subnets": "lab-2-crossing-subnets.md",
+        "lab-02-switch-in-the-middle": "lab-2-switch-in-middle.md",
+        "tier-03-router-switch-pc": "tier-03-router-switch-pc.md",
+        "lab-03-lock-it-down": "lab-3-lock-it-down.md",
+        "neteng-capstone": "neteng-capstone.md",
+    }
+    guide_file = guide_map.get(lab_id)
+    if guide_file and guide_file.endswith(".md"):
+        guide_path = LABS_DIR / guide_file
+        if guide_path.exists():
+            content = guide_path.read_text()
+            return PlainTextResponse(content, media_type="text/markdown")
 
-    Resolved by convention: a lab's guide, when present, is
-    `lab-definitions/<lab_id>.md`. Lab packs are content add-ons and may ship
-    their own guides under the same convention, so no per-lab registry is
-    maintained here.
-    """
-    candidate = LABS_DIR / f"{lab_id}.md"
-    if candidate.exists():
-        return PlainTextResponse(candidate.read_text(), media_type="text/markdown")
+    # Fallback: try <lab-id>.md
+    fallback = LABS_DIR / f"{lab_id}.md"
+    if fallback.exists():
+        return PlainTextResponse(fallback.read_text(), media_type="text/markdown")
+
+    # Fallback: a lab kept in its own folder (lab.topology_file = "<dir>/x.yml")
+    # may ship its guide as <lab-id>.md beside the topology. Resolve it
+    # relative to that folder so subdir labs don't need a guide_map entry.
+    lab = _get_lab(lab_id)
+    if lab:
+        sibling = (LABS_DIR / Path(lab.topology_file).parent / f"{lab_id}.md")
+        if sibling.exists():
+            return PlainTextResponse(sibling.read_text(), media_type="text/markdown")
 
     raise HTTPException(status_code=404, detail="No guide available for this lab")
 
@@ -1508,8 +1530,4 @@ if FRONTEND_DIR.exists():
 
 if __name__ == "__main__":
     import uvicorn
-    # Bind address is configurable so an operator can run a second instance, or
-    # move off a port already in use. Defaults preserve the documented 0.0.0.0:8000.
-    _host = os.environ.get("LISTEN_HOST", "0.0.0.0")
-    _port = int(os.environ.get("LISTEN_PORT", "8000"))
-    uvicorn.run(app, host=_host, port=_port)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
