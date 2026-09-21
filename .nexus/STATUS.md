@@ -1146,3 +1146,18 @@ does NOT yet list the two new real-switch labs. POST /api/labs/reload cannot
 pick up the change because the running process already imported the old
 module. It needs a process restart to serve the new labs. I did NOT restart
 Dad's server. Restart when he says so.
+
+### 2026-09-21 16:0x EDT — export hardening (guides + installer + guide routing)
+
+Extended the two demo labs so they ship complete, not just deployable:
+  - Student markdown guides for both labs, stored beside each topology
+    (lab-definitions/srl-demo/demo-01-two-pcs-and-a-real-switch.md,
+     lab-definitions/srl-demo2/demo-02-two-switches-one-router.md).
+  - Backend guide lookup: added a subdir fallback so a lab in its own folder
+    resolves <lab-id>.md beside its topology without a guide_map entry.
+  - install.sh completion banner: was globbing lab-definitions/*.yml (flat),
+    so subdir labs were never listed. Now finds maxdepth 2 recursively.
+VERIFIED on a throwaway :8002 instance: /guide and /topology both HTTP 200 for
+  both new labs; py_compile + bash -n clean. Instance shut down after.
+  Dad's :8000 never touched.
+LIVE COMMIT 80b11f2 · PUBLIC COMMIT a35d974
