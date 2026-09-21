@@ -47,3 +47,13 @@ DEPLOYS: YES — 5/5 nodes (2x SRL switches + FRR router + 2 PCs).
 ROUTES : YES — pc-a <-> pc-b 0% loss through the router, 2-hop path.
 This confirms a 5-node two-switch-one-router lab is deployable.
 NOT declaring complete — completion is Dad's call.
+
+--- RE-VERIFIED 2026-09-21 ~19:10 EDT (fresh instance, cold session) ---
+Ran the FULL HTTP flow again on a throwaway :8003 backend to confirm the
+capability-probe result is stable, not a one-off:
+  POST /api/sessions/start?lab_id=demo-02-two-switches-one-router
+     -> session 1f41cf7c, status=running, runtime_digest sha256:bb7ef23a... (pinned)
+  POST /api/sessions/<sid>/submit?node=<n>  for pc-a,pc-b,sw1,sw2,r1
+     -> passed=True, score=1.0 on ALL FIVE nodes.
+  POST /api/sessions/<sid>/stop -> destroyed.
+Instance :8003 shut down; Dad's :8000 untouched.
