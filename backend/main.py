@@ -1506,6 +1506,15 @@ def get_lab_guide(lab_id: str):
     if fallback.exists():
         return PlainTextResponse(fallback.read_text(), media_type="text/markdown")
 
+    # Fallback: a lab kept in its own folder (lab.topology_file = "<dir>/x.yml")
+    # may ship its guide as <lab-id>.md beside the topology. Resolve it
+    # relative to that folder so subdir labs don't need a guide_map entry.
+    lab = _get_lab(lab_id)
+    if lab:
+        sibling = (LABS_DIR / Path(lab.topology_file).parent / f"{lab_id}.md")
+        if sibling.exists():
+            return PlainTextResponse(sibling.read_text(), media_type="text/markdown")
+
     raise HTTPException(status_code=404, detail="No guide available for this lab")
 
 
