@@ -1481,3 +1481,31 @@ TASK 2 (demo-02 unsolved, session ef6eed3b, digest sha256:bb7ef23a... == pin):
 CLEANUP: sessions destroyed, 0 leftovers, clab baseline 35, :8012 down, :8000 200.
 No new defects. Proof: proofs/live-reverify-both-tasks-20260922-1515.txt
 NOT COMPLETE. Nexus completion is Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~16:15 EDT — aegis-demo2-drive (lint honesty pass)
+
+Tried to close the 7-lab NO-EXPECTED blind spot with an AST call-arg extractor
+(IPs passed to expectation-named params of legacy graders' check helpers).
+
+RAN it: it is IMPRECISE and was REVERTED.
+  tier02_router_basics -> 10.0.1.10 attributed to BOTH r1 and pc-a (a node's
+    branch references OTHER nodes' IPs; the branch is "this node's checks",
+    not "this node's expectations").
+  neteng_capstone -> matched at all (incl. a subnet mask), though my 12:12
+    note said it must stay NO-EXPECTED.
+Emitting verdicts would manufacture false SOLVED/UNSOLVED calls. Reverted
+(git checkout; parse OK).
+
+SHIPPED instead: an explicit honesty block so NO-EXPECTED is VISIBLE, not a
+silent "-":
+  "NOT CHECKED — pre-solved status UNKNOWN for 7 lab(s) ... this is not a pass"
+Verified live (14 labs; 3 SOLVED / 4 UNSOLVED / 7 NOT CHECKED; exit 1) and
+public (6 labs; 3/3; exit 1). Classifications + expect_source unchanged (no
+regression). Closing the 7 for real needs EXPECTED maps in those graders.
+Also restarted :8000 (had cleanly stopped; HTTP 200 again).
+Proof: proofs/lint-honesty-revert-20260922-1615.txt
+COMMITTED: live 6f73bb3, public a3fc533.
+NOT COMPLETE. Nexus completion is Dad's call alone.
