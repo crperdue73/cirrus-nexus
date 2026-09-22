@@ -1,0 +1,29 @@
+======================================================================
+PROOF — LINT: AST fallback for graders with no EXPECTED map
+Date: 2026-09-22 ~12:03-12:12 EDT   Drive: aegis-demo2-drive
+======================================================================
+
+WHY: 8 legacy labs reported NO-EXPECTED -- the pre-solved check was blind to
+them. Added an AST fallback that reads literal string->IPv4 dicts mapping
+node-like keys to student IPs, used ONLY when the grader exposes no EXPECTED
+map (EXPECTED stays authoritative).
+
+SAFETY (why AST, not regex): a raw-source regex over-matched networks, masks
+and localhost (neteng-capstone showed 192.168.12.0/.126/.128, 255.255.255.128
+etc.). The AST walker only accepts literal str->IPv4 pairs whose KEY looks
+like a node name, and never sees call arguments.
+
+VERIFIED (ran):
+  grader_tier01        EXP=-  AST={'pc-a':[.1,.2],'pc-b':[.2,.1]}  -> covered
+  grader_neteng_capstone EXP=- AST={}   (IPs are call args) -> stays NO-EXPECTED
+  grader_demo_02       EXP={pc-a,pc-b}  AST={sw1,sw2} -> uses EXPECTED (auth)
+  lint now: tier-01-foundation UNSOLVED 0/4 src=AST; the 3 shipped demos still
+  SOLVED; both unsolved variants UNSOLVED. exit 1. Same on the public export.
+
+HONESTY: labs whose graders encode expectations as call arguments
+(tier-02, lab-01/02/03, tier-03, neteng, lab-04) remain NO-EXPECTED -- that is
+"not checked", NOT a claim they are clean. Extending further would require
+guessing node->IP semantics from arbitrary code; not done, to avoid cry-wolf
+false verdicts.
+
+NOT COMPLETE. Nexus completion is Dad's call alone.
