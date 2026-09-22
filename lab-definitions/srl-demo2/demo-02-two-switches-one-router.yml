@@ -42,6 +42,14 @@ metadata:
   duration_min: 35
   gradeable_nodes: [pc-a, pc-b, sw1, sw2, r1]
   grader: grader_demo_02
+  instructions:
+    - 'PC-A: ip addr add 10.0.1.1/24 dev eth1 ; ip link set eth1 up ; ip route add 10.0.2.0/24 via 10.0.1.253'
+    - 'PC-B: ip addr add 10.0.2.1/24 dev eth1 ; ip link set eth1 up ; ip route add 10.0.1.0/24 via 10.0.2.253'
+    - 'r1 (router): sysctl -w net.ipv4.ip_forward=1 ; ip addr add 10.0.1.253/24 dev eth1 ; ip link set eth1 up ; ip addr add 10.0.2.253/24 dev eth2 ; ip link set eth2 up'
+    - 'sw1 and sw2 (SR Linux) are REAL switches; their IRBs ship pre-configured (10.0.1.254 and 10.0.2.254).'
+    - 'From PC-A: ping 10.0.1.254 (sw1), ping 10.0.1.253 (r1), ping 10.0.2.1 (PC-B across the router). All must reply.'
+    - 'From PC-B: ping 10.0.1.1 (PC-A). Must reply.'
+    - 'Verify the path: traceroute -n 10.0.2.1  -> hop 1 = 10.0.1.253 (r1), hop 2 = 10.0.2.1 (PC-B).'
   competencies:
     - IP addressing on hosts
     - L2 bridging on a real switch

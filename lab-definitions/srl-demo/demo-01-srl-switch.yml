@@ -48,6 +48,16 @@ metadata:
     - pc-b
     - sw1
   grader: grader_demo_01_srl
+  instructions:
+    - Click into the terminal for PC-A
+    - 'Assign an IP: ip addr add 10.0.1.1/24 dev eth1'
+    - 'Bring the interface up: ip link set eth1 up'
+    - Click into the terminal for PC-B
+    - 'Assign an IP: ip addr add 10.0.1.2/24 dev eth1'
+    - 'Bring the interface up: ip link set eth1 up'
+    - 'The switch (SR Linux) is a REAL switch; its IRB 10.0.1.254/24 ships pre-configured.'
+    - 'From PC-A, prove the lab: ping 10.0.1.254 (the switch) AND ping 10.0.1.2 (PC-B). Both must reply.'
+    - 'Optional: on the switch, sr_cli ''show interface irb0'' to confirm the IRB is up.'
   competencies:
     - IP addressing on a host
     - Management IP on a switch (IRB/SVI)
