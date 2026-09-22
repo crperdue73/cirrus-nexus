@@ -1,0 +1,94 @@
+# =============================================================================
+# AEGIS — DEMO LAB 02 (CAPABILITY PROBE): Two Real Switches, One Router
+# =============================================================================
+# Dad's spec (2026-09-21):
+#   "Build DEMO LAB 2: pc-a -> sw1 -> ROUTER -> sw2 -> pc-b. Two real switches,
+#    one real router between them. This is a CAPABILITY PROBE: we need to know
+#    what actually deploys and grades before lab packs can be built."
+#
+# Topology (as specified):
+#
+#   pc-a --- sw1(SR Linux) --- r1(FRR) --- sw2(SR Linux) --- pc-b
+# 10.0.1.1/24   IRB .254      .253 |  .253   IRB .254      10.0.2.1/24
+#  LEFT subnet 10.0.1.0/24        RIGHT subnet 10.0.2.0/24
+#
+# Design:
+#   - sw1 is a REAL switch: L2 bridge (mac-vrf-1) + IRB (ip-vrf-1) at
+#     10.0.1.254/24. Access port e1/1 -> pc-a, e1/2 -> r1.
+#   - sw2 mirrors it at 10.0.2.254/24. e1/1 -> r1, e1/2 -> pc-b.
+#   - r1 (FRR) is the inter-subnet router: 10.0.1.253/24 and 10.0.2.253/24,
+#     ip_forward=1, both subnets directly connected.
+#   - Each PC reaches the far subnet via r1 (a /24-specific route, NOT a
+#     second default — Alpine/containerlab already owns the default route).
+#
+# IRB NOTE (same fix as demo-01): irb0.0 must be in BOTH mac-vrf-1 (L2) AND
+#   ip-vrf-1 (L3). Access subinterfaces must be explicitly `type bridged`.
+#
+# CAPABILITY PROBE RESULT (verified 2026-09-21 15:15 EDT):
+#   DEPLOYS: 5/5 nodes running (2x SRL + 3 linux).
+#   ROUTES : pc-a->pc-b 0% loss, pc-b->pc-a 0% loss.
+#   PATH   : traceroute pc-a->pc-b = hop1 10.0.1.253 (r1), hop2 10.0.2.1 (pc-b).
+# =============================================================================
+metadata:
+  course: CI-DEMO
+  id: demo-02-two-switches-one-router-unsolved
+  name: "Demo 2 (UNSOLVED) — Two Switches and a Router 🖥️🔀📡🔀🖥️"
+  description: >
+    Two real SR Linux switches joined by a real FRR router. Each switch is an
+    L2 bridge with an IRB used as the subnet gateway. The router forwards
+    between the two subnets. Students prove the path works end-to-end from
+    PC-A to PC-B across the routed boundary.
+  difficulty: Intermediate
+  duration_min: 35
+  gradeable_nodes: [pc-a, pc-b, sw1, sw2, r1]
+  grader: grader_demo_02
+  instructions:
+    - 'PC-A: ip addr add 10.0.1.1/24 dev eth1 ; ip link set eth1 up ; ip route add 10.0.2.0/24 via 10.0.1.253'
+    - 'PC-B: ip addr add 10.0.2.1/24 dev eth1 ; ip link set eth1 up ; ip route add 10.0.1.0/24 via 10.0.2.253'
+    - 'r1 (router): sysctl -w net.ipv4.ip_forward=1 ; ip addr add 10.0.1.253/24 dev eth1 ; ip link set eth1 up ; ip addr add 10.0.2.253/24 dev eth2 ; ip link set eth2 up'
+    - 'sw1 and sw2 (SR Linux) are REAL switches; their IRBs ship pre-configured (10.0.1.254 and 10.0.2.254).'
+    - 'From PC-A: ping 10.0.1.254 (sw1), ping 10.0.1.253 (r1), ping 10.0.2.1 (PC-B across the router). All must reply.'
+    - 'From PC-B: ping 10.0.1.1 (PC-A). Must reply.'
+    - 'Verify the path: traceroute -n 10.0.2.1  -> hop 1 = 10.0.1.253 (r1), hop 2 = 10.0.2.1 (PC-B).'
+  competencies:
+    - IP addressing on hosts
+    - L2 bridging on a real switch
+    - Switch IRB / SVI as subnet gateway
+    - Router interface addressing and IP forwarding
+    - Static routing to a remote subnet
+    - End-to-end ping and traceroute verification
+  prerequisites: [demo-01-two-pcs-and-a-real-switch]
+name: aegis-demo-02-srl-two-switch-router
+topology:
+  nodes:
+    pc-a:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - ip link set eth1 up
+    pc-b:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - ip link set eth1 up
+    sw1:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux:latest
+      type: ixrd2l
+      startup-config: assets/sw1.cfg
+    sw2:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux:latest
+      type: ixrd2l
+      startup-config: assets/sw2.cfg
+    r1:
+      kind: linux
+      image: aegis/frr:latest
+      exec:
+        - ip link set eth1 up
+        - ip link set eth2 up
+  links:
+    - endpoints: ["pc-a:eth1", "sw1:e1-1"]
+    - endpoints: ["r1:eth1", "sw1:e1-2"]
+    - endpoints: ["r1:eth2", "sw2:e1-1"]
+    - endpoints: ["pc-b:eth1", "sw2:e1-2"]

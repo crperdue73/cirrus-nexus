@@ -1,0 +1,57 @@
+======================================================================
+PROOF — DEMO-02 "UNSOLVED" VARIANT: COLD FAIL -> CONFIG PASS
+Date: 2026-09-22 ~02:45 EDT   Drive: aegis-demo2-drive
+Backend: throwaway :8006 (Dad's :8000 untouched)
+======================================================================
+
+WHY: the shipped demo-02 grades 5/5 with zero student work (answers seeded
+in the topology exec blocks; see cold-zero-config-matrix-*.txt). This variant
+removes the answer key so the student must actually build the routed path.
+
+WHAT CHANGED vs shipped demo-02 (single file diff, same topology/links/grader):
+  - pc-a exec: kept `ip link set eth1 up`; REMOVED addr + route
+  - pc-b exec: kept `ip link set eth1 up`; REMOVED addr + route
+  - r1   exec: kept link-up; REMOVED ip_forward + both addrs
+  - sw1 / sw2: UNCHANGED (IRBs still ship pre-configured -- deliberate)
+  - links: unchanged (4 links, verified present)
+  File: lab-definitions/srl-demo2-unsolved/demo-02-two-switches-one-router-unsolved.yml
+  id:   demo-02-two-switches-one-router-unsolved   grader: grader_demo_02
+
+--- RUN 1: COLD, no student config --------------------------------------
+  pc-a: passed=False score=0.0
+  pc-b: passed=False score=0.0
+  sw1:  passed=True  score=1.0     (shipped pre-configured -- expected)
+  sw2:  passed=True  score=1.0     (shipped pre-configured -- expected)
+  r1:   passed=False score=0.2     (only ip_forward sub-check -- not set)
+  => the lab does NOT pass cold. Correct.
+
+--- RUN 2: after student config, same lab ---------------------------------
+  Configured by hand inside the containers:
+    pc-a: ip addr add 10.0.1.1/24 dev eth1 ; link up ; ip route add 10.0.2.0/24 via 10.0.1.253
+          -> eth1@if1505 UP 10.0.1.1/24
+    pc-b: ip addr add 10.0.2.1/24 dev eth1 ; link up ; ip route add 10.0.1.0/24 via 10.0.2.253
+          -> eth1@if1503 UP 10.0.2.1/24
+    r1:   sysctl net.ipv4.ip_forward=1 ; 10.0.1.253/24 eth1 ; 10.0.2.253/24 eth2 ; links up
+          -> eth1@if1498 UP 10.0.1.253/24 | eth2@if1501 UP 10.0.2.253/24
+  Grades after config:
+    pc-a: True 1.0 | pc-b: True 1.0 | sw1: True 1.0 | sw2: True 1.0 | r1: True 1.0
+  => 5/5 PASS after the student does the work. Correct.
+
+--- BUG FOUND AND FIXED DURING THIS PROBE --------------------------------
+First build of the variant accidentally dropped the `links:` entries (my
+strip step removed dash-lines while the trailing node was sw2, whose exec I
+was reading). Symptom: containers came up with NO eth1/eth2 -> `Cannot find
+device "eth1"`, lab unpassable. Caught by running it: the PCs had no data
+interfaces. Restored the 4 links; re-ran; fail->pass clean. Evidence above
+is from the corrected file. (containerlab also ignores an empty `links:`,
+so it silently deployed a link-less lab rather than erroring.)
+
+--- STATUS ---------------------------------------------------------------
+This variant is a PROPOSAL artifact, not a replacement. The shipped demo-02
+is untouched. Dad's call: adopt the unsolved pattern (student does the PC +
+router work), keep it as a second lab, or revert.
+ADDITIONAL GATE FOR DAD (applies to every lab): should the harness even ALLOW
+a lab to grade PASS with zero student input? A cold-deploy check as a lab-pack
+lint would catch "shipped solved" automatically.
+
+NOT COMPLETE. Nexus completion is Dad's call alone.
