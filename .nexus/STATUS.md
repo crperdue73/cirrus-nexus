@@ -1231,3 +1231,24 @@ pings") -- that is fine. The open decision is per-lab: what ships seeded vs.
 what the student must actually do. Not changed unilaterally; flagged.
 
 **NOT COMPLETE.** Nexus completion is Dad's call alone.
+
+
+### 2026-09-22 ~02:15 EDT — CORRECTION to the probe above (cold-run, zero config)
+
+The 01:15 matrix was WRONG for two rows. I re-ran each lab COLD with NO
+student config (proof: ../proofs/cold-zero-config-matrix-20260922-0215.txt):
+
+  lab                                zero-config grade      verdict
+  demo-01-two-pcs-and-a-switch       ALL FAIL (0.0/0.0/0.0)  UNSOLVED   ✅
+  demo-01 (SR Linux)                 pass 1.0/0.5/1.0       PRE-SOLVED ❌
+  demo-01 (Cumulus)                  pass 1.0/1.0/1.0       PRE-SOLVED ❌
+  demo-02 (2 switches + router)      pass 1.0 x5            PRE-SOLVED ❌
+
+Corrections:
+  - SRL demo-01: pc-a IS seeded (`ip addr add 10.0.1.1/24` in exec). The 01:15
+    note said pc-a was real work -- wrong; I had configured it by hand during
+    that probe while it was already seeded.
+  - plains demo-01: I called it pre-solved from the guide TEXT. Run cold it
+    FAILS all nodes -- it is the only demo lab that is genuinely unsolved.
+
+Lesson logged: grade the cold case; the guide text is not the topology.

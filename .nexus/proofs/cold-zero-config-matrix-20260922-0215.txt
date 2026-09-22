@@ -1,0 +1,53 @@
+======================================================================
+PROOF — COLD DEPLOY, ZERO STUDENT CONFIG: WHICH LABS ARE TRULY SOLVED
+Date: 2026-09-22 ~02:15 EDT   Drive: aegis-demo2-drive
+Backend: throwaway :8006 (Dad's :8000 untouched)
+CORRECTS the earlier probe note (pre-solved-labs-probe-*.txt) for plains demo-01.
+======================================================================
+
+METHOD: start each lab, wait ~60-95s for devices to come up, submit every
+node with NO student configuration applied at all, stop.
+
+--- RESULT ---------------------------------------------------------------
+lab                                      zero-config grade            verdict
+demo-01-two-pcs-and-a-switch (plains)    pc-a F / pc-b F / switch F   UNSOLVED  ✅
+demo-01-two-pcs-and-a-real-switch (SRL)  pc-a 1.0 / pc-b 0.5 / sw1 1.0 PRE-SOLVED ❌
+demo-01-...-real-switch-cumulus          pc-a 1.0 / pc-b 1.0 / sw1 1.0 PRE-SOLVED ❌
+demo-02-two-switches-one-router          pc-a 1.0 / pc-b 1.0 / sw1 1.0
+                                         sw2 1.0 / r1 1.0              PRE-SOLVED ❌
+
+--- ROOT CAUSE (read from the topologies, not inferred) -----------------
+plains demo-01  exec: `ip link set eth1 up` only. NO `ip addr add`. The
+  student assigns all three addresses -> grades FAIL cold (correct).
+SRL demo-01     pc-a exec HAS `ip addr add 10.0.1.1/24`; pc-b exec HAS
+  `ip addr add 10.0.1.2/24`. Both PCs ship addressed -> pass cold.
+Cumulus demo-01 pc-a/pc-b exec both HAVE `ip addr add` -> pass cold.
+demo-02         pc-a, pc-b, AND r1 exec all pre-apply their addresses and
+  the PC default routes -> pass cold.
+
+--- CORRECTION OF THE EARLIER NOTE --------------------------------------
+The 01:15 probe claimed "three of four are fully pre-solved; SR-Linux demo-01
+is mostly pre-solved (only pc-a is real work)." That was WRONG on two counts,
+both from NOT running the cold case:
+  1. SRL demo-01: pc-a is ALSO seeded (exec `ip addr add 10.0.1.1/24`). In
+     probe 2 I configured pc-a by hand while it was already seeded, which
+     made it look like real work. Cold run shows pc-a 1.0 with no input.
+  2. plains demo-01: I inferred "pre-solved" from the guide text listing the
+     commands. Running it cold FAILS all three nodes. It is the ONLY demo
+     lab that is genuinely unsolved.
+Lesson (the drive rule): the guide text is not the topology. Grade the cold
+case before calling a lab solved or unsolved.
+
+--- CONCLUSION ---------------------------------------------------------
+Substrate: fine. All four deploy cold, devices come up, real switches answer,
+every node grades through the product API with honest verdicts.
+Lab content: 3 of 4 demo labs ship with the answer key applied. Only the
+plains Linux-bridge demo-01 requires the student to do the work. The demo
+labs that were MEANT to be the "hard, real-switch" versions are the ones
+that hand over the solution.
+
+DECISION FOR DAD (not taken unilaterally): per lab, which values ship seeded
+(switch mgmt IP is deliberately seeded; that is consistent and fine) and which
+the student must supply (PC addresses, and for demo-02 the router addressing).
+
+NOT COMPLETE. Nexus completion is Dad's call alone.
