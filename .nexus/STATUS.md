@@ -1161,3 +1161,32 @@ VERIFIED on a throwaway :8002 instance: /guide and /topology both HTTP 200 for
   both new labs; py_compile + bash -n clean. Instance shut down after.
   Dad's :8000 never touched.
 LIVE COMMIT 80b11f2 · PUBLIC COMMIT a35d974
+
+---
+
+## 2026-09-22 ~22:10 EDT — aegis-demo2-drive (hourly drive)
+
+**RAN (live, cold deploy, evidence in .nexus/proofs/demo-02-negative-gate-fix-20260922-2210.txt):**
+- Cold `containerlab deploy` of demo-02 (pc-a -> sw1(SRL) -> r1(FRR) -> sw2(SRL) -> pc-b),
+  metadata stripped as Nexus does. 5/5 nodes up.
+- Pings: pc-a->sw1 IRB / ->r1 / ->pc-b, pc-b->pc-a, pc-b->sw2 IRB — ALL 0% loss.
+- traceroute pc-a->pc-b: hop1 r1 (10.0.1.253), hop2 pc-b — real 2-hop path.
+- grader_demo_02.grade_all on the live session: PASSED, 5/5 nodes.
+- NEGATIVE TEST (Dad's requirement): fed an Alpine PC as sw1.
+
+**FOUND + FIXED (2 grader defects):**
+1. `grader_demo_02.py` `grade_all()` gated only on pc-a/pc-b, NEVER on sw1/sw2.
+   -> a Linux-PC fake switch graded the LAB as PASSED. Now requires
+   `e2e AND real_switches AND router_ok`. Re-verified: real=True, fake=False.
+2. `grader_demo_01_cumulus.py` had NO `grade_all()` at all (all siblings do).
+   -> Cumulus lab had no lab-level real-switch gate. Added, matching demo_01_srl.
+
+**SCOPE NOTE (not overclaiming):** backend `main.py` grades per-node via
+`grader.grade(session,node)`, so the API's per-node verdicts were ALREADY
+correct (sw1 refused the fake). The `grade_all` hole affected the standalone /
+CLI / lab-pack verdict path, which is what a lab-pack build would call.
+
+**TASK 1 (real switch):** evidenced earlier today (SRL final proof + Cumulus
+evaluation). Not re-run this drive.
+
+**NOT COMPLETE.** Nexus completion is Dad's call alone.
