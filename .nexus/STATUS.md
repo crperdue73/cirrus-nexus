@@ -1401,3 +1401,21 @@ Ran the Cumulus real-switch demo through the full product path on a throwaway
   Proof: proofs/product-api-e2e-cumulus-20260922-1010.txt
 
 NOT COMPLETE. Nexus completion is Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~11:12 EDT — aegis-demo2-drive (product-API E2E, SR Linux)
+
+Ran SR Linux real-switch demo through the full product path on a throwaway
+:8010:
+  start -> session c93d0dc6, 3 nodes, digest aegis-less:0d40ee2f...
+  grades via API: pc-a 1.0, pc-b 0.5, sw1 1.0
+    fb "sw1: real SR Linux switch, SR Linux irb0.0 up with 10.0.1.254"
+  switch inspected: PRETTY_NAME="SRLINUX 26.7.2-519", /usr/local/bin/sr_cli.
+  TASK 1 CONDITION: pc-a->switch 3/3 0%, pc-a->pc-b 3/3 0%.
+  stop -> destroyed, 0 left. :8010 down; :8000 still 200. clab 35.
+Both real-switch vendors (SR Linux + Cumulus) now product-path evidenced.
+Proof: proofs/product-api-e2e-srl-20260922-1112.txt
+
+NOT COMPLETE. Nexus completion is Dad's call alone.
