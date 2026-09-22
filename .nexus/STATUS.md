@@ -1456,3 +1456,28 @@ throwaway :8011:
 Both unsolved variants now product-path evidenced.
 Proof: proofs/product-api-e2e-demo01-unsolved-20260922-1312.txt
 NOT COMPLETE. Nexus completion is Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~15:15 EDT — aegis-demo2-drive (live re-verify BOTH tasks, throwaway :8012)
+
+RAN both tasks live this hour on a THROWAWAY backend (:8012, Dad's :8000 untouched)
+using the UNSOLVED variants through the whole product path.
+
+TASK 1 (real switch, SRL, session b4927eba, digest aegis-less:0d40ee2f...):
+  switch is real SR Linux (SRLINUX 26.7.2-519, /usr/local/bin/sr_cli).
+  cold via API: pc-a/pc-b 0.0 FAIL, sw1 1.0 (seeded). student work applied.
+  PASS CONDITION: pc-a->switch 10.0.1.254 3/3 0%; pc-a->pc-b 10.0.1.2 3/3 0%.
+  FDB: IRB MAC in bridge table with both PCs. after: pc-a 1.0 / pc-b 0.5 / sw1 1.0.
+  NEGATIVE GATE live: plain-demo Alpine "switch" -> SRL grader REFUSED
+    ("sr_cli not available — node is not an SR Linux switch"); generic grader
+    also FAILS. A Linux PC cannot pass as a switch.
+
+TASK 2 (demo-02 unsolved, session ef6eed3b, digest sha256:bb7ef23a... == pin):
+  all 5 nodes up; pc-a->r1->pc-b all 0% loss; traceroute = r1 then pc-b (2 hops).
+  grades via API: ALL 5 nodes 1.0.
+
+CLEANUP: sessions destroyed, 0 leftovers, clab baseline 35, :8012 down, :8000 200.
+No new defects. Proof: proofs/live-reverify-both-tasks-20260922-1515.txt
+NOT COMPLETE. Nexus completion is Dad's call alone.

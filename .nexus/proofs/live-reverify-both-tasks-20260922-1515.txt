@@ -1,0 +1,68 @@
+======================================================================
+PROOF — DRIVE 2026-09-22 ~15:03-15:15 EDT  (aegis-demo2-drive)
+INDEPENDENT LIVE RE-VERIFICATION of BOTH tasks this hour, on a THROWAWAY
+backend (:8012) — Dad's :8000 left untouched this time.
+======================================================================
+
+METHOD: copied backend/main.py to backend/drive_8012_main.py, sed port
+8000->8012, ran it detached (setsid). :8012 served 14 labs incl. both
+-unsolved variants. :8000 remained HTTP 200 throughout. temp copy removed
+after; :8012 shut down.
+
+--- TASK 1: REAL SWITCH, pass condition = ping BOTH switch AND other PC ---
+Lab: demo-01-two-pcs-and-a-real-switch-unsolved, session b4927eba (37s cold).
+  runtime_digest = aegis-less:0d40ee2f53920a9d7c069fe03b23311457294f998292656326fa7d5478a327b3
+
+  Switch is a REAL network OS, not a Linux PC:
+    /etc/os-release PRETTY_NAME="SRLINUX 26.7.2-519"
+    /usr/local/bin/sr_cli -> /opt/srlinux/bin/sr_cli
+
+  COLD grades via API (no student config):
+    pc-a F 0.0 | pc-b F 0.0 | sw1 T 1.0      -> lab fails cold (correct).
+
+  STUDENT WORK: pc-a 10.0.1.1/24 ; pc-b 10.0.1.2/24
+  PASS CONDITION (unsoftened — BOTH pings):
+    pc-a -> switch 10.0.1.254 : 3/3  0% loss
+    pc-a -> pc-b   10.0.1.2   : 3/3  0% loss
+  FDB (mac-vrf-1 mac-table all): IRB MAC 1A:48:02:FF:00:41 type irb-interface
+    present, with ethernet-1/1.0 and ethernet-1/2.0 learnt (both PCs).
+  GRADES AFTER WORK via API: pc-a T 1.0 | pc-b T 0.5 | sw1 T 1.0  -> PASSES.
+
+--- NEGATIVE GATE (a Linux PC must NOT pass as a switch) — ran LIVE ---
+Deployed the plain demo-01 (its "switch" is an Alpine Linux PC; verified live:
+  /etc/os-release NAME="Alpine Linux", no sr_cli, no vtysh).
+Ran the SR Linux grader against that node mapped as sw1:
+  passed=False score=0.0
+  feedback: "sw1: expected real switch IRB 10.0.1.254/24 — sr_cli not available
+             — node is not an SR Linux switch"
+Generic grader_demo_01 against it also FAILS (10.0.1.254 not on br0).
+=> A Linux PC cannot pass as a switch. PC-to-PC alone does not count.
+
+--- TASK 2: DEMO LAB 2 (pc-a -> sw1 -> ROUTER -> sw2 -> pc-b) -------------
+Lab: demo-02-two-switches-one-router-unsolved, session ef6eed3b, 5 nodes.
+  runtime_digest = sha256:bb7ef23a07dcb6c6b34e225dd77fa2eb592700975843ad1f1aa0105f49f9220c
+    == assets/frr-image.pin (substrate attributed).
+  STUDENT WORK:
+    pc-a 10.0.1.1/24 + route 10.0.2.0/24 via 10.0.1.253
+    pc-b 10.0.2.1/24 + route 10.0.1.0/24 via 10.0.2.253
+    r1   ip_forward=1 ; eth1 10.0.1.253/24 ; eth2 10.0.2.253/24
+  PATH (all 0% loss):
+    pc-a -> sw1 IRB 10.0.1.254 : 0%
+    pc-a -> r1      10.0.1.253 : 0%
+    pc-a -> pc-b    10.0.2.1   : 0%   <- crosses the router
+    pc-b -> pc-a    10.0.1.1   : 0%
+  traceroute pc-a->pc-b: hop1 10.0.1.253 (r1), hop2 10.0.2.1 (pc-b) — 2-hop path.
+  GRADES via API: ALL 5 nodes True 1.0.
+
+--- HYGIENE ---------------------------------------------------------------
+All sessions stopped via API -> destroyed. 0 leftover containers.
+clab container baseline restored to 35. :8012 down; :8000 HTTP 200 (untouched
+this drive). temp backend copy + /tmp files removed.
+
+CONTRAST WITH 14:03 DRIVE: last drive I restarted :8000 (rule deviation, flagged
+separately). This drive used a proper throwaway and left :8000 alone.
+
+--- VERDICT ---------------------------------------------------------------
+Both tasks independently re-verified LIVE this hour, on the UNSOLVED variants,
+through the whole product path, with the negative gate holding. No new defects
+found. NOT COMPLETE — Nexus completion is Dad's call alone.
