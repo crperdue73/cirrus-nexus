@@ -1,0 +1,35 @@
+======================================================================
+PROOF — PRODUCT-API E2E: SR LINUX demo-01 (real switch; task-1 condition)
+Date: 2026-09-22 ~11:03-11:12 EDT   Drive: aegis-demo2-drive
+Backend: throwaway :8010 (Dad's :8000 untouched)
+======================================================================
+
+WHY: closes the last demo lab on the product path, giving BOTH real-switch
+vendors the same end-to-end evidence (Cumulus proven at 10:10, SR Linux here).
+
+--- START via API -------------------------------------------------------
+  POST /api/sessions/start?lab_id=demo-01-two-pcs-and-a-real-switch
+   -> session c93d0dc6 running, 3 nodes (pc-a, pc-b, sw1)
+   -> runtime_digest aegis-less:0d40ee2f...
+
+--- GRADES via API ------------------------------------------------------
+  pc-a True 1.0 | pc-b True 0.5 | sw1 True 1.0
+  fb: "sw1: real SR Linux switch, SR Linux irb0.0 up with 10.0.1.254"
+
+--- SWITCH IS REAL (direct container inspection) ------------------------
+  /etc/os-release: PRETTY_NAME="SRLINUX 26.7.2-519" (SR Linux, Debian base)
+  /usr/local/bin/sr_cli present
+
+--- TASK 1 PASS CONDITION (ping the switch AND the other PC) ------------
+  pc-a -> 10.0.1.254 (switch): 3/3, 0% loss
+  pc-a -> 10.0.1.2   (pc-b)  : 3/3, 0% loss
+  Both met, on a REAL SR Linux switch, through the product API.
+
+--- STOP -----------------------------------------------------------------
+  POST /api/sessions/c93d0dc6/stop -> {"status":"destroyed"}
+  0 containers remain. :8010 down; :8000 still 200. clab baseline 35.
+
+VERDICT: SR Linux real-switch demo deploys and grades through the product API,
+and task 1's pass condition holds against a genuine SR Linux switch. Together
+with the Cumulus proof, both vendors are end-to-end evidenced.
+NOT COMPLETE. Nexus completion is Dad's call alone.
