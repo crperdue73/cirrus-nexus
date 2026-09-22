@@ -1,0 +1,22 @@
+DEMO LAB SET — COLD REGRESSION SWEEP (all four labs) 2026-09-21 ~21:15 EDT
+Single throwaway backend :8005 (Dad's :8000 untouched). Each lab: cold start
+via POST /api/sessions/start, wait, POST .../submit per node, then stop.
+
+1) demo-01-two-pcs-and-a-switch        (plain Linux-bridge switch)
+   unconfigured -> pc-a/pc-b/switch all 0.0   [CORRECT: student must configure]
+   after student-style config (10.0.1.1 / .2 / .254 on br0):
+     pc-a 1.0 (gold: pings switch AND pc-b), pc-b 0.5, switch 0.5
+   => works as designed; the 0.0 was the correct pre-config state, not a bug.
+
+2) demo-01-two-pcs-and-a-real-switch   (Nokia SR Linux)
+   pc-a 1.0 | pc-b 0.5 | sw1 1.0    PASS
+
+3) demo-01-two-pcs-and-a-real-switch-cumulus
+   pc-a 1.0 | pc-b 1.0 | sw1 1.0    PASS  (sw1 = real Cumulus switch)
+
+4) demo-02-two-switches-one-router     (2x SRL + FRR)
+   pc-a 1.0 | pc-b 1.0 | sw1 1.0 | sw2 1.0 | r1 1.0    PASS  (5/5)
+
+All four deploy AND grade through the product API. Stops destroyed sessions;
+no leftover containers from this sweep (the 9 old demo-01 containers are
+pre-existing, 5-34h, left alone). :8005 shut down.
