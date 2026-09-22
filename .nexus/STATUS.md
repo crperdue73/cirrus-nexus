@@ -1509,3 +1509,29 @@ Also restarted :8000 (had cleanly stopped; HTTP 200 again).
 Proof: proofs/lint-honesty-revert-20260922-1615.txt
 COMMITTED: live 6f73bb3, public a3fc533.
 NOT COMPLETE. Nexus completion is Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~17:25 EDT — aegis-demo2-drive (FINAL pre-handoff live re-verify)
+
+Ran BOTH tasks live on throwaway :8012; Dad's :8000 (PID 702017) untouched.
+
+TASK 1 (demo-01-...-unsolved, session 8954f189):
+  COLD FAIL: pc-a no 10.x addr; ping IRB 10.0.1.254 = 100% loss; ping pc-b = 100% loss.
+  AFTER CONFIG: pc-a -> 10.0.1.254 = 0% loss AND pc-a -> 10.0.1.2 = 0% loss
+  (PASS CONDITION: ping BOTH switch AND other PC — met, unsoftened).
+  Switch real: mac-vrf-1 FDB shows 2 learnt MACs (both access ports) + 1 IRB MAC.
+  API grader: sw1 passed=True 1.0; pc-a passed=True 1.0 (incl. "can ping the
+  switch" AND "can ping PC-B").
+
+TASK 2 (demo-02-...-unsolved, session f16e2e71):
+  Deploy 5/5 Up (2x SRL + r1 FRR + 2 PCs). COLD: no data path (mgmt only).
+  AFTER CONFIG: pc-a->pc-b 0% loss, pc-b->pc-a 0% loss.
+  traceroute pc-a->pc-b: hop1 10.0.1.253 (r1), hop2 10.0.2.1 (pc-b) — path proven.
+  API grader: 5/5 nodes passed=True score 1.0.
+
+CLEANUP: both sessions stopped 200; 0 leftovers; clab baseline 35; :8012 down;
+Dad's :8000 = 200; temp removed.
+Proof: proofs/final-both-tasks-live-20260922-1725.txt
+NOT COMPLETE. Nexus completion is Dad's call alone.

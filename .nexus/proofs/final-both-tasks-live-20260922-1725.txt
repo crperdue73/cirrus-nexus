@@ -1,0 +1,95 @@
+======================================================================
+PROOF — DRIVE 2026-09-22 ~17:03-17:25 EDT  (aegis-demo2-drive)
+FINAL PRE-HANDOFF LIVE RE-VERIFICATION OF BOTH TASKS (throwaway :8012)
+======================================================================
+
+Dad's servers untouched: his :8000 (PID 702017) ran throughout; all work on a
+throwaway copy at :8012 (sed port=8000 -> 8012 in a copy of backend/main.py,
+placed at /tmp/drive8012/backend/main.py so BASE_DIR=parent.parent resolves
+lab-definitions/ + assets/ correctly).
+
+----------------------------------------------------------------------
+TASK 1 — REAL SWITCH: lab demo-01-two-pcs-and-a-real-switch-unsolved
+----------------------------------------------------------------------
+DEPLOY: session 8954f189, nodes pc-a / pc-b / sw1, all Up. status=running.
+
+COLD (student work absent) — the pass condition FAILS:
+  pc-a addr: only mgmt eth0 (172.20.20.13) — NO 10.0.1.x.
+  pc-a -> 10.0.1.254 (switch IRB): 100% packet loss.
+  pc-a -> 10.0.1.2   (pc-b)      : 100% packet loss.
+
+APPLIED student config, then re-ran:
+  pc-a: 10.0.1.1/24 on eth1, default via 10.0.1.254.
+  pc-b: 10.0.1.2/24 on eth1, default via 10.0.1.254.
+
+  PASS CONDITION (unsoftened — ping BOTH switch AND other PC):
+    pc-a -> 10.0.1.254  (sw1 IRB) : 3/3 received, 0% loss  ✅
+    pc-a -> 10.0.1.2    (pc-b)    : 3/3 received, 0% loss  ✅
+    (pc-b -> 10.0.1.1   pc-a      : 2/2 received, 0% loss)
+
+  SWITCH IS REAL (SR Linux mac-vrf-1 FDB):
+    AA:C1:AB:77:F1:.. ethernet-1/1.0  learnt
+    AA:C1:AB:BD:7B:.. ethernet-1/2.0  learnt
+    Total Learnt Macs: 2 Active ; Total Irb Macs: 1 Active
+  Network instances present: mac-vrf-1, ip-vrf-1, mgmt (irb0.0 in both mac+ip).
+
+API GRADER (echoes the pass condition, no softening):
+  sw1 : status=graded passed=True score=1.0
+        "sw1: real SR Linux switch, SR Linux irb0.0 up with 10.0.1.254"
+  pc-a: status=graded passed=True score=1.0
+        "10.0.1.1/24 present on eth1" / "can ping the switch (10.0.1.254)" /
+        "can ping PC-B (10.0.1.2)"   <- BOTH required checks, both green
+  pc-b: status=graded passed=True score=0.5 (addr present)
+
+----------------------------------------------------------------------
+TASK 2 — CAPABILITY PROBE: lab demo-02-two-switches-one-router-unsolved
+----------------------------------------------------------------------
+DEPLOY: session f16e2e71, 5/5 nodes Up:
+  pc-a, sw1, r1, sw2, pc-b  (2x SR Linux + 3 linux/FRR).
+
+COLD: pc-a has no 10.x addr; traceroute 10.0.2.1 exits via mgmt
+      (172.20.20.1 -> 192.168.1.1) — no lab data path. FAILS as expected.
+
+APPLIED student config (from the lab yaml's expected commands):
+  pc-a: 10.0.1.1/24 eth1, route 10.0.2.0/24 via 10.0.1.253
+  pc-b: 10.0.2.1/24 eth1, route 10.0.1.0/24 via 10.0.2.253
+  r1  : ip_forward=1, eth1 10.0.1.253/24, eth2 10.0.2.253/24
+
+  RUNS GREEN:
+    pc-a -> 10.0.1.254 (sw1 IRB) : 0% loss
+    pc-a -> 10.0.1.253 (r1)      : 0% loss
+    pc-a -> 10.0.2.1   (pc-b, across router) : 3/3, 0% loss
+    pc-b -> 10.0.1.1   (pc-a, across router) : 2/2, 0% loss
+    TRACEROUTE pc-a->pc-b proves the path:
+      1  10.0.1.253   0.175 ms   <- r1 (the router)
+      2  10.0.2.1     0.200 ms   <- pc-b
+
+API GRADER — 5/5 nodes PASS, all score 1.0:
+  pc-a: addr + ping sw1 + ping r1 + ping pc-b(across router)  passed=True 1.0
+  pc-b: addr + ping pc-a(across router)                        passed=True 1.0
+  sw1 : real SR Linux switch, irb0.0 10.0.1.254                passed=True 1.0
+  sw2 : real SR Linux switch, irb0.0 10.0.2.254                passed=True 1.0
+  r1  : 10.0.1.253/24 eth1 + 10.0.2.253/24 eth2 + forwarding ON passed=True 1.0
+
+----------------------------------------------------------------------
+CLEANUP (verified)
+----------------------------------------------------------------------
+  Sessions stopped via API: 8954f189 -> 200, f16e2e71 -> 200.
+  Leftover containers from both sessions: 0.
+  clab baseline restored: 35.
+  Throwaway :8012 down (000). Dad's :8000 healthy (200), his PID 702017
+  still the ONLY main.py. Temp dir/file removed.
+
+----------------------------------------------------------------------
+STATUS
+----------------------------------------------------------------------
+Both of Dad's asks are verified LIVE right now, by running them, on a
+throwaway port, with his server untouched:
+  (1) REAL SWITCH — PASS condition (ping BOTH switch and other PC) met and
+      graded green. SR Linux is the chosen real switch. (Cumulus also ships
+      as its own gradeable lab; verified earlier this session.)
+  (2) DEMO LAB 2 — deploys and grades end-to-end: 5/5 green, traceroute
+      proves pc-a -> r1 -> pc-b across two real switches.
+
+NOT COMPLETE. "Deployed" is not "finished". Nexus completion is Dad's call
+alone and has not been given.
