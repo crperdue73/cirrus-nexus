@@ -271,13 +271,23 @@ def grade_all(session):
     for node in ["pc-a", "pc-b", "sw1", "sw2", "r1"]:
         results[node] = grade(session, node)
 
+    # Lab-level pass must require EVERY gradeable node, not just the hosts.
+    # DEFECT FIXED 2026-09-21: this used to gate only on pc-a/pc-b, so a lab
+    # with a Linux-PC FAKE in place of a real switch graded as PASSED as long
+    # as the hosts pinged. Per-node sw1/sw2 correctly refused the fake, but
+    # the lab verdict ignored them. Dad's pass condition requires REAL
+    # switches, so the lab verdict must consult the real-switch checks too.
     e2e = results["pc-a"]["passed"] and results["pc-b"]["passed"]
+    real_switches = results["sw1"]["passed"] and results["sw2"]["passed"]
+    router_ok = results["r1"]["passed"]
+    lab_passed = e2e and real_switches and router_ok
     return {
-        "passed": e2e,
+        "passed": lab_passed,
         "nodes": results,
         "summary": (
-            "Demo lab 2 PASSES — pc-a <-> pc-b end-to-end through sw1, r1, sw2."
-            if e2e
+            "Demo lab 2 PASSES — pc-a <-> pc-b end-to-end through sw1, r1, sw2 "
+            "(both switches real, router forwarding)."
+            if lab_passed
             else "Demo lab 2 is not yet complete — see per-node feedback."
         ),
     }

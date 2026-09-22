@@ -1,10 +1,10 @@
 # =============================================================================
 # AEGIS — DEMO LAB 01: Two PCs and a Switch
 # =============================================================================
-# Design spec:
-#   A single DEMO lab with 2 PCs and a switch. The student configures IPs on
-#   the two computers and a management IP on the switch. When PC-A can ping
-#   BOTH the switch and PC-B, the lab works.
+# Dad's spec (2026-09-20):
+#   "a single DEMO lab with 2 PCs and a switch. the student needs to configure
+#    IPs on the two computers, and a management IP on the switch. when PC 1 can
+#    ping BOTH the switch and PC 2, then the lab works. simple demo."
 #
 # Topology:
 #
@@ -38,6 +38,17 @@ metadata:
     - pc-b
     - switch
   grader: grader_demo_01
+  instructions:
+    - Click into the terminal for PC-A
+    - 'Assign an IP: ip addr add 10.0.1.1/24 dev eth1'
+    - 'Bring the interface up: ip link set eth1 up'
+    - Click into the terminal for PC-B
+    - 'Assign an IP: ip addr add 10.0.1.2/24 dev eth1'
+    - 'Bring the interface up: ip link set eth1 up'
+    - Click into the terminal for the switch
+    - 'Assign the management IP on the bridge: ip addr add 10.0.1.254/24 dev br0'
+    - 'Bring the bridge up: ip link set br0 up'
+    - 'From PC-A, prove the lab: ping 10.0.1.254 (the switch) AND ping 10.0.1.2 (PC-B). Both must reply.'
   competencies:
     - IP addressing on a host
     - Management IP on a switch (SVI)

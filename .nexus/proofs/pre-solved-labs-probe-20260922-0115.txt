@@ -1,0 +1,60 @@
+======================================================================
+PROOF — CAPABILITY PROBE: ARE THE DEMO LABS ACTUALLY UNSOLVED?
+Date: 2026-09-22 ~01:15 EDT   Drive: aegis-demo2-drive
+Backend: throwaway :8006 (Dad's :8000 untouched)
+======================================================================
+
+QUESTION the probe answers: Dad said "we need to know what actually
+deploys and grades before lab packs can be built." So: deploy each lab
+COLD, apply NO student configuration, and grade immediately.
+
+--- PROBE 1: demo-02-two-switches-one-router (student does NOTHING) ------
+start -> wait 110s -> submit all 5 nodes -> stop
+
+  pc-a: passed=True score=1.0
+      ✅ 10.0.1.1/24 present on eth1
+      ✅ pc-a can ping sw1 (10.0.1.254)
+  pc-b: passed=True score=1.0
+      ✅ 10.0.2.1/24 present on eth1
+      ✅ pc-b can ping pc-a across the router (10.0.1.1)
+  sw1:  passed=True score=1.0   (real SR Linux, irb0.0 10.0.1.254)
+  sw2:  passed=True score=1.0   (real SR Linux, irb0.0 10.0.2.254)
+  r1:   passed=True score=1.0   (10.0.1.253/24 eth1, 10.0.2.253/24 eth2, fwd on)
+
+RESULT: 5/5 nodes PASS with ZERO student configuration.
+
+ROOT CAUSE (read from the topology, not guessed):
+   lab-definitions/srl-demo2/demo-02-two-switches-one-router.yml
+   - pc-a  exec: ip addr add 10.0.1.1/24 ... ; ip route add 10.0.2.0/24 via .253
+   - pc-b  exec: ip addr add 10.0.2.1/24 ... ; ip route add 10.0.1.0/24 via .253
+   - r1    exec: sysctl ip_forward=1 ; ip addr add 10.0.1.253/24 ; ip add 10.0.2.253/24
+   EVERY value the grader checks is baked into the deploy `exec` block.
+   The lab ships FULLY PRE-SOLVED.
+
+--- PROBE 2: demo-01-two-pcs-and-a-real-switch (configure pc-a ONLY) ----
+start -> wait 90s -> configure pc-a by hand -> submit pc-a/pc-b/sw1 -> stop
+
+  pc-a: passed=True score=1.0  (I configured it)
+  pc-b: passed=True score=0.5  ("10.0.1.2/24 present on eth1") -- I did NOT touch pc-b
+  sw1:  passed=True score=1.0
+
+ROOT CAUSE: srl-demo/demo-01-srl-switch.yml pc-b exec block pre-applies
+   10.0.1.2/24 + link-up. So pc-b grades as a pass with NO student work.
+   This lab is PARTIALLY pre-solved (pc-b seeded; only pc-a is real work).
+
+--- WHAT THIS MEANS (precise, not overclaimed) -------------------------
+The SUBSTRATE capability is proven: both labs deploy cold on a fresh
+backend, all devices come up, real switches answer, and every node
+grades through the product API with honest, attributable verdicts.
+  => DEMO-02 as a two-real-switches-one-router PROBE: PASS (the
+     topology deploys and grades end to end; grader fixes hold).
+
+The LAB-CONTENT capability is NOT proven: demo-02 requires zero student
+work (5/5 with no config), and demo-01-srl seeds pc-b. A lab pack built
+from these would ship solved. THIS IS THE GAP TO CLOSE:
+  -> decide per-lab what ships pre-configured (the switch IRB/SVI is
+     deliberately pre-seeded, which is correct) and what the student
+     must actually do (the PC addresses + router addressing should NOT
+     be seeded in a lab that asks the student to assign them).
+
+NOT COMPLETE. Nexus completion is Dad's call alone.

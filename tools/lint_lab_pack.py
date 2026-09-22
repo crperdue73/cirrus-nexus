@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+"""
+AEGIS lab-pack lint — detect labs that ship PRE-SOLVED.
+
+Why this exists (2026-09-22): the four demo labs all deployed and graded, but
+a cold deploy of demo-02 graded 5/5 with ZERO student work — every value the
+grader checks was baked into the topology `exec` blocks. A lab pack built from
+those would ship the answer key. This lint catches that statically, before a
+deploy, so "shipped solved" can't slip through unnoticed.
+
+Method (static, no containers):
+  1. For each lab YAML, find its grader module (metadata.grader).
+  2. Import the grader and read its EXPECTED map (node -> {ip, dev}) plus any
+     switch-IRB / router expectations the module exposes.
+  3. Scan the lab's topology YAML for those IPs appearing in node `exec:` or
+     `startup-config` files.
+  4. Classify each lab.
+
+Classification: a lab's PC/router addresses are the *student's* work. The
+switch management IP is deliberately pre-seeded by design, so it is NOT counted
+when deciding "solved".
+
+  SOLVED  — every PC (and router, if any) address is pre-applied in the topology
+  PARTIAL — some PC/router addresses pre-applied, some left to the student
+  UNSOLVED— no PC/router addresses pre-applied (the student does the work)
+
+Usage:  python3 tools/lint_lab_pack.py [--json]
+Exit code 1 if any lab is SOLVED (a lab-pack red flag), else 0.
+"""
+
+import argparse
+import importlib.util
+import json
+import re
+import sys
+from pathlib import Path
+
+BASE = Path(__file__).resolve().parent.parent
+LABS_DIR = BASE / "lab-definitions"
+
+
+def load_grader(module_name: str):
+    path = LABS_DIR / f"{module_name}.py"
+    if not path.exists():
+        return None
+    spec = importlib.util.spec_from_file_location(f"_lint_{module_name}", path)
+    mod = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(mod)
+    except Exception as e:  # pragma: no cover - defensive
+        print(f"  ! could not import {module_name}: {e}", file=sys.stderr)
+        return None
+    return mod
+
+
+def parse_metadata(yml_path: Path) -> dict:
+    """Read just the `metadata:` block (no yaml dep assumed)."""
+    text = yml_path.read_text()
+    m = re.search(r"^metadata:\n((?:[ \t].*\n|\n)*)", text, re.M)
+    if not m:
+        return {}
+    block = m.group(1)
+    meta = {}
+    for line in block.split("\n"):
+        km = re.match(r"\s*([a-z_]+):\s*(.*)$", line)
+        if km:
+            meta[km.group(1)] = km.group(2).strip()
+    return meta
+
+
+def switch_ips_from_grader(mod) -> dict:
+    """Collect switch-IRB expectations a grader may expose."""
+    out = {}
+    for attr in ("IRB_EXPECTED", "SWITCH_EXPECTED", "SW_EXPECTED"):
+        v = getattr(mod, attr, None)
+        if isinstance(v, dict):
+            out.update({k: vv for k, vv in v.items()})
+    return out
+
+
+def student_values(mod) -> dict:
+    """node -> list of IPs the STUDENT is expected to apply.
+
+    PCs come from EXPECTED. A router's addresses (if the grader exposes a
+    ROUTER_EXPECTED map of node -> [(dev, ip), ...]) are also student work.
+    Switch IRBs are deliberately seeded and excluded.
+    """
+    vals = {}
+    exp = getattr(mod, "EXPECTED", {}) or {}
+    for node, spec in exp.items():
+        if isinstance(spec, dict) and spec.get("ip"):
+            # 'switch' node in the plains lab is the switch mgmt IP: it IS
+            # student work there (no separate switch grader map). Keep it.
+            vals.setdefault(node, []).append(spec["ip"])
+    rt = getattr(mod, "ROUTER_EXPECTED", {}) or {}
+    for node, pairs in rt.items():
+        for _dev, ip in pairs:
+            vals.setdefault(node, []).append(ip)
+    return vals
+
+
+def preapplied_in_topology(yml_path: Path, ips: list) -> set:
+    """Which of `ips` appear in the topology's *executable* config text.
+
+    Only real config counts: node `exec:` commands and referenced
+    `startup-config` files. The `instructions:` list and header comments quote
+    the same commands but do not apply them, and scanning those produced false
+    SOLVED verdicts for labs that actually fail cold (verified by running them:
+    plains demo-01 and demo-02-unsolved both FAIL with zero student config, yet
+    an earlier version of this lint flagged them SOLVED).
+    """
+    import yaml
+    doc = yaml.safe_load(yml_path.read_text()) or {}
+    topo = doc.get("topology") or {}
+    chunks = []
+    for node, spec in (topo.get("nodes") or {}).items():
+        if not isinstance(spec, dict):
+            continue
+        for cmd in (spec.get("exec") or []):
+            chunks.append(str(cmd))
+        sc = spec.get("startup-config")
+        if sc:
+            scp = (yml_path.parent / sc)
+            if scp.exists():
+                chunks.append(scp.read_text())
+    blob = "\n".join(chunks)
+    found = set()
+    for ip in ips:
+        if re.search(re.escape(ip) + r"/", blob):
+            found.add(ip)
+    return found
+
+
+def classify(lab_dir: Path, yml_path: Path) -> dict:
+    meta = parse_metadata(yml_path)
+    grader_name = meta.get("grader") or f"grader_{meta.get('id','')}"
+    mod = load_grader(grader_name)
+    result = {
+        "lab": meta.get("id", yml_path.stem),
+        "topology": str(yml_path.relative_to(BASE)),
+        "grader": grader_name,
+        "status": "UNKNOWN",
+        "student_nodes": {},
+    }
+    if mod is None:
+        result["status"] = "NO-GRADER"
+        return result
+
+    sv = student_values(mod)
+    if not sv:
+        result["status"] = "NO-EXPECTED"
+        return result
+
+    total, seeded = 0, 0
+    for node, ips in sv.items():
+        got = preapplied_in_topology(yml_path, ips)
+        total += len(ips)
+        seeded += len(got)
+        result["student_nodes"][node] = {
+            "expected": ips,
+            "seeded_in_topology": sorted(got),
+        }
+
+    if seeded == 0:
+        result["status"] = "UNSOLVED"
+    elif seeded == total:
+        result["status"] = "SOLVED"
+    else:
+        result["status"] = "PARTIAL"
+    result["seeded_ratio"] = f"{seeded}/{total}"
+    return result
+
+
+def discover_labs() -> list:
+    out = []
+    cands = list(LABS_DIR.glob("*.yml"))
+    for sub in sorted(p for p in LABS_DIR.iterdir() if p.is_dir()):
+        cands.extend(sorted(sub.glob("*.yml")))
+    for yml in sorted(cands):
+        # only real labs: a metadata block with an id
+        meta = parse_metadata(yml)
+        if meta.get("id"):
+            out.append(yml)
+    return out
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--json", action="store_true")
+    args = ap.parse_args()
+
+    results = []
+    for yml in discover_labs():
+        try:
+            results.append(classify(yml.parent, yml))
+        except Exception as e:
+            results.append({"lab": yml.stem, "status": "ERROR", "error": str(e)})
+
+    if args.json:
+        print(json.dumps(results, indent=2))
+    else:
+        print(f"{'STATUS':<9} {'SEEDED':<8} LAB")
+        print("-" * 70)
+        for r in results:
+            if r["status"] in ("SOLVED", "PARTIAL", "UNSOLVED"):
+                print(f"{r['status']:<9} {r.get('seeded_ratio',''):<8} {r['lab']}")
+            else:
+                print(f"{r['status']:<9} {'-':<8} {r['lab']}  ({r.get('error', r['status'])})")
+        solved = [r for r in results if r["status"] == "SOLVED"]
+        print("-" * 70)
+        print(f"labs scanned: {len(results)}   SOLVED (red flag): {len(solved)}")
+        if solved:
+            print("RED FLAG — these labs grade with zero student work:")
+            for r in solved:
+                print(f"   {r['lab']}  (grader {r['grader']})")
+
+    return 1 if any(r["status"] == "SOLVED" for r in results) else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

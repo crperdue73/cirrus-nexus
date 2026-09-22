@@ -1,0 +1,63 @@
+metadata:
+  course: CI-DEMO
+  id: demo-01-two-pcs-and-a-real-switch-unsolved
+  name: "Demo (UNSOLVED) \u2014 Two PCs and a Real Switch (SR Linux) \U0001F5A5\uFE0F\
+    \U0001F500\U0001F5A5\uFE0F"
+  description: 'The shipping demo, on a REAL switch. Two computers connected through
+    a Nokia SR Linux switch. The student assigns an IP on each PC and a management
+    IP on the switch''s IRB, then proves the lab works by pinging the switch and the
+    other PC from PC-A. Teaches IP addressing, interface bring-up, L2 bridging, IRB/SVI
+    L3 on a switch, and ping verification.
+
+    '
+  difficulty: Beginner
+  duration_min: 25
+  gradeable_nodes:
+  - pc-a
+  - pc-b
+  - sw1
+  grader: grader_demo_01_srl
+  instructions:
+  - Click into the terminal for PC-A
+  - 'Assign an IP: ip addr add 10.0.1.1/24 dev eth1'
+  - 'Bring the interface up: ip link set eth1 up'
+  - Click into the terminal for PC-B
+  - 'Assign an IP: ip addr add 10.0.1.2/24 dev eth1'
+  - 'Bring the interface up: ip link set eth1 up'
+  - The switch (SR Linux) is a REAL switch; its IRB 10.0.1.254/24 ships pre-configured.
+  - 'From PC-A, prove the lab: ping 10.0.1.254 (the switch) AND ping 10.0.1.2 (PC-B).
+    Both must reply.'
+  - 'Optional: on the switch, sr_cli ''show interface irb0'' to confirm the IRB is
+    up.'
+  competencies:
+  - IP addressing on a host
+  - Management IP on a switch (IRB/SVI)
+  - Interface bring-up
+  - L2 bridging vs L3 gateway on a switch
+  - Ping verification (host-to-switch, host-to-host)
+  prerequisites: []
+name: aegis-demo-01-srl-switch
+topology:
+  nodes:
+    pc-a:
+      kind: linux
+      image: alpine:latest
+      exec:
+      - ip link set eth1 up
+    pc-b:
+      kind: linux
+      image: alpine:latest
+      exec:
+      - ip link set eth1 up
+    sw1:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux:latest
+      type: ixrd2l
+      startup-config: assets/sw1.cfg
+  links:
+  - endpoints:
+    - pc-a:eth1
+    - sw1:e1-1
+  - endpoints:
+    - pc-b:eth1
+    - sw1:e1-2

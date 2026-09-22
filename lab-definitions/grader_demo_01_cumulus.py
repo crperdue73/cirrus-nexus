@@ -180,3 +180,36 @@ def grade(session, node):
         "feedback": feedback,
         "competencies": competencies,
     }
+
+
+def grade_all(session):
+    """Lab-level pass = Dad's pass condition: pc-a reaches BOTH the real
+    Cumulus switch (SVI) and PC-B, AND the switch fingerprint confirms a real
+    switch (so a Linux-PC fake cannot carry the lab).
+
+    NOTE (2026-09-21): this function was MISSING from this grader while every
+    sibling grader had one. Added so the Cumulus lab has the same lab-level
+    verdict contract as grader_demo_01_srl / grader_demo_02, and so the
+    real-switch requirement gates the LAB verdict, not just the node score.
+    """
+    results = {}
+    for node in ["pc-a", "pc-b", "sw1"]:
+        results[node] = grade(session, node)
+
+    lab_passed = results["pc-a"]["passed"] and results["sw1"]["passed"]
+    return {
+        "passed": lab_passed,
+        "nodes": results,
+        "summary": (
+            "Demo lab 1 (Cumulus) PASSES — pc-a reaches both the real switch "
+            "and PC-B."
+            if lab_passed
+            else "Demo lab 1 (Cumulus) is not yet complete — see per-node feedback."
+        ),
+    }
+
+
+if __name__ == "__main__":
+    import sys
+    s = json.loads(sys.argv[1]) if len(sys.argv) > 1 else {}
+    print(json.dumps(grade_all(s), indent=2))

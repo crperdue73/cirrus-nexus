@@ -1,0 +1,47 @@
+======================================================================
+AEGIS LAB-PACK LINT — detects labs that ship PRE-SOLVED
+Date: 2026-09-22 ~03:15 EDT   Drive: aegis-demo2-drive
+======================================================================
+
+ARTIFACT: tools/lint_lab_pack.py  (static, no containers, exit 1 on any SOLVED)
+Method: import each lab's grader, read its EXPECTED map (and any
+ROUTER_EXPECTED), then scan ONLY the topology's executable config
+(node `exec:` commands + referenced `startup-config` files) for those IPs.
+A lab is SOLVED when every PC/router value the grader checks is pre-applied.
+
+--- OUTPUT (verified, matches live cold runs exactly) --------------------
+STATUS    SEEDED   LAB
+SOLVED    2/2      demo-01-two-pcs-and-a-real-switch-cumulus
+UNSOLVED  0/3      demo-01-two-pcs-and-a-switch
+SOLVED    2/2      demo-01-two-pcs-and-a-real-switch
+SOLVED    2/2      demo-02-two-switches-one-router
+UNSOLVED  0/2      demo-02-two-switches-one-router-unsolved
+NO-EXPECTED -      tier-01-foundation ... (9 legacy labs have no EXPECTED map)
+labs scanned: 13   SOLVED (red flag): 3
+
+CROSS-CHECK vs LIVE COLD RUNS (this is what makes the lint trustworthy):
+  plains demo-01        lint=UNSOLVED  | ran cold: pc-a/pc-b/switch all FAIL  ✅
+  demo-02-unsolved      lint=UNSOLVED  | ran cold: pc-a/pc-b/r1 FAIL          ✅
+  SRL demo-01           lint=SOLVED    | ran cold: pass 1.0/0.5/1.0           ✅
+  Cumulus demo-01       lint=SOLVED    | ran cold: pass 1.0/1.0/1.0           ✅
+  demo-02 shipped       lint=SOLVED    | ran cold: pass 1.0 x5                ✅
+
+--- FALSE POSITIVES CAUGHT AND FIXED (three, by running the truth) -------
+1. First version flagged plains demo-01 SOLVED. It was scanning header
+   COMMENTS that quote the intended commands ("# switch: ip addr add ...").
+2. After stripping comments it STILL flagged plains demo-01 and
+   demo-02-unsolved SOLVED: the same IPs appear in the `instructions:` list,
+   which quotes the commands but does not apply them.
+3. Fixed by parsing the YAML and scanning ONLY `topology.nodes.*.exec` and
+   `startup-config` file bodies. Output then matched every live run.
+   (A lint that cries wolf on labs that actually fail cold is worthless --
+   each false positive was rejected by running the real thing.)
+
+--- WHY IT MATTERS ------------------------------------------------------
+This is the gate I proposed after finding demo-02 grades 5/5 cold. Any future
+lab pack can run `python3 tools/lint_lab_pack.py` before shipping; a non-zero
+exit means a lab hands the student the answer key.
+NOTE: 9 legacy labs report NO-EXPECTED (their graders don't expose an EXPECTED
+map), so the lint is blind to them -- not a claim that they are solved.
+
+NOT COMPLETE. Nexus completion is Dad's call alone.

@@ -1,0 +1,43 @@
+======================================================================
+PROOF — NEW DEMO-01 (SRL) "UNSOLVED" VARIANT: COLD FAIL -> CONFIG PASS
+Date: 2026-09-22 ~06:03-06:10 EDT   Drive: aegis-demo2-drive
+======================================================================
+
+WHY: the shipped demo-01 (SRL) and demo-02 grade PASS with zero student
+work (answer seeded in topology exec). demo-02 already has an unsolved
+variant. This drive closes the remaining gap: an UNSOLVED variant of
+demo-01 (SRL), so BOTH pre-solved demos have a fix candidate.
+
+WHAT CHANGED vs shipped demo-01 (single-file diff, same topology/links/grader):
+  - pc-a exec: kept `ip link set eth1 up`; REMOVED addr 10.0.1.1/24
+  - pc-b exec: kept `ip link set eth1 up`; REMOVED addr 10.0.1.2/24
+  - sw1: UNCHANGED (IRB ships pre-configured -- deliberate, by design)
+  - links: unchanged
+  File: lab-definitions/srl-demo-unsolved/demo-01-two-pcs-and-a-real-switch-unsolved.yml
+  id:   demo-01-two-pcs-and-a-real-switch-unsolved   grader: grader_demo_01_srl
+
+--- RUN 1: COLD, no student config --------------------------------------
+  LAB PASSED: False  (expect False)
+    pc-a False 0.0 | pc-b False 0.0 | sw1 True 1.0 (shipped pre-configured)
+  => the lab does NOT pass cold. Correct.
+
+--- RUN 2: after student config, same lab ---------------------------------
+  pc-a: ip addr add 10.0.1.1/24 dev eth1 ; link up
+  pc-b: ip addr add 10.0.1.2/24 dev eth1 ; link up
+  pc-a -> switch 10.0.1.254 : 3/3 0% loss
+  pc-a -> pc-b   10.0.1.2   : 3/3 0% loss
+  LAB PASSED: True  (expect True)
+    pc-a True 1.0 | pc-b True 0.5 | sw1 True 1.0
+  => PASS CONDITION (ping switch AND other PC) met after the student works.
+
+--- LINT CROSS-CHECK (tools/lint_lab_pack.py) -----------------------------
+  UNSOLVED 0/2  demo-01-two-pcs-and-a-real-switch-unsolved   (matches live)
+  labs scanned: 14   SOLVED (red flag): 3
+  Lint exit code 1 (red flag present) -- verified.
+
+--- STATUS ---------------------------------------------------------------
+Proposal artifact, not a replacement. Shipped demo-01 is untouched. Dad's
+call: adopt the unsolved pattern for both demos, ship as second labs, or
+revert.
+
+NOT COMPLETE. Nexus completion is Dad's call alone.

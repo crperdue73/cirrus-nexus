@@ -1,0 +1,42 @@
+CUMULUS SHIPPED AS A GRADEABLE LAB — 2026-09-21 ~18:15 EDT
+
+Dad asked to evaluate BOTH SRL and Cumulus. Both pass (see
+cumulus-vs-srl-evaluation-20260921-1708.txt). This ships Cumulus as a real
+product lab, not just a probe note.
+
+NEW ARTIFACTS
+  lab-definitions/cumulus-demo/demo-01-cumulus-switch.yml
+  lab-definitions/grader_demo_01_cumulus.py
+
+DEPLOY (cold, via containerlab; metadata stripped exactly as Nexus does):
+  3/3 nodes running (pc-a, pc-b, sw1=networkop/cx).
+  sw1 br0 UP 10.0.1.254/24; ports eth1/eth2 in VLAN 1.
+
+PASS CONDITION (Dad's, unsoftened):
+  pc-a -> switch (10.0.1.254)  3/3 0% loss  PASS
+  pc-a -> pc-b   (10.0.1.2)    3/3 0% loss  PASS
+  pc-b -> switch (10.0.1.254)  3/3 0% loss  PASS
+
+GRADER (grader_demo_01_cumulus), run directly:
+  pc-a 1.0 | pc-b 1.0 | sw1 1.0  all passed.
+
+NEGATIVE TEST (Dad's explicit requirement — a Linux PC must not pass as a switch):
+  fed the grader an Alpine PC as 'sw1'
+  -> passed=False  "not a real Cumulus switch (os-release cumulus=False, vtysh=False)"
+  Same negative test against grader_demo_01_srl -> passed=False
+  ("sr_cli not available"). BOTH graders refuse a fake switch.
+
+DISCOVERY: backend _reload_labs() picks up
+  id=demo-01-two-pcs-and-a-real-switch-cumulus
+  topology_file=cumulus-demo/demo-01-cumulus-switch.yml
+
+--- VERIFIED THROUGH THE PRODUCT API 2026-09-21 ~20:10 EDT ---
+Throwaway :8004 backend (Dad's :8000 untouched):
+  POST /api/sessions/start?lab_id=demo-01-two-pcs-and-a-real-switch-cumulus
+     -> session 838aa1e6, status=running, runtime_digest aegis-less:683b2836c9d4470
+  POST /api/sessions/<sid>/submit?node={pc-a,pc-b,sw1}
+     -> pc-a 1.0 | pc-b 1.0 | sw1 1.0   (sw1: "real Cumulus switch")
+  POST /api/sessions/<sid>/stop -> destroyed.
+Instance :8004 shut down; no leftover containers; Dad's :8000 untouched.
+So the Cumulus real-switch lab deploys AND grades through the product API,
+same as the SRL labs.

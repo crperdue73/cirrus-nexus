@@ -1,0 +1,57 @@
+======================================================================
+PROOF — TASK 1 SOLVED: REAL SWITCH (Nokia SR Linux) meets pass condition
+Date: 2026-09-21 15:13 EDT
+======================================================================
+
+PASS CONDITION (Dad, unsoftened): a student can ping BOTH the switch AND
+the other PC. PC-to-PC alone does NOT count.
+
+Substrate: ghcr.io/nokia/srlinux:latest (v26.7.2, 7220 IXR-D2L) — a REAL
+network OS switch, NOT a Linux bridge.
+
+--- THE BUG ---
+Naive SRL IRB config puts access ports in mac-vrf-1 and irb0.0 in ip-vrf-1
+ONLY. The L2 bridge domain and the L3 gateway end up in DIFFERENT network
+instances. Result: PC-to-PC works (same L2), but the switch's own IP
+10.0.1.254 never answers ARP -> 100% loss (observed).
+
+--- THE FIX ---
+1. irb0.0 must be a member of BOTH mac-vrf-1 (L2) AND ip-vrf-1 (L3).
+2. On a fresh switch, access subinterfaces default to 'type routed';
+   they must be explicitly 'type bridged' to join a mac-vrf.
+Config shipped in lab-definitions/srl-demo/assets/sw1.cfg
+
+--- REPRODUCED FROM COLD (containerlab deploy, no hand steps) ---
+Deploy: aegis-demo-01-srl-switch (metadata stripped by Nexus backend)
+
+pc-a -> switch (10.0.1.254):  3/3 received, 0% packet loss
+pc-a -> pc-b   (10.0.1.2):    3/3 received, 0% packet loss
+pc-b -> switch (10.0.1.254):  3/3 received, 0% packet loss
+
+--- FDB: IRB MAC present in bridge table WITH both PCs ---
+|     Address     |                   Destination                    |   Dest   |     Type      | Active | Aging |     Not-      |   GBP Tags    |                   Last Update                    |
+|                 |                                                  |  Index   |               |        |       |  Programmed   |               |                                                  |
+|                 |                                                  |          |               |        |       |    Reason     |               |                                                  |
++=================+==================================================+==========+===============+========+=======+===============+===============+==================================================+
+| 1A:E8:02:FF:00: | irb-interface                                    | 0        | irb-interface | true   | N/A   | none          | N/A           | 2026-09-21T19:11:40.000Z                         |
+| 41              |                                                  |          |               |        |       |               |               |                                                  |
+| AA:C1:AB:8F:75: | ethernet-1/1.0                                   | 2        | learnt        | true   | 284   | none          | 0             | 2026-09-21T19:11:42.000Z                         |
+| 0B              |                                                  |          |               |        |       |               |               |                                                  |
+| AA:C1:AB:D7:6C: | ethernet-1/2.0                                   | 3        | learnt        | true   | 245   | none          | 0             | 2026-09-21T19:11:47.000Z                         |
+| 6C              |                                                  |          |               |        |       |               |               |                                                  |
++-----------------+--------------------------------------------------+----------+---------------+--------+-------+---------------+---------------+--------------------------------------------------+
+Total Irb Macs                 :    1 Total    1 Active
+
+--- irb0 dual membership ---
+irb0 is up, speed None, type None
+  irb0.0 is up
+    Network-instances:
+      * Name: mac-vrf-1 (mac-vrf)
+      * Name: ip-vrf-1 (ip-vrf)
+    Encapsulation   : null
+    Type            : None
+    IPv4 addr    : 10.0.1.254/24 (static, preferred, primary)
+
+VERDICT: PASS CONDITION MET on a REAL switch, reproducible from a lab def.
+Cumulus (networkop/cx) NOT needed — SRL works and is the stronger choice.
+NOT declaring complete — completion is Dad's call.

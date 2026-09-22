@@ -1,0 +1,98 @@
+======================================================================
+PROOF — SRL IRB FIX: student can ping BOTH switch and other PC
+Date: 2026-09-21 15:05 EDT   Node: sw1 = Nokia SR Linux ghcr.io/nokia/srlinux:latest (ixrd2l)
+======================================================================
+
+PASS CONDITION (Dad, not softened): pc-a can ping the SWITCH (IRB)
+AND the other PC. PC-to-PC alone does NOT count.
+
+--- TOPOLOGY ---
+name: srl-test
+topology:
+  nodes:
+    sw1:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux:latest
+      type: ixrd2l
+    pc-a:
+      kind: linux
+      image: alpine:latest
+    pc-b:
+      kind: linux
+      image: alpine:latest
+  links:
+    - endpoints: ["pc-a:eth1", "sw1:e1-1"]
+    - endpoints: ["pc-b:eth1", "sw1:e1-2"]
+
+--- BEFORE (broken): pc-a -> switch IRB 10.0.1.254 ---
+3 packets transmitted, 0 received, 100% packet loss   <-- IRB dead
+
+--- ROOT CAUSE (network-instance split-brain) ---
+Bridged access ports ethernet-1/1.0, ethernet-1/2.0 were bound to
+network-instance mac-vrf-1 (L2 only). The IRB irb0.0 was bound ONLY to
+ip-vrf-1 (L3). The L2 bridge domain and the L3 gateway were in DIFFERENT
+network instances, so the switch had no L3 presence on 10.0.1.0/24.
+PC-to-PC L2 worked; the switch's own IP never answered ARP.
+
+--- FIX ---
+Give irb0.0 DUAL membership: keep it in ip-vrf-1 (L3) AND add it to
+mac-vrf-1 (L2). The IRB then bridges into the access VLAN and routes in
+the ip-vrf. Commands committed to sw1:
+  set / network-instance mac-vrf-1 interface irb0.0
+
+--- AFTER: switch interface state ---
+========================================================================================================================================================================================================
+irb0 is up, speed None, type None
+  irb0.0 is up
+    Network-instances:
+      * Name: ip-vrf-1 (ip-vrf)
+      * Name: mac-vrf-1 (mac-vrf)
+    Encapsulation   : null
+    Type            : None
+    IPv4 addr    : 10.0.1.254/24 (static, preferred, primary)
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+--- AFTER: FDB shows IRB MAC in the bridge table WITH both PCs ---
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Mac-table of network instance mac-vrf-1
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
++-----------------+--------------------------------------------------+----------+---------------+--------+-------+---------------+---------------+--------------------------------------------------+
+|     Address     |                   Destination                    |   Dest   |     Type      | Active | Aging |     Not-      |   GBP Tags    |                   Last Update                    |
+|                 |                                                  |  Index   |               |        |       |  Programmed   |               |                                                  |
+|                 |                                                  |          |               |        |       |    Reason     |               |                                                  |
++=================+==================================================+==========+===============+========+=======+===============+===============+==================================================+
+| 1A:61:02:FF:00: | irb-interface                                    | 0        | irb-interface | true   | N/A   | none          | N/A           | 2026-09-21T19:04:59.000Z                         |
+| 41              |                                                  |          |               |        |       |               |               |                                                  |
+| AA:C1:AB:36:BC: | ethernet-1/2.0                                   | 8        | learnt        | true   | 289   | none          | 0             | 2026-09-21T19:04:08.000Z                         |
+| C4              |                                                  |          |               |        |       |               |               |                                                  |
+| AA:C1:AB:EC:28: | ethernet-1/1.0                                   | 7        | learnt        | true   | 289   | none          | 0             | 2026-09-21T19:04:06.000Z                         |
+| 08              |                                                  |          |               |        |       |               |               |                                                  |
++-----------------+--------------------------------------------------+----------+---------------+--------+-------+---------------+---------------+--------------------------------------------------+
+Total Irb Macs                 :    1 Total    1 Active
+Total Static Macs              :    0 Total    0 Active
+Total Duplicate Macs           :    0 Total    0 Active
+Total Learnt Macs              :    2 Total    2 Active
+Total Evpn Macs                :    0 Total    0 Active
+
+--- AFTER: pc-a -> SWITCH (10.0.1.254) ---
+--- 10.0.1.254 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2027ms
+rtt min/avg/max/mdev = 0.849/1.365/1.712/0.372 ms
+
+--- AFTER: pc-a -> PC-B (10.0.1.2) ---
+--- 10.0.1.2 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2051ms
+rtt min/avg/max/mdev = 0.219/0.278/0.367/0.064 ms
+
+--- AFTER: pc-b -> SWITCH (10.0.1.254) ---
+2 packets transmitted, 2 received, 0% packet loss, time 1001ms
+rtt min/avg/max/mdev = 1.222/1.396/1.570/0.174 ms
+
+--- AFTER: pc-b -> PC-A (10.0.1.1) ---
+2 packets transmitted, 2 received, 0% packet loss, time 1001ms
+rtt min/avg/max/mdev = 0.198/0.233/0.269/0.035 ms
+
+--- VERDICT ---
+pc-a->switch 0% loss, pc-a->pc-b 0% loss, pc-b->switch 0% loss,
+pc-b->pc-a 0% loss. IRB answers ARP. PASS CONDITION MET.
+NOTE: 'complete' is Dad's call. This is a working substrate proof.

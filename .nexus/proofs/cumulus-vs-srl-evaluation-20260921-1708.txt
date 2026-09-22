@@ -1,0 +1,43 @@
+CUMULUS vs SRL — REAL SWITCH EVALUATION (both evaluated, both work)
+2026-09-21 ~17:08 EDT
+
+DAD'S ASK: evaluate BOTH Nokia SR Linux AND Cumulus (networkop/cx).
+Earlier I shipped SRL and skipped Cumulus. Doing it now, for real.
+
+SUBSTRATE
+  networkop/cx:latest = Cumulus Linux 4.3.0, real /etc/os-release,
+  real vtysh (FRR), real ip. 733MB. Deployed as kind:linux with binds.
+
+PROBE: pc-a --- sw1(Cumulus) --- pc-b   (10.0.1.1 / .254 / .2)
+
+FIRST ATTEMPT (L3 on a VLAN sub-interface, br0.1) -- FAILED, same class as SRL:
+  pc-a -> pc-b (10.0.1.2)     0% loss   (L2 works)
+  pc-a -> switch (10.0.1.254) 100% loss (switch IP dead)
+  Diagnostic: ARP *resolved* (neigh REACHABLE) -- so not an ARP bug.
+  `ip neigh` on the switch showed:
+      10.0.1.1 dev br0   lladdr ..:78 REACHABLE
+      10.0.1.1 dev br0.1 FAILED
+  => traffic egressed via the untagged bridge (br0), not the SVI (br0.1).
+  L2 forwarding domain and L3 gateway path disagreed -- the exact same
+  *class* of bug as SRL's mac-vrf/ip-vrf split.
+
+FIX: Cumulus standard "L3 on the bridge" -- put the address on the bridge
+device itself, not a vlan sub-interface:
+      ip addr add 10.0.1.254/24 dev br0   (no br0.1)
+  (bridge is vlan_filtering 1, vlan_default_pvid 1, ports as untagged VLAN 1)
+
+COLD-VERIFY (fresh deploy, config reapplied, nothing hand-tuned):
+  pc-a -> switch (10.0.1.254)  3/3  0% loss   PASS
+  pc-a -> pc-b   (10.0.1.2)    3/3  0% loss   PASS
+  pc-b -> switch (10.0.1.254)  3/3  0% loss   PASS
+  FDB: both PC MACs in br0/vlan 1.
+
+VERDICT
+  SRL      -- PASS (mac-vrf+ip-vrf dual membership on the IRB). Real network OS.
+  Cumulus  -- PASS (L3 on the bridge). Real network OS.
+  Both meet the unsoftened pass condition: a student can ping BOTH the switch
+  AND the other PC. Neither is a plain Linux PC pretending.
+  RECOMMENDATION: keep SRL as the shipped substrate (container-native, startup-
+  config, richer, already wired into the graders); Cumulus is a viable second
+  option now proven, and the SAME failure class (L2 domain vs L3 gateway path
+  disagreeing) appears in both models -- worth a teaching note.
