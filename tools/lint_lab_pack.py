@@ -131,6 +131,45 @@ def preapplied_in_topology(yml_path: Path, ips: list) -> set:
     return found
 
 
+REAL_SWITCH_KINDS = {"nokia_srlinux", "srlinux", "cumulus_cx", "cumulus"}
+# A `kind: linux` node is still a REAL switch when it runs a real switch OS
+# image. networkop/cx ships the Cumulus Linux userland (verified: os-release
+# NAME="Cumulus Linux" VERSION_ID=4.3.0, /usr/bin/vtysh present), so the image,
+# not the kind, is what makes it authentic. Without this the lint would
+# false-positive the Cumulus demo -- the exact cry-wolf failure rejected before.
+REAL_SWITCH_IMAGE_MARKERS = ("cumulus", "networkop/cx", "/cx", "srlinux")
+
+
+def switch_authenticity(yml_path: Path) -> dict:
+    """Flag labs that model a switch as a Linux PC.
+
+    Dad's rule (2026-09-21): the switch must be a REAL switch, not a Linux PC
+    running a bridge. A node whose name looks like a switch but whose kind is
+    `linux` (and whose image is NOT a real switch OS) is the fake-switch
+    pattern. This is independent of the SOLVED check and applies to EVERY lab,
+    including legacy ones that expose no EXPECTED map.
+    """
+    import yaml
+    doc = yaml.safe_load(yml_path.read_text()) or {}
+    nodes = (doc.get("topology") or {}).get("nodes") or {}
+    fake = []
+    real = []
+    for name, spec in nodes.items():
+        if not isinstance(spec, dict):
+            continue
+        n = name.lower()
+        if not (n.startswith("sw") or "switch" in n):
+            continue
+        kind = str(spec.get("kind", "")).lower()
+        image = str(spec.get("image", "")).lower()
+        real_image = any(m in image for m in REAL_SWITCH_IMAGE_MARKERS)
+        if kind in REAL_SWITCH_KINDS or real_image:
+            real.append(name)
+        else:
+            fake.append(f"{name}({kind or 'linux'}:{image or 'no-image'})")
+    return {"fake_switches": fake, "real_switches": real}
+
+
 def classify(lab_dir: Path, yml_path: Path) -> dict:
     meta = parse_metadata(yml_path)
     grader_name = meta.get("grader") or f"grader_{meta.get('id','')}"
@@ -138,6 +177,7 @@ def classify(lab_dir: Path, yml_path: Path) -> dict:
     result = {
         "lab": meta.get("id", yml_path.stem),
         "topology": str(yml_path.relative_to(BASE)),
+        "switch_auth": switch_authenticity(yml_path),
         "grader": grader_name,
         "status": "UNKNOWN",
         "student_nodes": {},
@@ -207,14 +247,22 @@ def main() -> int:
             else:
                 print(f"{r['status']:<9} {'-':<8} {r['lab']}  ({r.get('error', r['status'])})")
         solved = [r for r in results if r["status"] == "SOLVED"]
+        fake = [r for r in results if (r.get("switch_auth") or {}).get("fake_switches")]
         print("-" * 70)
         print(f"labs scanned: {len(results)}   SOLVED (red flag): {len(solved)}")
         if solved:
             print("RED FLAG — these labs grade with zero student work:")
             for r in solved:
                 print(f"   {r['lab']}  (grader {r['grader']})")
+        if fake:
+            print(f"RED FLAG — these labs model a switch as a Linux PC ({len(fake)}):")
+            for r in fake:
+                print(f"   {r['lab']}  -> {', '.join(r['switch_auth']['fake_switches'])}")
 
-    return 1 if any(r["status"] == "SOLVED" for r in results) else 0
+    red = any(r["status"] == "SOLVED" for r in results) or any(
+        (r.get("switch_auth") or {}).get("fake_switches") for r in results
+    )
+    return 1 if red else 0
 
 
 if __name__ == "__main__":
