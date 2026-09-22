@@ -31,3 +31,8 @@ __pycache__/
 # --- runtime ---------------------------------------------------------------
 *.log
 .pytest_cache/
+
+# --- session scratch (never ship) -----------------------------------------
+# _prepare_topology() writes ._clean_<lab>_<session>.yml beside the lab as a
+# transient copy for containerlab. It must never be committed.
+._clean_*
