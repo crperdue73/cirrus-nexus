@@ -1,0 +1,39 @@
+======================================================================
+PROOF — LINT EXTENDED: switch-authenticity check (fake-switch gate)
+Date: 2026-09-22 ~08:04-08:12 EDT   Drive: aegis-demo2-drive
+======================================================================
+
+WHY: the lint only checked "pre-solved" and was BLIND to 9 legacy labs (no
+EXPECTED map). Dad's rule is that a switch must be REAL. Nothing was checking
+that across the whole pack. Added a switch-authenticity check that applies to
+EVERY lab.
+
+WHAT IT FLAGS: a node named like a switch (sw*/switch) whose kind is not a
+real switch kind AND whose image is not a real switch OS image. (The image
+allow-list exists because networkop/cx is kind:linux but IS real Cumulus --
+verified 2026-09-22 as Cumulus Linux 4.3.0 + vtysh. Without it the lint
+false-positived the Cumulus demo, the exact cry-wolf failure rejected earlier.)
+
+RESULT (python3 tools/lint_lab_pack.py, live tree):
+  REAL switches correctly recognized:
+    demo-01-...-real-switch (SRL)         real=['sw1']
+    demo-01-...-cumulus                   real=['sw1']   (kind:linux, real image)
+    demo-02-two-switches-one-router       real=['sw1','sw2']
+    demo-02-...-unsolved                  real=['sw1','sw2']
+    demo-01-...-unsolved                  real=['sw1']
+  FAKE switches flagged (Linux PC as a switch, 6 labs):
+    tier-01-foundation                    switch(linux:alpine)
+    lab-02-switch-in-the-middle           sw1(linux:aegis/frr)
+    tier-03-router-switch-pc              sw1(linux:aegis/frr)
+    lab-03-lock-it-down                   sw1(linux:aegis/frr)
+    neteng-capstone                       sw1(linux:alpine)
+    demo-01-two-pcs-and-a-switch          switch(linux:alpine)  (the "plain demo")
+  Exit code 1 (red = any SOLVED lab OR any fake switch).
+
+NOTE: legacy labs still report NO-EXPECTED for the pre-solved check (their
+graders expose no EXPECTED map) -- NOT a claim they are solved. The
+switch-auth check is the part that now covers them.
+
+Public export lint re-run: same classifications (subset of labs); exit 1.
+
+NOT COMPLETE. Nexus completion is Dad's call alone.

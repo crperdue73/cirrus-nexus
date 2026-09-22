@@ -1,0 +1,35 @@
+======================================================================
+PROOF — PUBLIC EXPORT SYNC + GUIDE ENDPOINT VERIFICATION
+Date: 2026-09-22 ~07:05-07:12 EDT   Drive: aegis-demo2-drive
+======================================================================
+
+WHY: the public export (/projects/aegis-public) lagged the live tree: it was
+missing the SRL demo-01 unsolved variant, the demo-02 unsolved variant's
+latest form, the lint tool, and the day's proofs.
+
+SYNCED live -> public:
+  lab-definitions/srl-demo-unsolved/            (new)
+  lab-definitions/grader_demo_01_srl.py         (negative-gate fix)
+  lab-definitions/grader_demo_01_cumulus.py     (grade_all added)
+  lab-definitions/grader_demo_02.py             (lab-level real-switch gate)
+  tools/lint_lab_pack.py
+  .nexus/proofs/*.txt                           (15 proofs)
+  lab-definitions/srl-demo-unsolved/demo-01-...-unsolved.md  (NEW guide --
+    the variant had a topology but no guide)
+
+VERIFICATION (ran, not narrated):
+  1) Public lint: python3 tools/lint_lab_pack.py
+       6 labs scanned; both unsolved variants detected UNSOLVED 0/N;
+       3 SOLVED red-flagged; exit 1. Matches the live tree's classification.
+  2) Guide endpoint (throwaway backend :8007, Dad's :8000 untouched):
+       GET /api/labs -> 14 labs; both -unsolved ids discovered.
+       GET /api/labs/demo-01-two-pcs-and-a-real-switch-unsolved/guide -> HTTP 200
+       GET /api/labs/demo-02-two-switches-one-router-unsolved/guide -> HTTP 200
+     (guide resolves via the subdir sibling fallback; no guide_map entry needed)
+  3) Throwaway :8007 shut down; :8000 still HTTP 200; no stray processes.
+
+COMMITTED:
+  live  repo: c1485db "demo-01: add UNSOLVED variant + live re-verify proofs"
+  public repo: 2ab2e29 "export: unsolved variants ... w/ guides, lint gate, proofs"
+
+NOT COMPLETE. Nexus completion is Dad's call alone.

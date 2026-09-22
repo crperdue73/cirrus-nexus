@@ -1321,3 +1321,24 @@ LINT GATE (tools/lint_lab_pack.py): re-run after adding the variant.
 Containers destroyed; 35 baseline, no leftovers.
 
 NOT COMPLETE. Nexus completion is Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~07:12 EDT — aegis-demo2-drive (export sync + guide endpoint)
+
+Both of Dad's asks are already evidenced live (task1-live-reverify,
+demo-02-live-reverify). This drive closed the EXPORT gap.
+
+SYNCED live -> /projects/aegis-public: srl-demo-unsolved/ (topology + NEW
+guide), corrected demo graders (negative-gate/grade_all), tools/lint_lab_pack.py,
+15 proofs.
+
+VERIFIED BY RUNNING:
+  - public lint: 6 labs, both unsolved variants UNSOLVED, 3 SOLVED, exit 1.
+  - throwaway backend :8007: /api/labs -> 14 labs incl both -unsolved;
+    both guide endpoints HTTP 200 (subdir sibling fallback works).
+  - :8007 shut down; Dad's :8000 still 200; no strays.
+
+COMMITTED: live c1485db, public 2ab2e29.
+NOT COMPLETE. Nexus completion is Dad's call alone.
