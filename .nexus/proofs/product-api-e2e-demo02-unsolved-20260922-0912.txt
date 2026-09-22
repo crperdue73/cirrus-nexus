@@ -1,0 +1,39 @@
+======================================================================
+PROOF — PRODUCT-API END-TO-END: demo-02 UNSOLVED (cold fail -> config pass)
+Date: 2026-09-22 ~09:03-09:14 EDT   Drive: aegis-demo2-drive
+Backend: throwaway :8008 (Dad's :8000 untouched)
+======================================================================
+
+WHY: prior proofs exercised graders directly. This runs the WHOLE product
+path — POST /api/sessions/start (deploy + runtime digest), POST .../submit
+(grade), POST .../stop — against the newest lab, to prove it deploys AND
+grades through the real API, not just the grader function.
+
+--- START ---------------------------------------------------------------
+  POST /api/sessions/start?lab_id=demo-02-two-switches-one-router-unsolved
+   -> session b8b3eea8, status running, 5 nodes (pc-a,pc-b,r1,sw1,sw2)
+   -> runtime_digest sha256:bb7ef23a07dcb6c6b34e225dd77fa2eb592...
+   (unattributable deploys are refused; this one resolved a digest.)
+
+--- COLD GRADES via API (no student config) — expect fail ---------------
+  pc-a False 0.0 | pc-b False 0.0 | sw1 True 1.0 | sw2 True 1.0 | r1 False 0.2
+  (switches pre-seeded by design; the student's work is un-done -> lab fails)
+
+--- STUDENT WORK (in-container) -----------------------------------------
+  pc-a: 10.0.1.1/24 + route 10.0.2.0/24 via 10.0.1.253
+  pc-b: 10.0.2.1/24 + route 10.0.1.0/24 via 10.0.2.253
+  r1  : ip_forward=1 + 10.0.1.253/24 eth1 + 10.0.2.253/24 eth2
+  PATH PROOF: pc-a -> pc-b 2/2 0% loss;
+              traceroute hop1 10.0.1.253 (r1), hop2 10.0.2.1 (pc-b)
+
+--- GRADES AFTER STUDENT WORK via API — expect pass ---------------------
+  pc-a True 1.0 | pc-b True 1.0 | sw1 True 1.0 | sw2 True 1.0 | r1 True 1.0
+
+--- STOP ------------------------------------------------------------------
+  POST /api/sessions/b8b3eea8/stop -> {"status":"destroyed"}
+  0 containers remain for the session. :8008 shut down; :8000 still 200.
+  clab baseline 35, no leftovers.
+
+VERDICT: the demo-02 unsolved variant deploys and grades correctly through the
+product API, cold-failing then passing after real student work. NOT COMPLETE.
+Nexus completion is Dad's call alone.

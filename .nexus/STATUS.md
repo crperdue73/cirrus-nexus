@@ -1342,3 +1342,45 @@ VERIFIED BY RUNNING:
 
 COMMITTED: live c1485db, public 2ab2e29.
 NOT COMPLETE. Nexus completion is Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~08:12 EDT — aegis-demo2-drive (lint switch-authenticity gate)
+
+Extended the lab-pack lint beyond pre-solved detection: it was blind to 9
+legacy labs (no EXPECTED map). Added a switch-authenticity check that covers
+EVERY lab — flags any sw*/switch node whose kind is not a real switch kind and
+whose image is not a real switch OS.
+
+RAN: python3 tools/lint_lab_pack.py (live + public).
+  Real switches recognized correctly: all 5 demo labs (incl. the Cumulus demo,
+    kind:linux but real Cumulus image — allow-listed to avoid a false positive).
+  Fake switches flagged (6): tier-01-foundation, lab-02-switch-in-the-middle,
+    tier-03-router-switch-pc, lab-03-lock-it-down, neteng-capstone,
+    demo-01-two-pcs-and-a-switch — all model the switch as a Linux PC.
+  Exit 1 when any SOLVED lab OR any fake switch is present.
+  Proof: proofs/lint-switch-auth-20260922-0810.txt
+
+FINDING FOR DAD: every legacy tier/lab models its switch as a Linux PC, and
+the "plain demo" deliberately does too. Only the real-switch demo labs use an
+actual switch OS. Not changed unilaterally — this is a lab-pack decision.
+
+COMMITTED: live cfef095, public 40b0606.
+NOT COMPLETE. Nexus completion is Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~09:14 EDT — aegis-demo2-drive (product-API E2E, demo-02 unsolved)
+
+RAN the whole product path (not just the graders) on a throwaway :8008:
+  POST /api/sessions/start demo-02-...-unsolved -> session b8b3eea8 running,
+    5 nodes, runtime_digest resolved.
+  COLD via API: pc-a/pc-b 0.0, sw1/sw2 1.0 (pre-seeded), r1 0.2 -> lab fails.
+  Student work applied; path proof pc-a->pc-b 2/2 0%, traceroute 2 hops.
+  AFTER via API: all 5 nodes 1.0 -> lab passes.
+  POST .../stop -> destroyed, 0 containers left. :8008 down; :8000 still 200.
+  clab baseline 35. Proof: proofs/product-api-e2e-demo02-unsolved-20260922-0912.txt
+
+NOT COMPLETE. Nexus completion is Dad's call alone.
