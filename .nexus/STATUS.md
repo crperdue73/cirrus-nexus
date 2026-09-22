@@ -1252,3 +1252,72 @@ Corrections:
     FAILS all nodes -- it is the only demo lab that is genuinely unsolved.
 
 Lesson logged: grade the cold case; the guide text is not the topology.
+
+
+---
+
+## 2026-09-22 ~04:10 EDT — aegis-demo2-drive (live cold re-verify of demo-02)
+
+RAN (not re-quoted): fresh cold deploy of demo-02 (metadata stripped), 5/5
+nodes up. Zero student config.
+
+  pc-a -> sw1 10.0.1.254 : 3/3 0% | pc-a -> r1 10.0.1.253 : 3/3 0%
+  pc-a -> pc-b 10.0.2.1  : 3/3 0% (E2E) | pc-b -> pc-a 10.0.1.1 : 3/3 0% (E2E)
+  traceroute: hop1 10.0.1.253 (r1), hop2 10.0.2.1 = REAL 2-hop path.
+  grader_demo_02.grade_all -> LAB PASSED True, all 5 nodes 1.0.
+  NEGATIVE: alpine PC as sw1 -> LAB PASSED False ("sr_cli not available").
+  Proof: proofs/demo-02-live-reverify-20260922-0410.txt
+
+FIND: `containerlab deploy` of the RAW lab yml fails on `metadata:`
+  ("field metadata not found", clab 0.75.0). The backend strips it
+  (main.py:625-627); a hand-dry-run must strip it too. Flagged, not a lab bug.
+
+HOUSEKEEPING: destroyed 9 stale demo-01 containers left from earlier probes
+  (44 -> 35). Probe containers destroyed after the run; no leftovers.
+
+Task 1 (real switch SRL+Cumulus): evidenced 2026-09-21; unchanged this drive.
+
+NOT COMPLETE. Nexus completion is Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~05:12 EDT — aegis-demo2-drive (Task 1 live cold re-verify, BOTH variants)
+
+RAN (fresh cold deploys, metadata stripped):
+  A) SR Linux demo-01: 3/3 up. pc-a->switch 3/3 0%, pc-a->pc-b 3/3 0%,
+     pc-b->switch 3/3 0%. grade_all -> PASSED True (pc-a 1.0/pc-b 0.5/sw1 1.0).
+     irb0.0 in BOTH mac-vrf-1 AND ip-vrf-1; FDB shows IRB MAC + both PC MACs.
+  B) Cumulus demo-01: 3/3 up (Cumulus Linux 4.3.0, vtysh present).
+     pc-a->switch 3/3 0%, pc-a->pc-b 3/3 0%, pc-b->switch 3/3 0%.
+     grade_all -> PASSED True (all 1.0).
+  NEGATIVE: alpine PC as sw1 refused by BOTH graders; LAB verdict False.
+  Proof: proofs/task1-live-reverify-20260922-0511.txt
+
+Both candidates meet the unsoftened pass condition. SR Linux = stronger
+(real NOS). Containers destroyed; 35 baseline, no leftovers.
+
+NOT COMPLETE. Nexus completion is Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~06:10 EDT — aegis-demo2-drive (demo-01 SRL unsolved variant + lint gate)
+
+CLOSED the open item: both pre-solved demos now have an unsolved variant.
+
+NEW: lab-definitions/srl-demo-unsolved/demo-01-two-pcs-and-a-real-switch-unsolved.yml
+  (pc-a/pc-b addresses stripped from exec; switch IRB kept pre-seeded by design)
+  RUN 1 COLD: LAB PASSED False (pc-a/pc-b 0.0, sw1 1.0). Correct.
+  RUN 2 after student config: pc-a->switch 3/3 0%, pc-a->pc-b 3/3 0%,
+    LAB PASSED True. Correct.
+  Proof: proofs/demo-01-unsolved-variant-20260922-0608.txt
+
+LINT GATE (tools/lint_lab_pack.py): re-run after adding the variant.
+  UNSOLVED 0/2 demo-01-...-unsolved (matches live) | scanned 14 | SOLVED 3.
+  Exit code 1 on SOLVED present (verified). This is the pre-ship gate: a lab
+  pack is red-flagged if any lab grades with zero student work.
+
+Containers destroyed; 35 baseline, no leftovers.
+
+NOT COMPLETE. Nexus completion is Dad's call alone.

@@ -1,0 +1,52 @@
+======================================================================
+PROOF — TASK 1 LIVE COLD RE-VERIFICATION (both variants, this drive)
+Date: 2026-09-22 ~05:08-05:12 EDT   Drive: aegis-demo2-drive
+Pass condition (Dad, unsoftened): student can ping BOTH the switch AND
+the other PC. PC-to-PC alone does NOT count.
+======================================================================
+
+WHY: Dad's rule is "verify by RUNNING things". Re-ran BOTH real-switch
+candidates from clean cold deploys this drive (previously quoted 9/21).
+
+--- A) NOKIA SR LINUX (ghcr.io/nokia/srlinux, real NOS) -------------------
+Deploy: demo-01-srl-switch, metadata stripped, 3/3 nodes up cold.
+  pc-a -> switch 10.0.1.254 : 3/3  0% loss
+  pc-a -> pc-b   10.0.1.2   : 3/3  0% loss
+  pc-b -> switch 10.0.1.254 : 3/3  0% loss
+  grader_demo_01_srl.grade_all -> LAB PASSED True
+    pc-a True 1.0 | pc-b True 0.5 | sw1 True 1.0
+  irb0 dual membership (the fix):
+    irb0.0 is up
+      * Name: ip-vrf-1 (ip-vrf)
+      * Name: mac-vrf-1 (mac-vrf)
+      IPv4 addr: 10.0.1.254/24
+  FDB (mac-vrf-1 bridge-table mac-table all):
+    1A:5F:02:FF:00:41  irb-interface     (IRB MAC in bridge table)
+    AA:C1:AB:8F:5E:E4  ethernet-1/1.0   learnt
+    AA:C1:AB:F6:99:D0  ethernet-1/2.0   learnt
+    => PASS CONDITION MET on a REAL switch.
+
+--- B) CUMULUS (networkop/cx, real Cumulus Linux) -------------------------
+Deploy: demo-01-cumulus-switch, metadata stripped, 3/3 nodes up cold.
+  Real switch identity: /etc/os-release NAME="Cumulus Linux" VERSION_ID=4.3.0,
+                        /usr/bin/vtysh present.
+  pc-a -> switch 10.0.1.254 : 3/3  0% loss
+  pc-a -> pc-b   10.0.1.2   : 3/3  0% loss
+  pc-b -> switch 10.0.1.254 : 3/3  0% loss
+  grader_demo_01_cumulus.grade_all -> LAB PASSED True
+    pc-a True 1.0 | pc-b True 1.0 | sw1 True 1.0
+
+--- NEGATIVE GATE (both variants, austere computer as switch) -------------
+  SR Linux grader, alpine PC as sw1  -> refused ("sr_cli not available").
+  Cumulus grader, alpine PC as sw1   -> refused ("not a real Cumulus switch
+    (os-release cumulus=False, vtysh=False)").
+  LAB verdict False in both cases. A Linux PC cannot pass as a switch.
+
+--- VERDICT ---------------------------------------------------------------
+Both variants genuinely work and meet the unsoftened condition. SR Linux is
+the stronger choice (real NOS, sr_cli-driven IRB check); Cumulus is also
+shipped as a separate gradeable lab. Neither is declared complete — that is
+Dad's call.
+
+Probe containers destroyed after each run; no leftovers (35 clab containers
+baseline).
