@@ -1,0 +1,47 @@
+======================================================================
+PROOF — DRIVE 2026-09-22 ~19:04-19:20 EDT  (aegis-demo2-drive)
+CUMULUS HALF OF TASK 1 RE-VERIFIED LIVE TODAY (throwaway :8014)
+======================================================================
+Rationale: the handoff asserts the Cumulus route also works, but it was
+verified EARLIER in the session. Rule is "verify by RUNNING things", so I
+re-ran it today. Dad's :8000 (PID 702017) untouched.
+
+LAB: demo-01-two-pcs-and-a-real-switch-cumulus
+DEPLOY: session cf653d34 -> nodes pc-a, pc-b, sw1, all Up.
+
+SWITCH IS REAL (not a Linux PC):
+  sw1 /etc/os-release:
+    NAME="Cumulus Linux"  VERSION_ID=4.3.0
+    PRETTY_NAME="Cumulus Linux"  CPE_NAME=cpe:/o:cumulusnetworks:cumulus_linux:4.3.0
+  sw1 has /usr/bin/vtysh and /sbin/bridge.
+  Bridging present: br0 + eth1 + eth2 all VLAN 1 (PVID, Egress Untagged)
+  via `bridge vlan show` — real L2 bridge, Cumulus control plane.
+
+PASS CONDITION (unsoftened: ping BOTH switch AND other PC):
+  pc-a (10.0.1.1/24) -> 10.0.1.254 (sw1): 2/2, 0% loss  ✅
+  pc-a (10.0.1.1/24) -> 10.0.1.2  (pc-b): 2/2, 0% loss  ✅
+  pc-b has 10.0.1.2/24 on eth1.
+
+NOTE — this variant ships PRE-SOLVED (lint status SOLVED, by design: it is the
+reference/answer variant). So the pings succeed with no student work; the
+student-facing cold variant is demo-01-two-pcs-and-a-real-switch (SRL) /
+demo-01-two-pcs-and-a-switch (the fake "Linux PC" switch). Stated plainly so
+the green above is not mistaken for a cold-start pass.
+
+API GRADER:
+  sw1 : graded passed=True score=1.0
+        "sw1: real Cumulus switch, Cumulus switch, iface has 10.0.1.254"
+  pc-a: graded passed=True score=1.0
+        "10.0.1.1/24 present on eth1" / "can ping sw1 (the switch) (10.0.1.254)"
+        / "can ping pc-b (10.0.1.2)"   <- BOTH required checks, both green
+
+CLEANUP: session stopped 200; 0 leftover containers; clab baseline 35;
+throwaway :8014 down; Dad's :8000 = 200 (his PID still the only main.py);
+temp removed.
+
+ANSWER TO "(1) evaluate BOTH": both real-switch transports work and grade:
+  - Nokia SR Linux  : primary lab, cold-start pass condition met (verified 17:25)
+  - Cumulus (networkop/cx): ships as its own lab, real Cumulus 4.3.0, grades 1.0
+Both are REAL switches. Neither is a Linux PC running a bridge.
+
+NOT COMPLETE. Completion is Dad's call alone.

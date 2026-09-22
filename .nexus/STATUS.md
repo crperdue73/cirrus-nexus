@@ -1535,3 +1535,25 @@ CLEANUP: both sessions stopped 200; 0 leftovers; clab baseline 35; :8012 down;
 Dad's :8000 = 200; temp removed.
 Proof: proofs/final-both-tasks-live-20260922-1725.txt
 NOT COMPLETE. Nexus completion is Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~19:20 EDT — aegis-demo2-drive (Cumulus half of Task 1 re-verified live)
+
+Re-ran the Cumulus variant today (handoff cited it from earlier in session;
+rule is verify-by-running). Throwaway :8014; Dad's :8000 untouched.
+
+LAB demo-01-two-pcs-and-a-real-switch-cumulus, session cf653d34:
+  sw1 = REAL Cumulus Linux 4.3.0 (vtysh + bridge present); br0+eth1+eth2 all
+  VLAN 1 -> real L2 bridge.
+  pc-a -> 10.0.1.254 (sw1) = 0% loss ; pc-a -> 10.0.1.2 (pc-b) = 0% loss
+  (PASS CONDITION met). NOTE: this variant ships PRE-SOLVED (reference variant).
+  API grader: sw1 1.0 ("real Cumulus switch"), pc-a 1.0 (both required pings).
+
+CLEANUP: stopped 200; 0 leftovers; clab 35; :8014 down; :8000 = 200; temp removed.
+Proof: proofs/cumulus-reverify-20260922-1920.txt
+Answer to "(1) evaluate BOTH": both SR Linux and Cumulus are REAL switches and
+both grade green. SR Linux = primary lab (cold-start pass met); Cumulus ships
+as its own lab.
+NOT COMPLETE. Dad's call alone.
