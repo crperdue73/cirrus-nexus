@@ -1384,3 +1384,20 @@ RAN the whole product path (not just the graders) on a throwaway :8008:
   clab baseline 35. Proof: proofs/product-api-e2e-demo02-unsolved-20260922-0912.txt
 
 NOT COMPLETE. Nexus completion is Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~10:12 EDT — aegis-demo2-drive (product-API E2E, Cumulus)
+
+Ran the Cumulus real-switch demo through the full product path on a throwaway
+:8009:
+  start -> session 2a3975ff running, 3 nodes, digest aegis-less:683b2836...
+  cold grades: pc-a/pc-b/sw1 all 1.0 (shipped pre-solved, by design)
+  switch inspected: /etc/os-release == "Cumulus Linux 4.3.0", /usr/bin/vtysh
+    present, br0 UP 10.0.1.254/24.
+  TASK 1 CONDITION: pc-a->switch 3/3 0%, pc-a->pc-b 3/3 0%, pc-b->switch 3/3 0%.
+  stop -> destroyed, 0 containers left. :8009 down; :8000 still 200. clab 35.
+  Proof: proofs/product-api-e2e-cumulus-20260922-1010.txt
+
+NOT COMPLETE. Nexus completion is Dad's call alone.

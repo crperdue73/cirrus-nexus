@@ -1,0 +1,40 @@
+======================================================================
+PROOF — PRODUCT-API E2E: CUMULUS demo-01 (real switch; task-1 pass condition)
+Date: 2026-09-22 ~10:03-10:12 EDT   Drive: aegis-demo2-drive
+Backend: throwaway :8009 (Dad's :8000 untouched)
+======================================================================
+
+WHY: the Cumulus demo was verified earlier via the grader directly. This runs
+it through the WHOLE product path to close the last un-proven demo lab, and
+re-checks task 1's exact pass condition (ping the switch AND the other PC).
+
+--- START via API -------------------------------------------------------
+  POST /api/sessions/start?lab_id=demo-01-two-pcs-and-a-real-switch-cumulus
+   -> session 2a3975ff running, 3 nodes (pc-a, pc-b, sw1)
+   -> runtime_digest aegis-less:683b2836... (non-FRR substrate: expected,
+      this lab does not use the pinned aegis/frr image)
+
+--- COLD GRADES via API -------------------------------------------------
+  pc-a True 1.0 | pc-b True 1.0 | sw1 True 1.0
+  (this SHIPPED demo arrives pre-solved -- matches the lint's SOLVED 2/2;
+   it is a demonstration lab, not a student-work lab. By design.)
+
+--- SWITCH IS REAL (direct container inspection) ------------------------
+  /etc/os-release: NAME="Cumulus Linux"  VERSION_ID=4.3.0
+  /usr/bin/vtysh present (1104072 bytes)
+  ip -br addr: br0 UP 10.0.1.254/24  (bridge, not a Linux-PC hack)
+  grader feedback: "sw1: real Cumulus switch, iface has 10.0.1.254"
+
+--- TASK 1 PASS CONDITION (ping the switch AND the other PC) ------------
+  pc-a -> 10.0.1.254 (switch): 3/3, 0% loss
+  pc-a -> 10.0.1.2   (pc-b)  : 3/3, 0% loss
+  pc-b -> 10.0.1.254 (switch): 3/3, 0% loss
+  Both conditions met, on a REAL switch, through the product API.
+
+--- STOP -----------------------------------------------------------------
+  POST /api/sessions/2a3975ff/stop -> {"status":"destroyed"}
+  0 containers remain. :8009 down; :8000 still 200. clab baseline 35.
+
+VERDICT: the Cumulus real-switch demo deploys and grades through the product
+API, and task 1's pass condition holds against a genuine Cumulus Linux switch.
+NOT COMPLETE. Nexus completion is Dad's call alone.
