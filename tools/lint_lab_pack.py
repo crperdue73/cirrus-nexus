@@ -296,6 +296,7 @@ def main() -> int:
                 print(f"{r['status']:<9} {'-':<8} {r['lab']}  ({r.get('error', r['status'])})")
         solved = [r for r in results if r["status"] == "SOLVED"]
         fake = [r for r in results if (r.get("switch_auth") or {}).get("fake_switches")]
+        unchecked = [r for r in results if r["status"] == "NO-EXPECTED"]
         print("-" * 70)
         print(f"labs scanned: {len(results)}   SOLVED (red flag): {len(solved)}")
         if solved:
@@ -306,6 +307,19 @@ def main() -> int:
             print(f"RED FLAG — these labs model a switch as a Linux PC ({len(fake)}):")
             for r in fake:
                 print(f"   {r['lab']}  -> {', '.join(r['switch_auth']['fake_switches'])}")
+        if unchecked:
+            # Honesty line: NO-EXPECTED means the pre-solved check could not
+            # read this grader's expectations (they are not a literal
+            # node->IP map). That is NOT a clean bill — do not let silence
+            # read as a pass. A call-arg AST extractor was attempted and
+            # reverted: it cross-attributed IPs between node branches and
+            # counted neteng's subnet masks, i.e. it manufactured false
+            # verdicts. "Not checked" is the truthful status until a grader
+            # exposes a real EXPECTED map.
+            print(f"NOT CHECKED — pre-solved status UNKNOWN for {len(unchecked)} lab(s)"
+                  " (grader exposes no EXPECTED map; this is not a pass):")
+            for r in unchecked:
+                print(f"   {r['lab']}  (grader {r['grader']})")
 
     red = any(r["status"] == "SOLVED" for r in results) or any(
         (r.get("switch_auth") or {}).get("fake_switches") for r in results

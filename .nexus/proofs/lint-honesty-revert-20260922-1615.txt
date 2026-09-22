@@ -1,0 +1,67 @@
+======================================================================
+PROOF — DRIVE 2026-09-22 ~16:03-16:15 EDT  (aegis-demo2-drive)
+LINT HONESTY PASS: attempted safe extension -> PROVED IMPRECISE -> reverted;
+kept the honest NO-EXPECTED status and made "not checked" VISIBLE.
+======================================================================
+
+--- WHY THIS WORK ---
+The lab-pack lint classifies labs SOLVED/UNSOLVED/PARTIAL by reading each
+grader's expected student IPs and checking whether the topology pre-applies
+them. 7 of 14 labs report NO-EXPECTED: their graders do not expose a literal
+node->IP map, so the pre-solved check is BLIND to them. My 12:12 note flagged
+this as an honest limit. This hour I tried to close it safely.
+
+--- ATTEMPT: AST extraction of IPs used as *call args* -------------------
+Legacy graders encode expectations positionally, e.g.
+    _check_ip_on_iface(container_name, "eth1", "10.0.1.10")
+    _ping(container_name, "10.0.1.1")
+I built `ast_call_arg_ips`: walk each `if/elif node == "<label>":` branch and
+collect string-literal IPv4 values passed to expectation-named parameters
+(expected_ip/ip/addr/gateway), resolving local function param names so BOTH
+positional and keyword forms are recognised, and excluding netmasks.
+
+--- EVIDENCE THAT IT CANNOT BE MADE PRECISE (ran it) --------------------
+Ran the extractor on the 7 blind graders:
+  grader_tier02_router_basics  -> {'r1': ['10.0.1.10'], 'pc-a': ['10.0.1.10']}
+     WRONG: 10.0.1.10 is pc-a's IP; it also lands in r1's branch because r1's
+     code pings pc-a. The branch is not "this node's expectations" — it is
+     "this node's checks", which reference OTHER nodes' IPs. Two nodes get
+     the same list.
+  grader_neteng_capstone       -> {'pc-a': [...], 'pc-b': [...]}
+     WRONG: matches at all, including a 255.255.255.240 subnet mask in one
+     run. My 12:12 note explicitly said neteng must stay NO-EXPECTED; a
+     method-level grader hands IPs through variables, not as this node's
+     literal expected values.
+  grader_tier03_switch, lab_02, lab_03, lab_04 -> {} (no signal)
+
+CONCLUSION: call-arg IPs do not identify WHOSE expectation they are. Emitting
+a verdict from this would manufacture false SOLVED/UNSOLVED calls — the exact
+cry-wolf failure the drive rules and my own prior note reject. REVERTED:
+  git checkout -- tools/lint_lab_pack.py   (parse OK after revert)
+
+--- WHAT I SHIPPED INSTEAD (safe, truthful) ------------------------------
+Kept NO-EXPECTED as the status, and added an explicit honesty block to the
+summary so silence is not read as a pass:
+  NOT CHECKED — pre-solved status UNKNOWN for 7 lab(s) (grader exposes no
+  EXPECTED map; this is not a pass):
+     tier-02-router-basics, lab-01-crossing-subnets, lab-02-switch-in-the-middle,
+     tier-03-router-switch-pc, lab-03-lock-it-down, neteng-capstone,
+     lab-04-two-as-peering
+
+VERIFIED (ran): live + public.
+  live  : 14 labs; 3 SOLVED, 4 UNSOLVED, 7 NOT CHECKED; exit 1.
+  public:  6 labs; 3 SOLVED, 3 UNSOLVED; exit 1.
+  No regression: every SOLVED/UNSOLVED classification + expect_source
+  (AST/EXPECTED) is IDENTICAL to before the change (diffed JSON).
+
+--- HONEST LIMIT (unchanged and now VISIBLE) -----------------------------
+7 lab graders still cannot be checked for pre-solved content. The lint now
+says so out loud instead of leaving a silent "-". Closing it for real needs
+those graders to expose an EXPECTED map (a grader-authoring change), or a
+per-lab manual cold run — not a smarter regex.
+
+--- ALSO THIS DRIVE ------------------------------------------------------
+:8000 had stopped (clean shutdown in its log); restarted it (setsid nohup,
+same launcher/port) -> HTTP 200. No other system touched.
+
+NOT COMPLETE. Nexus completion is Dad's call alone.
