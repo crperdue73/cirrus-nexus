@@ -99,6 +99,49 @@ def student_values(mod) -> dict:
     return vals
 
 
+def _ipv4(s: str) -> bool:
+    parts = s.split(".")
+    if len(parts) != 4:
+        return False
+    return all(p.isdigit() and 0 <= int(p) <= 255 for p in parts)
+
+
+def ast_student_values(mod) -> dict:
+    """AST fallback for graders that expose no EXPECTED map.
+
+    Legacy tier/lab graders build their expectations inline, e.g.
+        ips = {"pc-a": "10.0.1.1", "pc-b": "10.0.1.2"}
+    Walk the module AST for dict literals mapping a STRING key that looks like
+    a node name to a STRING value that parses as IPv4. This is deliberately
+    conservative -- only literal string->IPv4 pairs, only keys that look like
+    node names -- so networks/masks/localhost are not mistaken for student IPs
+    (a regex sweep over raw source over-matched exactly those; that is why
+    this is AST-based). Returns node -> [ip, ...], same shape as
+    student_values().
+    """
+    import ast, inspect
+    try:
+        src = inspect.getsource(mod)
+        tree = ast.parse(src)
+    except Exception:
+        return {}
+    nodeish = re.compile(r"^(pc|sw|switch|host|r[0-9]|router|node)[-\w]*$")
+    vals: dict[str, list] = {}
+    for n in ast.walk(tree):
+        if not isinstance(n, ast.Dict):
+            continue
+        for k, v in zip(n.keys, n.values):
+            if not (isinstance(k, ast.Constant) and isinstance(k.value, str)):
+                continue
+            if not nodeish.match(k.value.lower()):
+                continue
+            if isinstance(v, ast.Constant) and isinstance(v.value, str) and _ipv4(v.value):
+                vals.setdefault(k.value, [])
+                if v.value not in vals[k.value]:
+                    vals[k.value].append(v.value)
+    return vals
+
+
 def preapplied_in_topology(yml_path: Path, ips: list) -> set:
     """Which of `ips` appear in the topology's *executable* config text.
 
@@ -187,9 +230,14 @@ def classify(lab_dir: Path, yml_path: Path) -> dict:
         return result
 
     sv = student_values(mod)
+    source = "EXPECTED"
+    if not sv:
+        sv = ast_student_values(mod)
+        source = "AST"
     if not sv:
         result["status"] = "NO-EXPECTED"
         return result
+    result["expect_source"] = source
 
     total, seeded = 0, 0
     for node, ips in sv.items():
