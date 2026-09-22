@@ -53,6 +53,22 @@ traceroute -n 10.0.2.1
 ```
 should show hop 1 = `10.0.1.253` (r1) and hop 2 = `10.0.2.1` (pc-b).
 
+## How this lab is graded
+Every one of the five nodes is graded, and the **lab passes only when the
+whole path is real end-to-end**:
+
+| Node | Check | Full credit when |
+|------|-------|------------------|
+| pc-a | `10.0.1.1/24` on `eth1` **and** pings `10.0.1.254` (sw1), `10.0.1.253` (r1), **and** `10.0.2.1` (PC-B across the router) | all three reply |
+| pc-b | `10.0.2.1/24` on `eth1` **and** pings `10.0.1.1` (PC-A across the router) | address + ping reply |
+| sw1  | **real SR Linux switch** with `10.0.1.254/24` up on `irb0.0` | `sr_cli` fingerprint matches |
+| sw2  | **real SR Linux switch** with `10.0.2.254/24` up on `irb0.0` | `sr_cli` fingerprint matches |
+| r1   | `10.0.1.253/24` on `eth1`, `10.0.2.253/24` on `eth2`, IP forwarding ON | both addressed + forwarding |
+
+The lab verdict requires **pc-a AND pc-b end-to-end AND both real switches
+AND the router** — a Linux PC standing in for a switch is refused, and a
+working PC-to-PC path alone is not a pass.
+
 ## Tips
 - A **far-segment switch IRB** (e.g. pc-a → `10.0.2.254`) does *not* answer:
   each switch is L2 plus its own subnet gateway only and does not route between

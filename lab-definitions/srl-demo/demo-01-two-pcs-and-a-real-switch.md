@@ -47,6 +47,19 @@ Both must succeed, 0% loss. If PC-B answers but the switch does not, the
 switch's L2 bridge and its L3 gateway are in different network instances —
 the IRB is not a member of the bridge domain.
 
+## How this lab is graded
+Every node is graded, and the **lab passes only when the real-switch check
+passes too**:
+
+| Node | Check | Full credit when |
+|------|-------|------------------|
+| pc-a | `10.0.1.1/24` on `eth1` **and** pings BOTH `10.0.1.254` (the switch) and `10.0.1.2` (PC-B) | both pings reply, 0% loss |
+| pc-b | `10.0.1.2/24` on `eth1` | address present |
+| sw1  | **real SR Linux switch** with `10.0.1.254/24` up on `irb0.0` | `sr_cli` reads the IRB up with the address |
+
+A Linux PC running a bridge **cannot** pass as `sw1` — the grader reads the IRB
+through `sr_cli` and refuses. PC-to-PC alone is not a pass.
+
 ## Tips
 - `ip addr show eth1` on a PC to check its addressing.
 - On sw1: `show interface irb0` shows the IRB address and its network-instance

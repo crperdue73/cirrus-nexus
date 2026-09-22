@@ -1190,3 +1190,44 @@ CLI / lab-pack verdict path, which is what a lab-pack build would call.
 evaluation). Not re-run this drive.
 
 **NOT COMPLETE.** Nexus completion is Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~01:15 EDT — aegis-demo2-drive (capability probe: are the labs solved?)
+
+**Guides closed out:** all four demo labs now serve BOTH a guide and a topology
+(HTTP 200 each) via the product API:
+  - wrote demo-01-two-pcs-and-a-switch.md (plain demo had NO guide)
+  - wrote demo-01-two-pcs-and-a-real-switch-cumulus.md (Cumulus lab HAD NO
+    guide -> /guide returned 404; now 200)
+  - added a "How this lab is graded" section to all four demo guides.
+
+**FOUND (capability probe, evidence ../proofs/pre-solved-labs-probe-20260922-0115.txt):**
+Deployed each lab COLD, applied NO student config, graded immediately.
+
+  demo-02-two-switches-one-router: ALL 5 NODES pass 1.0 with ZERO student work.
+  demo-01-two-pcs-and-a-real-switch: pc-a unconfigured -> configure pc-a by
+    hand -> pc-b STILL passes 0.5 (I never touched it).
+
+  ROOT CAUSE: every value the grader checks is baked into the topology `exec`
+  blocks. Pattern across all four labs:
+    lab                     pc-a IP   pc-b IP   switch mgmt IP   verdict
+    demo-01 (plain linux)   seeded    seeded    seeded           fully pre-solved
+    demo-01 (SR Linux)      NOT       seeded    seeded           mostly pre-solved
+    demo-01 (Cumulus)       seeded    seeded    seeded           fully pre-solved
+    demo-02 (2sw+router)    seeded    seeded    seeded (both)    FULLY PRE-SOLVED
+
+**What is PROVEN:** substrate capability. Both labs deploy cold on a fresh
+backend, all devices come up, real switches answer, every node grades through
+the product API with honest verdicts. demo-02 as a two-switch-one-router
+probe: PASS.
+
+**What is NOT proven / GAP FOR DAD:** the labs grade a SOLVED problem. Three of
+four seed the PC addresses (and demo-02 seeds the router too) while the guide
+tells the student to assign them. Seeding the SWITCH management IP is deliberate
+and consistent (documented "ships pre-configured so the demo is about the
+pings") -- that is fine. The open decision is per-lab: what ships seeded vs.
+what the student must actually do. Not changed unilaterally; flagged.
+
+**NOT COMPLETE.** Nexus completion is Dad's call alone.
