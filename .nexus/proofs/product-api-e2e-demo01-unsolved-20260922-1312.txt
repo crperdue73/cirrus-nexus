@@ -1,0 +1,34 @@
+======================================================================
+PROOF — PRODUCT-API E2E: demo-01 SRL UNSOLVED (cold fail -> config pass)
+Date: 2026-09-22 ~13:03-13:12 EDT   Drive: aegis-demo2-drive
+Backend: throwaway :8011 (Dad's :8000 untouched)
+======================================================================
+
+WHY: the demo-01 SRL unsolved variant was proven via the graders; this runs it
+through the WHOLE product path so BOTH unsolved variants carry product-path
+evidence (demo-02 unsolved was proven at 09:12).
+
+--- START via API -------------------------------------------------------
+  POST /api/sessions/start?lab_id=demo-01-two-pcs-and-a-real-switch-unsolved
+   -> session 8f1b4ac5 running, 3 nodes (pc-a, pc-b, sw1)
+
+--- COLD GRADES via API (no student config) — expect PCs fail -------------
+  pc-a False 0.0 | pc-b False 0.0 | sw1 True 1.0 (switch pre-seeded by design)
+  -> lab fails cold, as it must.
+
+--- STUDENT WORK --------------------------------------------------------
+  pc-a: 10.0.1.1/24 on eth1;  pc-b: 10.0.1.2/24 on eth1
+  TASK 1 CONDITION: pc-a -> 10.0.1.254 (switch) 3/3 0%;
+                    pc-a -> 10.0.1.2   (pc-b)   3/3 0%.
+
+--- GRADES AFTER STUDENT WORK via API — expect pass ---------------------
+  pc-a True 1.0 | pc-b True 0.5 | sw1 True 1.0
+
+--- STOP -----------------------------------------------------------------
+  POST /api/sessions/8f1b4ac5/stop -> {"status":"destroyed"}
+  0 containers remain. :8011 down; :8000 still 200. clab baseline 35.
+
+VERDICT: the demo-01 SRL unsolved variant deploys and grades correctly through
+the product API, cold-failing then passing after real student work, and task
+1's condition (ping the switch AND the other PC) holds on a real SR Linux
+switch. NOT COMPLETE. Nexus completion is Dad's call alone.

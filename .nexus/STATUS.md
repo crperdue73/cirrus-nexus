@@ -1419,3 +1419,40 @@ Both real-switch vendors (SR Linux + Cumulus) now product-path evidenced.
 Proof: proofs/product-api-e2e-srl-20260922-1112.txt
 
 NOT COMPLETE. Nexus completion is Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~12:12 EDT — aegis-demo2-drive (lint AST fallback)
+
+Added an AST-based expectation extractor so the pre-solved check is no longer
+blind to legacy graders: reads literal string->IPv4 dicts (node-like keys) and
+is used only when no EXPECTED map exists.
+RAN: lint on live + public.
+  tier-01-foundation now UNSOLVED 0/4 (src=AST). 3 shipped demos still SOLVED.
+  Both unsolved variants UNSOLVED. exit 1, both repos.
+  Safety verified: neteng-capstone (IPs are call args) -> AST {} and stays
+  NO-EXPECTED; a regex sweep would have over-matched networks/masks there.
+HONEST LIMIT: graders encoding expectations as call args (tier-02,
+lab-01/02/03, tier-03, neteng, lab-04) remain NO-EXPECTED = "not checked",
+not clean. Not extended further to avoid false verdicts.
+Proof: proofs/lint-ast-fallback-20260922-1210.txt
+COMMITTED: live f5a87ed, public e1126b4.
+NOT COMPLETE. Nexus completion is Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~13:12 EDT — aegis-demo2-drive (product-API E2E, demo-01 unsolved)
+
+Ran the demo-01 SRL unsolved variant through the full product path on a
+throwaway :8011:
+  start -> session 8f1b4ac5, 3 nodes.
+  cold via API: pc-a/pc-b 0.0, sw1 1.0 -> lab fails (correct).
+  student work: pc-a 10.0.1.1/24, pc-b 10.0.1.2/24;
+    pc-a->switch 3/3 0%, pc-a->pc-b 3/3 0% (task-1 condition holds).
+  after via API: pc-a 1.0, pc-b 0.5, sw1 1.0 -> passes.
+  stop -> destroyed, 0 left. :8011 down; :8000 still 200. clab 35.
+Both unsolved variants now product-path evidenced.
+Proof: proofs/product-api-e2e-demo01-unsolved-20260922-1312.txt
+NOT COMPLETE. Nexus completion is Dad's call alone.
