@@ -251,6 +251,63 @@
             border-bottom: 1px solid var(--border);
             font-family: var(--font);
             flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .terminal-label .term-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Fullscreen-one-terminal mode. The chosen frame is lifted out of the
+           grid and pinned over the whole viewport, so a student on a small or
+           projector screen can actually read it. The grid keeps its space so
+           returning to the small view does not reflow the page. */
+        .terminal-frame.fullscreen {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            height: 100vh;
+            border-radius: 0;
+            border: none;
+        }
+
+        .terminal-frame.fullscreen .terminal-label {
+            font-size: 14px;
+            padding: 10px 16px;
+        }
+
+        body.term-fullscreen-active {
+            overflow: hidden;
+        }
+
+        .term-btn {
+            font-family: var(--font);
+            font-size: 12px;
+            line-height: 1;
+            color: var(--text-muted);
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 5px 10px;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: color .12s, border-color .12s, background .12s;
+        }
+
+        .term-btn:hover {
+            color: var(--text);
+            border-color: var(--text-muted);
+            background: var(--surface);
+        }
+
+        .term-btn:focus-visible {
+            outline: 2px solid var(--accent, #6ea8fe);
+            outline-offset: 1px;
         }
 
         .lab-instructions {
@@ -584,7 +641,9 @@ async function startLab(labId, studentName) {
             var url = (ttyd[name] && ttyd[name].url) ? ttyd[name].url : 'about:blank';
             var frame = document.createElement('div');
             frame.innerHTML = '<div class="terminal-frame"><div class="terminal-label">' +
-                escapeHtml(name) + ' - ' + escapeHtml(containerName) +
+                '<span class="term-name">' + escapeHtml(name) + ' - ' + escapeHtml(containerName) + '</span>' +
+                '<button type="button" class="term-btn" title="Expand this terminal" ' +
+                'aria-label="Expand terminal ' + escapeHtml(name) + '">\u26f6 Expand</button>' +
                 '</div><iframe src="' + url + '"></iframe></div>';
             grid.appendChild(frame.firstElementChild);
         }
@@ -714,6 +773,58 @@ async function stopSession() {
     loadLiveSessions();
     loadLabs();
 }
+
+// --- Fullscreen terminal ---------------------------------------------------
+// One frame at a time. Clicking Expand lifts that terminal over the viewport;
+// clicking it again (or pressing Escape) puts it back. Frames are created
+// dynamically, so this listens on the document rather than binding per frame.
+// The iframe is never re-created — only CSS changes — so the ttyd session and
+// any scrollback survive the toggle.
+function _termSetFullscreen(frame, on) {
+    if (!frame) return;
+    var btn = frame.querySelector('.term-btn');
+    if (on) {
+        frame.classList.add('fullscreen');
+        document.body.classList.add('term-fullscreen-active');
+        if (btn) {
+            btn.innerHTML = '\u2715 Exit';
+            btn.title = 'Return to grid view';
+        }
+    } else {
+        frame.classList.remove('fullscreen');
+        document.body.classList.remove('term-fullscreen-active');
+        if (btn) {
+            btn.innerHTML = '\u26f6 Expand';
+            btn.title = 'Expand this terminal';
+        }
+    }
+}
+
+function _termToggleFullscreen(btn) {
+    var frame = btn.closest('.terminal-frame');
+    if (!frame) return;
+    var goingFull = !frame.classList.contains('fullscreen');
+    // Only one terminal can be fullscreen; collapse any other first.
+    if (goingFull) {
+        document.querySelectorAll('.terminal-frame.fullscreen').forEach(function(f) {
+            if (f !== frame) _termSetFullscreen(f, false);
+        });
+    }
+    _termSetFullscreen(frame, goingFull);
+}
+
+document.addEventListener('click', function(ev) {
+    var btn = ev.target.closest && ev.target.closest('.term-btn');
+    if (!btn) return;
+    ev.preventDefault();
+    _termToggleFullscreen(btn);
+});
+
+document.addEventListener('keydown', function(ev) {
+    if (ev.key !== 'Escape') return;
+    var open = document.querySelector('.terminal-frame.fullscreen');
+    if (open) _termSetFullscreen(open, false);
+});
 
 // Surface live sessions on first paint too (not just after an action).
 if (typeof window !== 'undefined') {
