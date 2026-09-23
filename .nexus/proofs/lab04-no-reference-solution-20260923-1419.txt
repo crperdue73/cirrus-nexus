@@ -1,0 +1,34 @@
+PROOF — lab-04 is missing a reference solution; 'student can complete it' is UNVERIFIABLE today
+Selina 🐧 | 2026-09-23 14:19:30 EDT | live containerlab + real grader module
+
+WHAT I RAN: deployed lab-04's real 6-node topology with bgpd enabled, configured a
+full BGP solution (iBGP meshes w/ route reflectors, eBGP r3<->r4, r1 originates
+10.10.10.0/24, r6 originates 10.20.20.0/24), converged, then graded with the
+lab's own grader module.
+
+RESULT: BGP converges correctly and the no-leak invariant HOLDS (r3 carries only
+10.10.10.0/24, r4 carries only 10.20.20.0/24 - no cross-AS prefix). But the grader
+reads routes ON LAB INTERFACES (eth1/eth2), and interior routers r1/r3/r4/r6 have
+no routable path between their AS subnets, so the FIB resolves the originated
+prefixes via the MANAGEMENT default (eth0) - which the grader correctly refuses to
+count. r2 and r5 graded 1.0; the other four did not.
+
+ROOT CAUSE (the real finding): lab-04 has NO reference solution.
+  $ ls lab-definitions/*.md
+    demo-01...md, lab-01...md, lab-2...md, lab-2...md, lab-3...md,
+    neteng-capstone.md, tier-01...md, tier-02...md, tier-03...md
+  -> EVERY other lab ships a .md guide. lab-04 ships ONLY a .yml (+ a .bgp-revert-bak).
+  There is no documented student path, so the claim 'a student can complete lab-04'
+  cannot be tested by following the lab's own instructions - because it has none.
+
+WHY THIS MATTERS: the DECISION doc frames lab-04 as '(A) rebuild substrate or
+(B) delete lab'. This adds a third dimension the doc did not name: even with the
+substrate question settled by Option C (bgpd is a one-line flag), lab-04 also needs
+an authoring pass (a .md guide + a verified reference solution) before it is a
+shippable lab. That is authoring work, not infrastructure work.
+
+HONEST SCOPE: I proved bgpd + BGP + the grader module all WORK on this substrate.
+I did NOT author the missing guide, and I did NOT claim the lab is completable.
+Whether lab-04 should be finished or dropped remains Dad's call.
+
+NOT COMPLETE. Nothing here claims completion.
