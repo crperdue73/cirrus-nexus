@@ -1,0 +1,98 @@
+======================================================================
+DRIVE 2026-09-23 ~03:05-03:15 EDT  (aegis-demo2-drive)
+DEFECT: the UNSOLVED (student-facing) demo-02 lab SHIPS ITS OWN ANSWER KEY
+======================================================================
+Found while checking the demo-02 deliverables' file layout, then reproduced
+live. This is a PRE-SOLVED-LAB defect of the same class I found on demo-02 at
+01:15 on 09-22 — but this time it is in the artifact a STUDENT gets.
+
+--- STATIC EVIDENCE (diff, no interpretation needed) ---
+  diff lab-definitions/srl-demo2-unsolved/assets/sw1.cfg \
+       lab-definitions/srl-demo2/assets/sw1.cfg
+    => IDENTICAL, no output. Same for sw2.cfg.
+  Both YAMLs load that file as a startup-config:
+    unsolved: line 79/84  startup-config: assets/sw1.cfg / assets/sw2.cfg
+    solved  : line 83/88  startup-config: assets/sw1.cfg / assets/sw2.cfg
+  So the "unsolved" lab boots the switches into the SOLVED state.
+
+--- LIVE REPRODUCTION (throwaway :8020, live lab-definitions) ---
+  deployed demo-02-two-switches-one-router-unsolved, session deadb946
+  5/5 containers up: pc-a, sw1, r1, sw2, pc-b
+
+  GRADE SW1 WITH ZERO STUDENT WORK:
+    passed= True  score= 1.0
+    "✅ sw1: real SR Linux switch, SR Linux irb0.0 up with 10.0.1.254"
+  Same for sw2: passed= True score= 1.0
+
+  THE PASS CONDITION ITSELF (Dad's ask 2), zero student work:
+    pc-a -> pc-b (10.0.2.1):  3 sent, 0 received, 100% loss
+    => NOT met. pc-a/pc-b grade 0.0 because the student still must address them.
+
+--- WHAT THIS MEANS ---
+  1. The switches are pre-solved. A student deploys the "unsolved" lab and the
+     hardest part of the lab (the SR Linux IRB config that demo-01 proved is the
+     tricky bit) is ALREADY DONE. The switches grade 1.0 before the student
+     touches them. The lab cannot teach what it claims to teach.
+  2. This is almost certainly a COPY ARTIFACT: the unsolved variant was created
+     by copying the solved variant's directory, including assets/. The YAML
+     metadata was edited; the startup configs were not.
+  3. It is NOT a total fake-green: the end-to-end pass condition still fails
+     (pc-a cannot reach pc-b) because the PCs are genuinely unsolved. So the lab
+     is "partially pre-solved", not "fully pre-solved".
+
+--- SCOPE CHECK REQUIRED ---
+  The same copy-artifact pattern could exist in the demo-01 unsolved variant
+  (srl-demo-unsolved/). It ships an assets/ dir too. I have NOT checked it this
+  hour; flagging it as the next check rather than assuming either way.
+
+CLEANUP: session deadb946 stopped + destroyed. Throwaway :8020 down. No stray
+  clab labs (verified via `containerlab inspect --all` this time, per the 01:35
+  lesson). :8000 = 200, PID 702017 untouched.
+
+NOT COMPLETE. The fix (strip the solved startup-configs from the unsolved
+variant, or point it at blank configs) is a change to a student-facing artifact
+and the shipping definition of demo-02 — Dad's call, not mine.
+
+======================================================================
+ADDENDUM 03:20 — SCOPE CONFIRMED: BOTH unsolved variants ship solved configs
+======================================================================
+The scope check flagged above is now DONE (not assumed).
+
+--- demo-01 unsolved: srl-demo-unsolved/sw1.cfg ---
+  diff srl-demo-unsolved/assets/sw1.cfg srl-demo/assets/sw1.cfg  -> IDENTICAL
+  LIVE (session 56527df0, zero student work):
+    sw1 as deployed, `info interface irb0`:
+      admin-state enable / subinterface 0 { admin-state enable /
+      ipv4 { admin-state enable / address 10.0.1.254/24 } }
+    grade sw1 -> passed= True  score= 1.0
+      "✅ sw1: real SR Linux switch, SR Linux irb0.0 up with 10.0.1.254"
+  => The ONE thing demo-01 teaches (bringing up the SR Linux IRB) is DONE
+     before the student arrives. The switch grades 1.0 cold.
+
+  NOTE (also a finding): the demo-01 unsolved lab's switch node is named `sw1`,
+  not `switch` (session 6f33ab2b: probing node "switch" returned
+  "Node 'switch' not found in session"). The plain demo-01 lab names it
+  `switch`. Two variants of the same lab disagree on the node name — a real
+  papercut for a student following the .md instructions.
+
+--- CONFIRMED SCOPE ---
+  demo-02-two-switches-one-router-unsolved : sw1 + sw2 pre-solved (grade 1.0 cold)
+  demo-01-two-pcs-and-a-real-switch-unsolved : sw1 pre-solved (grade 1.0 cold)
+  Both are the labs Dad's ask #1 says a student should learn the switch from.
+  Root cause is the same in both: the unsolved variant is a DIRECTORY COPY of the
+  solved variant, so assets/ came along with it. YAML metadata was edited;
+  the startup configs were not.
+
+--- WHAT IS STILL HONEST ABOUT THESE LABS ---
+  The end-to-end pass condition is NOT pre-met:
+    demo-02: pc-a -> pc-b = 100% loss (PCs genuinely unsolved)
+    demo-01: pc-a -> 10.0.1.254 = 100% loss (PC genuinely unsolved)
+  So they are partially pre-solved, not fully fake-green. The student still
+  must do the PC work — but the SWITCH work, the part Dad's ask #1 is ABOUT,
+  is handed to them.
+
+CLEANUP: sessions deadb946 / 6f33ab2b / 56527df0 all stopped+destroyed.
+  Verified no stray clab labs via `containerlab inspect --all`.
+NOT COMPLETE. The fix changes a student-facing artifact (strip the solved
+  startup-configs from both unsolved variants, or ship blank ones) plus the
+  node-name inconsistency — Dad's call.

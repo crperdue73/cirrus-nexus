@@ -1651,3 +1651,32 @@ NOT COMPLETE. Both open items are Dad's call (lab migration; tier-03 sub-check).
   removed with `docker rm -f`. Verified after: 38 containers (= baseline),
   0 tier-03 clab rows, :8000 = 200 PID 702017, no throwaway ports, /tmp/d8020
   gone. Lesson logged: verify teardown with containerlab inspect, not docker ps.
+
+---
+
+## 2026-09-23 ~03:15 EDT — aegis-demo2-drive (RESTORED: unsolved labs ship solved configs)
+
+The 22:20 entry on 09-22 was DELETED from this ledger by a write race when three
+drives fired in the same window. Restoring it here in full, as its own entry, so
+the record cannot be lost again:
+
+  Demonstrated live: the UNSOLVED student-facing lab demo-02-two-switches-one-router-unsolved
+  deploys with its switches ALREADY CONFIGURED (session c0dbdc5e, live grader):
+
+    pc-a: FAIL 0.0    sw1: PASS 1.0    r1: FAIL 0.2    sw2: PASS 1.0    pc-b: FAIL 0.0
+
+  sw1 is the lab SUBJECT. It passes 1.0 before the student touches it, and its
+  own feedback says the switch is a real SR Linux switch, because the lab ships
+  assets/sw1.cfg as a startup-config. Underlining that pc-a -> pc-b is
+  "100% packet loss" only underlines the central point, not a fix: the student
+  is being handed the switch config -- the part ask #1 is about.
+
+Root cause found this hour and confirmed across BOTH unsolved variants:
+  the unsolved variant is a DIRECTORY COPY of the solved variant (same assets/,
+  byte-identical sw1.cfg/sw2.cfg), so the solved startup configs shipped with it.
+  The YAML metadata was edited; the startup configs were not.
+
+Artifact: proofs/unsolved-lab-ships-solved-config-20260923-0310.txt
+NOT COMPLETE. Fix = strip/blank the startup-configs in both unsolved variants +
+  resolve the sw1-vs-switch node-name mismatch. Student-facing shipping change:
+  Dad's call.
