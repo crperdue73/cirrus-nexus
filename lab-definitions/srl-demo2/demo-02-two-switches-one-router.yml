@@ -32,6 +32,7 @@
 metadata:
   course: CI-DEMO
   id: demo-02-two-switches-one-router
+  validates_switch_authenticity: true          # audited 2026-09-22: real switch OS
   name: "Demo 2 — Two Switches and a Router 🖥️🔀📡🔀🖥️"
   description: >
     Two real SR Linux switches joined by a real FRR router. Each switch is an

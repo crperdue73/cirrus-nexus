@@ -1,0 +1,64 @@
+metadata:
+  course: CI-30
+  competencies:
+  - IPv4 Subnetting
+  - IPv6 Addressing
+  - Router Configuration (RTR)
+  - Switch Configuration (SW1)
+  - SSH & Device Security
+  - End-to-End Connectivity Verification
+  description: 'Configure a router, switch, and PCs with IPv4/IPv6 addressing, device
+    security (SSH/Telnet), and end-to-end connectivity. Based on the Cisco Network
+    Engineering Technology I performance-based measurement.
+
+    '
+  difficulty: Intermediate
+  duration_min: 90
+  grader: grader_neteng_capstone
+  id: neteng-capstone
+  validates_switch_authenticity: false          # audited 2026-09-22: middle device is a Linux PC (connectivity only)
+  name: Net Eng I Capstone
+name: aegis-neteng-capstone
+topology:
+  links:
+  - endpoints:
+    - rtr:eth2
+    - sw1:eth1
+  - endpoints:
+    - sw1:eth2
+    - pc-a:eth1
+  - endpoints:
+    - rtr:eth1
+    - pc-b:eth1
+  nodes:
+    pc-a:
+      exec:
+      - apk add iproute2 iputils -q
+      - ip link set eth1 up
+      image: alpine:latest
+      kind: linux
+    pc-b:
+      exec:
+      - apk add iproute2 iputils -q
+      - ip link set eth1 up
+      image: alpine:latest
+      kind: linux
+    rtr:
+      exec:
+      - /usr/lib/frr/frrinit.sh start
+      - sleep 2
+      - ip link set eth1 up
+      - ip link set eth2 up
+      image: aegis/frr:latest
+      kind: linux
+    sw1:
+      exec:
+      - apk add iproute2 iputils bridge-utils -q
+      - ip link add name br0 type bridge
+      - ip link set br0 up
+      - ip link set eth1 up
+      - ip link set eth1 master br0
+      - ip link set eth2 up
+      - ip link set eth2 master br0
+      image: alpine:latest
+      kind: linux

@@ -31,6 +31,7 @@
 metadata:
   course: CI-DEMO
   id: demo-01-two-pcs-and-a-real-switch-cumulus
+  validates_switch_authenticity: true          # audited 2026-09-22: real switch OS
   name: "Demo — Two PCs and a Real Switch (Cumulus) 🖥️🔀🖥️"
   description: >
     The same shipping demo, on a REAL Cumulus Linux switch. Two computers

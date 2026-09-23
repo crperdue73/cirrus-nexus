@@ -1,0 +1,55 @@
+======================================================================
+DRIVE 2026-09-22 ~23:05-23:15 EDT  (aegis-demo2-drive)
+SWITCH-AUTHENTICITY IS NOW DECLARED IN METADATA AND SURFACED BY THE API
+======================================================================
+Problem this closes: at 20:20 I proved demo-01-plain grades the FULL pass
+condition green with a plain Alpine Linux box as the "switch". At 22:05 I
+wrote it into a markdown banner. Neither reaches a student through the
+product: the API said nothing about it.
+
+Change (3 files, no grader touched, no pass condition softened):
+  1. backend/main.py
+     - LabDef gains `validates_switch_authenticity: bool = False`
+     - `_discover_labs()` reads it from the lab's OWN metadata block
+  2. Each lab YAML declares its own contract in `metadata`:
+       validates_switch_authenticity: true   (real switch OS required)
+       validates_switch_authenticity: false  (middle device is a Linux PC)
+  3. .md banner for demo-01-plain already carried the truth; the field now
+     makes it machine-readable.
+
+WHY METADATA AND NOT A HARD-CODED LIST IN THE BACKEND: the lab declares its
+own contract, the audit is the evidence behind each value, and a lab cannot
+silently drift from what it claims. A backend-side list would rot.
+
+--- LIVE VERIFY (throwaway :8020; Dad's :8000 PID 702017 NEVER TOUCHED) ----
+Started a copy of backend/main.py on :8020 against the live lab-definitions.
+  GET /api/labs -> HTTP 200, 14 labs
+
+  validates_switch_authenticity = TRUE (5):
+     demo-01-two-pcs-and-a-real-switch-cumulus
+     demo-01-two-pcs-and-a-real-switch            (SR Linux)
+     demo-01-two-pcs-and-a-real-switch-unsolved
+     demo-02-two-switches-one-router
+     demo-02-two-switches-one-router-unsolved
+  validates_switch_authenticity = FALSE (9):
+     tier-01-foundation, tier-02-router-basics, lab-01-crossing-subnets,
+     lab-02-switch-in-the-middle, tier-03-router-switch-pc,
+     lab-03-lock-it-down, neteng-capstone,
+     demo-01-two-pcs-and-a-switch, lab-04-two-as-peering
+  field ABSENT (0) -- every lab either declares true or false; no silence.
+
+NEGATIVE CONTROL (the point of a gate is that it can fail):
+  Checked the 6 labs the 22:05 audit named as fake-switch. All 6 report
+  False. Mismatches: NONE.
+  Example wire payload:
+    demo-01-two-pcs-and-a-switch      -> False   ("Demo — Two PCs and a Switch")
+    demo-01-two-pcs-and-a-real-switch -> True    ("... (SR Linux)")
+
+SANITY: all lab YAMLs parse clean; backend/main.py parses clean.
+
+CLEANUP: no containers started, no sessions, no clab operations. Throwaway
+:8020 down. Dad's :8000 = HTTP 200, his PID the only main.py.
+
+NOT COMPLETE. Whether the API should also SHOW this field in the UI, and
+which of the 9 False labs get migrated to a real switch OS, remain Dad's
+call. Nexus completion is Dad's call alone.
