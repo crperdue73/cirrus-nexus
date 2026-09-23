@@ -1,0 +1,44 @@
+======================================================================
+DRIVE 2026-09-23 ~13:04-13:15 EDT  (aegis-demo2-drive)
+lab-04 BGP SUBSTRATE CONTRADICTION -- FRESH LIVE REPRODUCTION (still true)
+======================================================================
+Re-ran the contradiction against the running :8000 today, so the decision brief
+cites a same-day run rather than yesterday's.
+
+LIVE, just now:
+  POST /api/sessions/start?lab_id=lab-04-two-as-peering
+    -> HTTP 409
+    detail: "substrate cannot run lab-04-two-as-peering: requires daemons
+    ['bgpd'], but aegis/frr:latest enables only ['mgmtd','staticd',
+    'vtysh_enable','zebra']. Redeploy on a substrate built with those daemons"
+  No session created. The guard is CORRECT -- it is refusing a real mismatch.
+
+THE TWO SIDES (fresh reads):
+  install.sh:168  "# (Dockerfile.frr-bgp removed 2026-09-20 -- that substrate is
+                   not part of this product.)"
+  install.sh:379  "Step 7b removed 2026-09-20 -- it built a substrate the product
+                   does not ship."
+  backend/main.py:103-107,321,859-862,944 -- all still reference "the BGP variant
+                   (bgpd enabled, for lab-04)".
+  assets/installed-image-id.txt -- carries a 2nd substrate digest.
+  lab-04-two-as-peering.yml -- requires_daemons: [bgpd].
+
+BLAST RADIUS (measured this hour):
+  `requires_daemons` appears in EXACTLY ONE lab: lab-04-two-as-peering.yml.
+  lab-04 is referenced only by its own .yml + grader + internal docs
+  (backend, HANDOFF-2026-09-22.md, 10-archive/SUMMARY-for-Dad.md).
+  NO lab pack manifest lists it -> neither option churns a pack.
+
+OPTIONS (both scoped, neither taken -- Dad's call):
+  A) restore substrate: re-add Dockerfile.frr-bgp to install.sh, build,
+     re-publish the pin (staged Dockerfile.frr-bgp already builds; layer chain
+     244c88aa...; pin currently lacks it -> guard 500s until re-pinned).
+  B) drop lab-04: remove lab-04 .yml + grader and the BGP references in
+     backend/main.py + the 2nd pin digest. Deletes a shipped lab.
+
+Deliverable: .nexus/DECISION-NEEDED-lab04-bgp-20260923.md (one page, for Dad).
+I did NOT touch install.sh / the pin / any shipped lab.
+
+CLEANUP: no session created (409), 0 leftovers, baseline 35, :8000 200.
+NOT COMPLETE. Completion is Dad's call alone.
+======================================================================
