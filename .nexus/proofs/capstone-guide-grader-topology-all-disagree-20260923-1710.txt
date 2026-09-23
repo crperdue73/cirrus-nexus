@@ -1,0 +1,59 @@
+PROOF — capstone: the GUIDE, the GRADER's reference data, and the TOPOLOGY
+         all disagree with each other. A correct student cannot pass.
+Selina 🐧 | 2026-09-23 17:10:47 EDT | live containerlab + real grader module
+
+TOPOLOGY (07-capstone.yml, the thing that actually deploys):
+    nodes: pc-a, pc-b, rtr, sw1        <-- FOUR nodes. NO sw2.
+    links: rtr:eth2 <-> sw1:eth1
+           sw1:eth2 <-> pc-a:eth1
+           rtr:eth1 <-> pc-b:eth1
+
+WHAT THE GUIDE (neteng-capstone.md) TELLS THE STUDENT:
+    - configure THREE devices beyond the router: SW1, SW2, PC-A, PC-B
+      ('4. Configure SW2 as a bridge ...')  <-- SW2 DOES NOT EXIST in topology
+    - PC-A: 192.168.12.50/25   gw 192.168.12.1
+    - PC-B: 192.168.12.150/28  gw 192.168.12.129
+
+WHAT THE GRADER'S OWN REFERENCE DATA SAYS (grader_neteng_capstone.py:409-421):
+    subnet_a_network: 192.168.12.0/25     subnet_a_last: 192.168.12.126
+    subnet_b_network: 192.168.12.128/28   subnet_b_last: 192.168.12.142
+    pc_a_ip: 192.168.12.126               pc_b_ip: 192.168.12.142
+    and it grades PC IPs by literal match: 'Expected IP 192.168.12.126'
+    and 'Expected IP 192.168.12.142'.
+
+THE CONTRADICTIONS, enumerated:
+  1. GUIDE vs TOPOLOGY: guide says configure SW2; there is no sw2 node.
+  2. GUIDE vs GRADER (Subnet B host): guide says PC-B = .150, but .150 is
+     NOT INSIDE Subnet B (192.168.12.128/28 = .128-.143). The address the
+     guide hands the student is not in the subnet the guide itself defines.
+  3. GUIDE vs GRADER (PC addresses): guide says .50 / .150; grader demands
+     literal .126 / .142. A student who follows the guide FAILS the check.
+  4. GUIDE vs GRADER (Subnet A size): guide PC-A .50/25 is inside .0-.127
+     (ok as a subnet) but the grader wants the LAST usable .126 specifically.
+
+LIVE DEMONSTRATION (this is the important part):
+  Verified the FULL end-to-end path works when addressed sanely:
+      rtr eth2 = 192.168.12.1/28   (Subnet A side, via sw1)
+      rtr eth1 = 192.168.12.129/28 (Subnet B side, direct to pc-b)
+      pc-a      = 192.168.12.10/28  gw .1
+      pc-b      = 192.168.12.130/28 gw .129
+      $ pc-a ping pc-b  ->  2/2, 0% packet loss   (through sw1 -> rtr)
+  Then graded that WORKING configuration:
+      pc-a: passed=False score=0.50
+        ❌ Expected IP 192.168.12.126 not found on eth1   <-- FALSE NEGATIVE
+        ✅ Default gateway 192.168.12.1 configured
+      pc-b: passed=False score=0.50
+        ❌ Expected IP 192.168.12.142 not found on eth1   <-- FALSE NEGATIVE
+        ✅ Default gateway 192.168.12.129 configured
+  The network WORKS end to end; the grader fails the PCs anyway because they
+  are not at two magic addresses that the guide never told the student to use.
+
+VERDICT: this lab cannot currently be passed by following its own guide.
+  To pass, a student would have to IGNORE the guide, INVENT sw2, and guess
+  the grader's private addresses (.126/.142). There is no path from guide to
+  green. This is not a rubric that is too strict; it is three artifacts that
+  were written separately and never reconciled.
+
+SCOPE: did NOT edit guide, grader, or topology. Probe destroyed; baseline
+restored. Fixing this is authoring work and Dad's call.
+NOT COMPLETE. Nothing here claims completion.
