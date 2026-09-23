@@ -1,0 +1,50 @@
+======================================================================
+DRIVE 2026-09-23 ~09:06-09:20 EDT  (aegis-demo2-drive)
+CLOSING MY OWN SELF-FLAGGED EDGE [3]: the Cumulus "a student can do it" claim
+======================================================================
+SELF-AUDIT EDGE [3] said: the Cumulus branch was verified only on the SOLVED
+reference variant (PCs pre-configured), so "a student can do it on Cumulus" was
+a CLAIM, not earned — no unsolved Cumulus lab existed. This hour I earned it.
+
+WHAT I BUILT: lab-definitions/cumulus-demo/demo-01-cumulus-switch-unsolved.yml
+  id: demo-01-two-pcs-and-a-real-switch-cumulus-unsolved
+  - SAME topology + SAME grader (grader_demo_01_cumulus) as the solved variant.
+  - PCs ship UNCONFIGURED (no ip addr add; interface up only) -> addressing is
+    the student's job, mirroring demo-01-...-unsolved on SR Linux.
+  - Switch SVI 10.0.1.254/24 on br0 still ships pre-configured (same deliberate
+    choice as the SR Linux unsolved lab).
+  + a matching student guide .md.
+Registered and exercised through a FRESH backend (:8098, Dad's :8000 untouched).
+
+RUN 1 — COLD (no student work):
+  pc-a eth1: only fe80:: link-local, NO IPv4
+  pc-a -> 10.0.1.254: 100% packet loss
+  grade: pc-a 0.0 | pc-b 0.0 | sw1 1.0  -> PCs fail, switch pre-configured. OK.
+
+RUN 2 — AFTER the lab's own documented student work:
+  pc-a -> 10.0.1.254 (the switch): 3/3, 0% loss
+  pc-a -> 10.0.1.2   (PC-B):       3/3, 0% loss
+  => PASS CONDITION MET, un-softened, ON CUMULUS. The switch itself answered;
+     PC-to-PC alone did not carry it.
+
+SWITCH IS REAL CUMULUS:
+  /etc/os-release NAME="Cumulus Linux" VERSION_ID=4.3.0 ; /usr/bin/vtysh present
+  bridge fdb show br br0: two PC MACs learnt (eth1 aa:c1:ab:db:b7:90,
+  eth2 aa:c1:ab:49:72:5c), vlan 1.
+
+GRADER after student work: pc-a 1.0 | pc-b 1.0 | sw1 1.0   => 3/3
+  pc-a feedback: addr present + "can ping sw1 (the switch)" + "can ping pc-b".
+
+LINT RE-CHECK: the new lab reports UNSOLVED 0/2 (ships no student config) while
+its solved sibling stays SOLVED 2/2. So the new variant is a genuine student
+lab, not a second copy of a pre-solved one.
+
+WHERE EDGE [3] NOW STANDS: CLOSED. Both switch options (Nokia SR Linux and
+Cumulus) now each have a STUDENT variant that cold-fails and passes after
+documented student work, meeting Dad's un-softened condition. Self-audit file
+updated accordingly.
+
+CLEANUP: fresh backend :8098 killed; session c7379cfd stopped, 0 leftover
+containers; live sessions 0; clab baseline 35; :8000 200.
+NOT COMPLETE. Completion is Dad's call alone.
+======================================================================

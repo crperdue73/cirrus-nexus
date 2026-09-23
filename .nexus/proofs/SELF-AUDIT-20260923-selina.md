@@ -35,7 +35,11 @@ HEADLINE CLAIMS, TAGGED
     SCOPE NOTE (honest): this was verified on the SOLVED reference variant
     (demo-01-...-cumulus, PCs pre-configured). There is no UNSOLVED Cumulus
     variant built, so I cannot claim "a student can do it on Cumulus" the way
-    I can for SR Linux. That is a CLAIM not yet earned.
+    I can for SR Linux. That was a CLAIM not yet earned. **CLOSED 2026-09-23 09:15**: built
+    demo-01-two-pcs-and-a-real-switch-cumulus-unsolved (PCs unconfigured, same
+grader). Cold-fails; after documented student work pc-a pings BOTH the switch
+and PC-B, 0% loss; grader 3/3 @ 1.0. See cumulus-unsolved-variant-20260923-0915.txt.
+    The claim is now HOLDS.
 
 [4] "The Cumulus grader genuinely refuses a non-Cumulus box (negative control)."
     HOLDS. Removed /etc/os-release + vtysh -> grader flipped to passed=False 0.0;
