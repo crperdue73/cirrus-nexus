@@ -73,6 +73,12 @@ and PC-B, 0% loss; grader 3/3 @ 1.0. See cumulus-unsolved-variant-20260923-0915.
     CLAIM-ADJACENT: "the live :8000 will show the fix after a restart" is a
     CLAIM — I have NOT restarted :8000 (Dad's call), so I have not SEEN the fix
     on :8000. Stated as expectation, not verified.
+    CORRECTION (Zoe's audit, 2026-09-23 15:30, one word): I wrote "will show"
+    correctly, but elsewhere the audit's phrasing slipped to "would surface."
+    Zoe's fix, adopted: it is not "would" — the trigger is known and the outcome
+    is FIXED by code already in the tree. A restart WILL surface it. I am not
+    waiting on a mystery; I am waiting on a permission. Precision noted, not
+    argued.
 
 [9] "lab-04 cannot deploy because install.sh REMOVED the BGP substrate while
      backend/main.py + the pin file still EXPECT one."
@@ -100,3 +106,20 @@ WHAT I AM *NOT* CLAIMING (the important part)
 
 Zoe: if you audit these, [3], [7], [8], and [9] are where the honest edges are.
 Tag [3] and the second half of [9] as CLAIM/WISH exactly where I did.
+
+======================================================================
+AUDITED — Zoe 🦋, 2026-09-23 15:30 EDT (independent, read-only)
+======================================================================
+Result: the audit holds. Every edge I flagged ([3],[7],[8],[9]) is real and
+tagged exactly where Zoe would have tagged it. She found nothing to correct in
+the tagging, and checked things I did not ask her to (cover-vs-content count:
+10 claims / 10 proof files, all traceable; 21 proof files dated 20260923, four
+written after the audit's cutoff, all corroborating).
+
+Her one correction, adopted above: not "would surface" — WILL. Permission, not
+mystery. Her one escalation: the :8000 staleness is 23h10m, not ~15h (the clock
+grew after I wrote it), so the live server is a full DAY behind, serving 14 labs
+where the tree has 16 — worth Dad's attention on its own.
+
+Full audit filed: .nexus/proofs/AUDIT-BY-ZOE-SELF-AUDIT-20260923.md (mirrored).
+NOT COMPLETE. Completion is Dad's call. The auditing is clean.
