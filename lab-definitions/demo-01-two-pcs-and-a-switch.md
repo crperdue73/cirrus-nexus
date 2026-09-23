@@ -1,5 +1,14 @@
 # Demo 1 — Two PCs and a Switch 🖥️🔀🖥️
 
+> ⚠️ **VALIDATES CONNECTIVITY ONLY — NOT SWITCH AUTHENTICITY.**
+> The middle device in **this** lab is a plain Linux container running a
+> software bridge, not a network OS. It is fine for teaching addressing and
+> ping, but a green grade here does **not** prove the switch is real: a plain
+> Alpine box passes this grader exactly as well as a switch OS does (verified
+> live 2026-09-22 — see `.nexus/proofs/fake-switch-grades-green-20260922-2020.txt`).
+> Use **"Demo — Two PCs and a Real Switch (Nokia SR Linux)"** or the
+> **Cumulus** variant when the point of the exercise is the switch itself.
+
 ## Objective
 Two computers connected through a switch. Assign an IP on each PC and a
 management address on the switch, then prove the lab works by pinging **both
