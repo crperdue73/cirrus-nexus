@@ -1,0 +1,61 @@
+======================================================================
+DRIVE 2026-09-23 ~04:04-04:10 EDT  (aegis-demo2-drive)
+TASK 1 (Dad's ask #1): REAL SWITCH — live re-verification
+Lab: demo-01-two-pcs-and-a-real-switch-unsolved
+Path: deployed THROUGH THE BACKEND API (not raw clab; raw clab rejects the
+      `metadata:` key by design — _prepare_topology strips it). :8000 = 200.
+======================================================================
+
+--- DEPLOY ---
+POST /api/sessions/start?lab_id=demo-01-two-pcs-and-a-real-switch-unsolved
+session 4c993fb6, 3/3 nodes up: pc-a, pc-b, sw1   (SR Linux image)
+
+--- COLD (zero student work): pass condition MUST fail ---
+  grade pc-a: passed=False score=0.0
+    "10.0.1.1 not found on eth1"
+    "pc-a cannot ping the switch (10.0.1.254)"
+    "pc-a cannot ping PC-B (10.0.1.2)"
+  => END-TO-END PASS CONDITION NOT PRE-MET. Correct.
+
+  NOTE (honest): grade sw1 cold = passed=True score=1.0.
+  The switch IRB ships pre-configured. This is DECLARED IN THE ARTIFACT'S OWN
+  DOCS ("its IRB arrives pre-configured (that is deliberate: this lab is about
+  host addressing and reaching the switch, not about switch bring-up)"). The
+  lab teaches host addressing + reaching a real switch; sw1 is the fixed
+  substrate. This is a design choice, not a leak — the 03:10 proof framed it as
+  a "defect"; the artifact's own instruction text contradicts that framing. The
+  distinction matters and I am recording it rather than inheriting the label.
+
+--- AFTER STUDENT WORK (address both PCs) ---
+  pc-a: eth1 UP 10.0.1.1/24 ; pc-b: eth1 UP 10.0.1.2/24
+  FROM pc-a:
+    ping 10.0.1.254 (the switch): 3 sent, 3 recv, 0% loss
+    ping 10.0.1.2   (PC-B):       3 sent, 3 recv, 0% loss
+  => DAD'S UN-SOFTENED PASS CONDITION MET: pc-a reaches BOTH the switch AND PC-B.
+
+--- API GRADER (does not soften anything) ---
+  pc-a : passed=True score=1.0  (addr + ping switch + ping PC-B, all separate)
+  pc-b : passed=True score=0.5  (addr present)
+  sw1  : passed=True score=1.0  "real SR Linux switch, irb0.0 up with 10.0.1.254"
+
+--- PROOF THE SWITCH IS REAL (not a Linux PC running a bridge) ---
+  sr_cli 'show version': OS = SR Linux, Software Version v26.7.2,
+                         Chassis 7220 IXR-D2L, Hostname sw1
+  sr_cli 'show interface irb0': irb0.0 is up
+      Network-instances: ip-vrf-1 (ip-vrf) AND mac-vrf-1 (mac-vrf)
+      IPv4 addr: 10.0.1.254/24 (static, preferred, primary)
+  sr_cli 'show network-instance mac-vrf-1 bridge-table mac-table all':
+      Total Learnt Macs : 2  (both access ports: ethernet-1/1.0, ethernet-1/2.0)
+      Total Irb Macs    : 1
+  => a Linux bridge cannot produce this output; the node is a real NOS.
+
+--- NODE-NAME INCONSISTENCY (papercut, unchanged from 03:10 finding) ---
+  This unsolved variant names the switch `sw1`.
+  The PLAIN demo-01 lab (demo-01-two-pcs-and-a-switch) names it `switch`.
+  Same lab, two variants, two node names. A student following one .md against
+  the other lab hits "Node 'switch' not found". Not fixed here — it is a
+  student-facing naming change; Dad's call.
+
+CLEANUP: session 4c993fb6 stop+destroy pending (next step). :8000 untouched.
+NOT COMPLETE. "Deployed" != "finished". Completion is Dad's call alone.
+======================================================================
