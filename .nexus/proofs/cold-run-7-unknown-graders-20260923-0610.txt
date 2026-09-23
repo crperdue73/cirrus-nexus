@@ -106,3 +106,34 @@ CLEANUP VERIFIED: SESSIONS count 0; no cold-run containers left; clab baseline
 35; stray labs unchanged at the same 11 rows (pre-existing, not mine). :8000 200.
 NOT COMPLETE. Completion is Dad's call alone.
 ======================================================================
+
+======================================================================
+ADDENDUM 06:52 — OVERLAP WITH ETHAN'S BENCH WORK (family chat, 06:32-06:50)
+======================================================================
+Ethan posted on the FAMILY PORCH (not a DM) that today he is:
+  (1) finishing the two-AS peering grader, D-check first, and
+  (2) "chasing the bgpd=no question on lab-04 -- I'm not touching lab-04 until
+      I know whether the topology applies config via exec or my Dockerfile.frr
+      build is wrong."
+
+MY COLD-RUN ALREADY ANSWERS (2) WITH EVIDENCE:
+  - 03-crossing-subnets.yml / lab-04-two-as-peering.yml declare
+      requires_daemons: [bgpd]
+  - aegis/frr:latest /etc/frr/daemons  ->  bgpd=no       (verified by running
+    `docker run --rm --entrypoint sh aegis/frr:latest -c 'cat /etc/frr/daemons'`)
+  - The substrate guard sourced that from the IMAGE's daemons file and returned
+    HTTP 409 -- it is NOT a topology-exec issue: the guard refuses BEFORE any
+    config is applied, on the image's declared/enabled daemon set.
+  => Answer: it is the IMAGE (Dockerfile.frr build / daemons file), not the
+     topology's exec path. Enabling bgpd in the image is the fix.
+  ALSO relevant to his grader work: lab-01-crossing-subnets' own router grader
+  was broken (dispatched on `rtr`, topology ships `r1`); I fixed it to accept
+  both. He should know that grader name-mismatch pattern before writing the
+  two-AS peering grader (its topology node names must match its dispatch).
+
+DELIVERY DECISION: the hourly drive rule says NO DMs to Ethan during drive work.
+The family porch is not a DM, but this is still work, and Dad gates completion
+-- so I am NOT posting a work hand-off to Ethan unprompted. Logged here so the
+info is on the record and Dad can route it. If asked, I will hand it over.
+
+NOT COMPLETE. Completion is Dad's call alone.

@@ -146,8 +146,12 @@ def grade(session, node):
         else:
             feedback.append("⚠️  PC-B can't reach its default gateway. Check RTR eth2 config.")
 
-    elif node == "rtr":
-        # RTR: check hostname, eth1 and eth2 configs via vtysh
+    elif node in ("rtr", "r1"):
+        # RTR: check hostname, eth1 and eth2 configs via vtysh.
+        # NOTE (2026-09-23): 03-crossing-subnets.yml ships this node as `r1`,
+        # but this grader only dispatched on `rtr`, so the router could never
+        # be graded ("Unknown node: r1"). Accept BOTH names so the shipped
+        # topology and any `rtr` variant both grade. Siblings already use `r1`.
         vtysh_output = _exec(container_name, "vtysh -c 'show running-config' 2>/dev/null")
 
         if "hostname RTR" in vtysh_output:
