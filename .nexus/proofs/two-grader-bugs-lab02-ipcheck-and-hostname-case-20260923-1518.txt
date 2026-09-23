@@ -1,0 +1,71 @@
+PROOF — TWO grader bugs found live in lab-02-switch-in-the-middle (and their exact blast radius)
+Selina 🐧 | 2026-09-23 15:18:52 EDT | live containerlab + real grader modules
+
+SETUP: deployed lab-definitions/04-switch-in-the-middle.yml (r1 FRR, sw1 FRR, pc-a, pc-b),
+configured the FULL documented solution, confirmed the end-to-end path:
+    pc-a ping pc-b -> 2/2, 0% packet loss  (pc-a -> sw1 -> r1 -> pc-b works)
+Then graded. The path works; the grader still withholds points. Root-caused below.
+
+================================================================
+BUG 1 — _check_ip can NEVER match when the expected string has a prefix
+================================================================
+  def _check_ip(cn, iface, expected):
+      out = _exec(cn, f"ip -j addr show {iface} 2>/dev/null || ip addr show {iface}")
+      return expected in out        # <-- naive substring
+
+  The command runs 'ip -j addr show' FIRST. It SUCCEEDS, so the '||' plain-text
+  fallback never executes. In JSON the address is split into separate keys:
+      "addr_info":[{"local":"10.0.1.10","prefixlen":24,...}]
+  so the literal substring '10.0.1.10/24' NEVER appears.
+  MEASURED:
+      $ docker exec pc-a ip -j addr show eth1 | grep -c '10.0.1.10/24'  -> 0
+      $ docker exec pc-a ip addr show eth1    | grep -c '10.0.1.10/24'  -> 1
+  Live grade of a CORRECTLY configured pc-a:
+      ❌ Missing 10.0.1.10/24 on eth1      <-- FALSE NEGATIVE
+      ✅ PC-A gateway = 10.0.1.1
+      ✅ PC-A -> PC-B across subnet + switch = success!
+  (the same node both FAILS the IP check and PASSES end-to-end reachability)
+
+  EXACT BLAST RADIUS (checked all 9 graders that call 'ip -j addr show'):
+    7 PARSE JSON correctly (json.loads + addr_info.local/prefixlen) -> fine:
+      grader_demo_01.py, _cumulus.py, _srl.py, demo_02.py, _cumulus.py,
+      grader_tier01.py, grader_tier02_crossing.py
+    1 DEFINITELY BROKEN (naive substring + an IP/prefix expected string):
+      grader_lab_02_switch_in_the_middle.py
+    1 LUCK-DEPENDENT (naive substring, but passes IP WITHOUT prefix, which
+      does appear in JSON as local":"10.0.1.10") -> works today, fragile:
+      grader_tier02_router_basics.py
+
+================================================================
+BUG 2 — case-sensitive hostname checks can NEVER match (FRR lowercases)
+================================================================
+  vtysh stores hostnames LOWERCASE. Live:
+      set 'hostname R1'  -> show running-config emits:  hostname r1
+      set 'hostname SW1' -> show running-config emits:  hostname sw1
+  Graders that match the capitalised literal can never pass:
+      grader_lab_02_switch_in_the_middle.py :104 "hostname R1", :149 "hostname SW1"
+      grader_lab_03_lock_it_down.py        :45  "hostname RTR", :136 "hostname SW1"
+      grader_tier02_crossing.py            :157 "hostname RTR"
+      grader_tier03_switch.py              :38  "hostname RTR", :79  "hostname SW1"
+  Live grade of a CORRECTLY configured r1:
+      ❌ Hostname not 'R1'         <-- FALSE NEGATIVE (FRR stored 'r1')
+      ✅ Enable password configured
+      ✅ R1 eth1 = 10.0.2.1/24
+
+================================================================
+WHY THIS MATTERS
+================================================================
+  These are FALSE NEGATIVES that throw away correct student work. A student who
+  does everything right in lab-02 scores 0.75/0.65 and is told their hostname is
+  wrong and their IP is missing, when both are correct. That is the opposite of
+  the 'fake green' the project forbids -- it is fake RED, and it is just as
+  misleading. Fixes are small and mechanical:
+    (1) _check_ip -> json.loads + compare addr_info.local + prefixlen
+        (copy the already-correct pattern from grader_tier02_crossing.py).
+    (2) hostname checks -> compare case-insensitively, or match ^hostname\s+\S+
+        and compare .lower().
+
+SCOPE: did NOT edit any grader. Probe destroyed; baseline restored. Authoring
+fixes are Dad's call.
+
+NOT COMPLETE. Nothing here claims completion.
