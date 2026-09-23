@@ -73,6 +73,19 @@ image. Full evidence: `.nexus/proofs/lab04-bgpd-is-a-flag-not-a-substrate-202609
 probe proves bgpd + peering works; proving the *grader* passes it end-to-end is
 separate and I will report it when run.
 
+### UPDATE 2026-09-23 14:17-14:19 — caveat closed, plus a NEW finding
+- **Grader DOES run on a bgpd substrate.** Deployed the real 6-node topology with
+  bgpd enabled, configured a live BGP solution, and the grader module returned real
+  per-node verdicts (r2 1.0, r5 1.0, others honest partials). Proof:
+  `.nexus/proofs/lab04-grader-runs-on-bgpd-substrate-20260923-1417.txt`.
+- **NEW finding: lab-04 ships NO reference solution.** Every other lab ships a
+  `.md` guide; lab-04 ships only a `.yml` (+ a `.bgp-revert-bak`). So "a student can
+  complete lab-04" cannot be tested by following the lab's own instructions,
+  because it has none. Proof: `.nexus/proofs/lab04-no-reference-solution-20260923-1419.txt`.
+  → Option C settles the *substrate*; lab-04 **also** needs an authoring pass (a
+  guide + a verified reference solution) before it is shippable. That is authoring
+  work, not infrastructure work — still your call whether to finish or drop it.
+
 ## Option B — DROP lab-04 from the product
 Accept that the fundamentals substrate is the product, and lab-04 is future work.
 - Work required: remove/retire `lab-04-two-as-peering.yml` +
