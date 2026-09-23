@@ -1,0 +1,39 @@
+======================================================================
+DRIVE 2026-09-23 ~12:04-12:20 EDT  (aegis-demo2-drive)
+TWO FINDINGS: (1) defect-A fix is ALREADY LIVE on :8000. (2) clab cruft cleaned.
+======================================================================
+
+FINDING 1 -- the r1/rtr grader fix is LIVE. My earlier "blocked by a :8000
+restart" note was STALE and is now WITHDRAWN.
+
+  Why it looked blocked: `_load_grader` caches modules in _GRADER_CACHE; I
+  assumed the edit from 06:07 needed a process restart. But backend/main.py has
+  `POST /api/labs/reload` which calls _GRADER_CACHE.clear() (line ~1180), and
+  that was called earlier today. So the cache holds the FIXED module.
+
+  Live verification against the running :8000 (pid 702017, up since Sep 22
+  16:03):
+    deploy tier-02-router-basics -> grade node `r1`:
+      r1 passed=False score=0.35, real per-check feedback
+      ("Router hostname configured" ok / "No enable password set" fail)
+    NOT the pre-fix "Unknown node: r1". So the dispatch fix
+    (`elif node in ("rtr", "r1")`) is serving live.
+  => No :8000 restart is needed for defect A. That open item is CLOSED.
+
+FINDING 2 -- containerlab was dumping its per-session working dirs INSIDE
+lab-definitions/. 19 directories named clab-aegis-<lab>-<sessionid> had
+accumulated there (each holds ansible-inventory.yml, authorized_keys,
+nornir-simple-inventory.yml, .tls, topology-data.json — clab artifacts, NOT
+source). All untracked (git ls-files for them = 0), so they were invisible cruft
+sitting in a source directory.
+
+  Guarded cleanup: removed only dirs with ZERO matching containers.
+    removed: 11   (neteng-capstone x3? no -- see list: foundation x2, tier-02 x2,
+                    tier-03 x3, two-as-peering x2 ... those with 0 containers)
+    kept   :  8   (still backing live baseline labs)
+  After: 8 clab dirs remain, all live; git working tree clean; :8000 labs 200,
+  sessions 0, clab baseline 35.
+
+CLEANUP: session stopped, 0 leftovers, baseline 35, :8000 200.
+NOT COMPLETE. Completion is Dad's call alone.
+======================================================================
