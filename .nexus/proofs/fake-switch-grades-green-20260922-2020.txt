@@ -1,0 +1,53 @@
+======================================================================
+PROOF — DRIVE 2026-09-22 ~20:03-20:20 EDT  (aegis-demo2-drive)
+THE FAKE-SWITCH LAB GRADES GREEN ON A FAKE SWITCH  (proof of Dad's defct)
+======================================================================
+Dad's ask (1) was: "Fix the switch so it is a REAL switch, not a Linux PC."
+This run demonstrates, by running it, WHY the old lab is the problem — and
+gives the concrete evidence for the lab-pack decision. Dad's :8000 (PID 702017)
+untouched; all work on throwaway :8016.
+
+LAB: demo-01-two-pcs-and-a-switch  (the "plain" variant, still in the pack)
+DEPLOY: session e8e445c2 -> pc-a, pc-b, switch, all Up.
+
+THE "SWITCH" IS NOT A SWITCH:
+  switch /etc/os-release: NAME="Alpine Linux"  ID=alpine
+  no vtysh  (not a switch OS)
+  -> it is a plain Linux container, exactly the "Linux PC pretending" case.
+
+COLD: grader FAILS as expected (0.0): nothing pre-seeded
+  switch: "expected 10.0.1.254/24 on br0 — not found on br0"
+  pc-a  : "10.0.1.1/24 not found on eth1" + cannot ping switch + cannot ping PC-B
+
+THEN: configured ONLY the fake switch (ip addr add 10.0.1.254/24 dev br0) plus
+the two PCs' addresses, and re-graded:
+
+  switch: passed=True  score=0.5
+          "✅ switch: 10.0.1.254/24 present on br0"
+  pc-a  : passed=True  score=1.0
+          "✅ pc-a: 10.0.1.1/24 present on eth1"
+          "✅ pc-a can ping the switch (10.0.1.254)"
+          "✅ pc-a can ping PC-B (10.0.1.2)"
+
+RESULT: the lab reports the FULL pass condition as met — pc-a pings BOTH the
+switch and PC-B — while the "switch" is a plain Alpine Linux PC with no switch
+OS. The grader only checks `10.0.1.254/24 up on br0`; it cannot tell a real
+switch from a Linux box.
+
+--------------------------------------------------------------------------
+WHY THIS MATTERS (the point of the whole drive)
+--------------------------------------------------------------------------
+This is the defect Dad described, reproduced live: the old lab PASSES a fake
+switch. The SRL and Cumulus labs fix it — their graders assert the node really
+is a switch OS:
+  SRL    : "sw1: real SR Linux switch, SR Linux irb0.0 up with 10.0.1.254"
+  Cumulus: "sw1: real Cumulus switch, Cumulus switch, iface has 10.0.1.254"
+  (both verified green this session; the SRL cold-start pass condition also met)
+
+So the honest statement is: the plain demo-01 validates connectivity, but NOT
+switch authenticity. It should not be used to claim "the switch is real."
+
+CLEANUP: session stopped 200; 0 leftover containers; clab baseline 35;
+throwaway :8016 down; Dad's :8000 = 200 (his PID the only main.py); temp removed.
+
+NOT COMPLETE. Completion is Dad's call alone.

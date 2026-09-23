@@ -1557,3 +1557,28 @@ Answer to "(1) evaluate BOTH": both SR Linux and Cumulus are REAL switches and
 both grade green. SR Linux = primary lab (cold-start pass met); Cumulus ships
 as its own lab.
 NOT COMPLETE. Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~20:20 EDT — aegis-demo2-drive (fake-switch lab reproduced)
+
+Ran the "plain" lab demo-01-two-pcs-and-a-switch (session e8e445c2, :8016) to
+show WHY it is the defect Dad named.
+
+  switch is NAME="Alpine Linux", no vtysh -> a plain Linux PC, not a switch.
+  COLD: grader 0.0 (nothing seeded).
+  AFTER configuring only the fake switch + PC addresses:
+    switch passed=True 0.5 ; pc-a passed=True 1.0
+    including "pc-a can ping the switch (10.0.1.254)" AND "can ping PC-B".
+  => the lab reports the FULL pass condition as met with a FAKE switch. The
+     grader only checks 10.0.1.254/24 up on br0; it can't tell real from fake.
+
+Contrast (both verified green this session):
+  SRL    grader: "real SR Linux switch, irb0.0 up with 10.0.1.254"
+  Cumulus grader: "real Cumulus switch, iface has 10.0.1.254"
+The plain lab validates CONNECTIVITY but NOT switch authenticity — it should
+not be used to claim "the switch is real."
+CLEANUP: stopped 200; 0 leftovers; clab 35; :8016 down; :8000 = 200; temp removed.
+Proof: proofs/fake-switch-grades-green-20260922-2020.txt
+NOT COMPLETE. Dad's call alone.
