@@ -106,6 +106,16 @@ class LabDef(BaseModel):
     # can only grade it red forever (found 2026-09-20: lab-04 two-AS peering vs.
     # a `bgpd=no` image).
     requires_daemons: list[str] = []
+    # Does the lab's middle device have to be a REAL switch OS (not a Linux PC
+    # running a software bridge)? Sourced from the lab's own metadata so the
+    # lab declares its own contract; the per-lab audit
+    # (.nexus/proofs/lab-authenticity-audit-20260922-2205.txt) is the evidence
+    # behind each value. 2026-09-22: demo-01-plain PASSES with a plain Alpine
+    # box in the middle -- it validates CONNECTIVITY ONLY. A student hitting a
+    # green grade there is not looking at a real switch, and nothing in the API
+    # said so. This field makes that honest on the wire, not just in a
+    # markdown banner nobody in the UI reads.
+    validates_switch_authenticity: bool = False
     # The substrate image THIS lab's routers run. Defaults to the pinned base
     # substrate. The capability gate below reads the image the lab ACTUALLY
     # deploys (not a global default), so capability and deployability can never
@@ -364,6 +374,9 @@ def _discover_labs() -> list[dict]:
             "tip": meta.get("tip", ""),
             "gradeable_nodes": meta.get("gradeable_nodes", []),
             "requires_daemons": meta.get("requires_daemons", []),
+            "validates_switch_authenticity": bool(
+                meta.get("validates_switch_authenticity", False)
+            ),
             "substrate_image": _substrate_image_for(str(rel)),
         })
     return labs

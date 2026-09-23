@@ -17,6 +17,7 @@ metadata:
   difficulty: Intermediate
   duration_min: 90
   id: lab-03-lock-it-down
+  validates_switch_authenticity: false          # audited 2026-09-22: middle device is a Linux PC (connectivity only)
   name: "Lab 03 \u2014 Lock It Down"
   prerequisites:
   - "AEGIS Lab 02 \u2014 The Switch in the Middle"

@@ -16,6 +16,7 @@ metadata:
   duration_min: 90
   grader: grader_neteng_capstone
   id: neteng-capstone
+  validates_switch_authenticity: false          # audited 2026-09-22: middle device is a Linux PC (connectivity only)
   name: Net Eng I Capstone
 name: aegis-neteng-capstone
 topology:

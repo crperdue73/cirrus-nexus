@@ -19,6 +19,7 @@ name: aegis-lab-02-switch-in-the-middle
 metadata:
   course: CI-01
   id: lab-02-switch-in-the-middle
+  validates_switch_authenticity: false          # audited 2026-09-22: middle device is a Linux PC (connectivity only)
   name: Lab 02 — The Switch in the Middle
   description: >
     Introduce a switch (FRR-as-switch with SVI) between one PC and the router.

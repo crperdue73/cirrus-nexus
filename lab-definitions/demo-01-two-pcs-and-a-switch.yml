@@ -24,6 +24,7 @@
 metadata:
   course: CI-DEMO
   id: demo-01-two-pcs-and-a-switch
+  validates_switch_authenticity: false          # audited 2026-09-22: middle device is a Linux PC (connectivity only)
   name: "Demo — Two PCs and a Switch 🖥️🔀🖥️"
   description: >
     The shipping demo. Two computers connected through a switch. The student

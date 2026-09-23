@@ -1,6 +1,7 @@
 metadata:
   course: CI-DEMO
   id: demo-01-two-pcs-and-a-real-switch-unsolved
+  validates_switch_authenticity: true          # audited 2026-09-22: real switch OS
   name: "Demo (UNSOLVED) \u2014 Two PCs and a Real Switch (SR Linux) \U0001F5A5\uFE0F\
     \U0001F500\U0001F5A5\uFE0F"
   description: 'The shipping demo, on a REAL switch. Two computers connected through

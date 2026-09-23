@@ -34,6 +34,7 @@
 metadata:
   course: CI-DEMO
   id: demo-01-two-pcs-and-a-real-switch
+  validates_switch_authenticity: true          # audited 2026-09-22: real switch OS
   name: "Demo — Two PCs and a Real Switch (SR Linux) 🖥️🔀🖥️"
   description: >
     The shipping demo, on a REAL switch. Two computers connected through a

@@ -13,6 +13,7 @@ metadata:
   - pc-b
   grader: grader_tier01
   id: tier-01-foundation
+  validates_switch_authenticity: false          # audited 2026-09-22: middle device is a Linux PC (connectivity only)
   instructions:
   - Click into the terminal for PC-A
   - 'Assign IP: 10.0.1.1/24 on eth1'

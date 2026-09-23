@@ -27,6 +27,7 @@ name: aegis-tier-03-router-switch-pc
 metadata:
   course: CI-01
   id: tier-03-router-switch-pc
+  validates_switch_authenticity: false          # audited 2026-09-22: middle device is a Linux PC (connectivity only)
   name: "Tier 3 — Router, Switch, and a PC 🖥️🔗🖧"
   description: >
     Configure a router, an FRR-as-switch (with bridge + SVI), and a PC on the
