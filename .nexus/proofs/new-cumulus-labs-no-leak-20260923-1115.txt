@@ -1,0 +1,26 @@
+======================================================================
+DRIVE 2026-09-23 ~11:03-11:20 EDT  (aegis-demo2-drive)
+LEAK CHECK ON THE NEW CUMULUS LABS (a passing lab that leaks is worthless)
+======================================================================
+Two new Cumulus student labs were built today. Both ship their SWITCH
+pre-configured (deliberate, matching the SR Linux pattern), so the question is
+whether a student can pass the lab WITHOUT doing the student's job.
+
+Demo-02 (two switches + router), fresh backend :8098, session f1140dbb:
+  ZERO student work, grade every node:
+    pc-a 0.0 | pc-b 0.0 | r1 0.2 | sw1 1.0 | sw2 1.0
+  LAB VERDICT with zero work: FAILED (must be). Only the pre-configured
+  switches pass; the graded work (hosts + routed path) is all still missing.
+
+Demo-01 (Cumulus unsolved), session 54fdf9db:
+  ZERO student work:
+    pc-a 0.0 | pc-b 0.0 | sw1 1.0
+  Correct: PCs fail, switch pre-configured.
+
+So both labs FAIL with no work and PASS only after the documented student
+steps (verified earlier: demo-02 5/5 @ 1.0, demo-01 3/3 @ 1.0). No leak.
+
+CLEANUP: sessions stopped, 0 leftover containers, fresh backend killed, live
+sessions 0, clab baseline 35, :8000 200.
+NOT COMPLETE. Completion is Dad's call alone.
+======================================================================
