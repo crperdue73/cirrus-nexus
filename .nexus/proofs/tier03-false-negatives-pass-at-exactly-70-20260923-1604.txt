@@ -1,0 +1,51 @@
+PROOF — tier-03: a PERFECT student run lands EXACTLY on the 70% pass line,
+         dragged there by two false negatives (hostname case + IP check)
+Selina 🐧 | 2026-09-23 16:04:42 EDT | live containerlab + real grader module
+
+SETUP: deployed 05-router-switch-pc.yml (rtr FRR, sw1 FRR, pc-a). Applied the
+lab's OWN documented commands. Verified reality independently of the grader:
+    rtr: ran 'hostname RTR'  -> FRR stored:  hostname rtr   (lowercased)
+    pc-a: ip -4 -o addr show eth1 -> 10.0.1.10/24
+    pc-a ping rtr 10.0.1.1 -> 0% loss   (so the address is definitely live)
+
+GRADE OF THAT PERFECT RUN:
+    rtr  passed=True  score=0.70   <-- EXACTLY the 70% threshold
+      ❌ Hostname not 'RTR'. Set via 'hostname RTR'   <- FALSE NEGATIVE (-0.15)
+      ✅ RTR eth1 = 10.0.1.1/24
+      ✅ RTR can reach PC-A through switch!
+    pc-a passed=True  score=0.70   <-- EXACTLY the 70% threshold
+      ❌ PC-A expected 10.0.1.10, got 'none'          <- FALSE NEGATIVE (-0.25)
+      ✅ PC-A -> RTR through switch = success!
+    sw1  passed=False score=0.55
+      ❌ Hostname not 'SW1'                            <- FALSE NEGATIVE (-0.10)
+      ❌ No enable password (see note)                 <- see FRR 10.5 note below
+
+THE POINT: both passing nodes scored EXACTLY 0.70. They cleared the bar only
+because the reachability checks tipped them over by a hair AFTER the grader
+had already docked them for work they actually did. A student who does
+everything right is one check away from a false FAIL:
+    rtr would be 0.85 if 'hostname RTR' matched (0.70 + 0.15).
+    pc-a would be 0.95 if the IP check worked (0.70 + 0.25).
+The grader is not measuring 'did the student do it'. It is measuring 'did the
+student do it AND did our string match survive FRR's normalisation'. Those are
+different questions, and only the first one is the lab.
+
+TWO ROOT CAUSES (same bugs as the lab-02 proof, now shown to be threshold-critical):
+  BUG B (hostname case): vtysh stores hostnames LOWERCASE. Graders compare the
+    capitalised literal 'hostname RTR'/'hostname SW1' -> can NEVER match. Costs
+    0.15/0.10 on tier-03; 0.05/0.05 on lab-03. Affected: lab_02, lab_03,
+    tier02_crossing, tier03_switch.
+  BUG A (IP check): _check_ip runs 'ip -j addr show' first (succeeds), so the
+    '||' plain fallback never runs; JSON splits local/prefixlen so the expected
+    string (with /prefix) never appears -> 'got none' on a machine that HAS the
+    address. Costs 0.25 here.
+
+SEPARATE OBSERVATION (FRR 10.5.3, not a grader bug but a GUIDE bug):
+    The lab text says:  enable secret cisco
+    FRR 10.5.3 rejects it:  '% Unknown command: enable secret cisco'
+    The working directive is  enable password cisco  (or 'enable password'
+    with a hashed form). So the guide hands students a command this image
+    does not accept. Same class as the tier-02 route trap found earlier.
+
+SCOPE: did NOT edit any grader or guide. Probe destroyed; baseline restored.
+NOT COMPLETE. Nothing here claims completion.
