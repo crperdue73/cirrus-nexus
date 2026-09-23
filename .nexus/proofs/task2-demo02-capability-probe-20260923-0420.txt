@@ -1,0 +1,65 @@
+======================================================================
+DRIVE 2026-09-23 ~04:12-04:20 EDT  (aegis-demo2-drive)
+TASK 2 (Dad's ask #2): DEMO LAB 2 CAPABILITY PROBE
+Lab: demo-02-two-switches-one-router-unsolved
+Shape: pc-a -> sw1 -> r1 -> sw2 -> pc-b  (2 real switches + 1 real router)
+Path: deployed THROUGH THE BACKEND API (:8000 = 200).
+======================================================================
+
+--- DEPLOY ---
+POST /api/sessions/start?lab_id=demo-02-two-switches-one-router-unsolved
+session 60b008b9, 5/5 nodes up: pc-a, sw1, r1, sw2, pc-b
+
+--- COLD (zero student work) ---
+  pc-a: FAILED  0.0  no addr; cannot ping sw1/r1/pc-b
+  pc-b: FAILED  0.0  no addr; cannot ping pc-a
+  r1  : FAILED  0.2  neither addr; ip_forward=1 (baseline)
+  sw1 : passed  1.0  real SR Linux irb0.0 10.0.1.254   (declared pre-configured)
+  sw2 : passed  1.0  real SR Linux irb0.0 10.0.2.254   (declared pre-configured)
+  => END-TO-END NOT PRE-MET. Correct: the routed path is the student's work.
+
+--- STUDENT WORK (per the lab's own .md) ---
+  pc-a: 10.0.1.1/24 + route 10.0.2.0/24 via 10.0.1.253
+  pc-b: 10.0.2.1/24 + route 10.0.1.0/24 via 10.0.2.253
+  r1  : 10.0.1.253/24 eth1, 10.0.2.253/24 eth2, ip_forward=1
+
+--- OPERATOR NOTE (my error, recorded honestly) ---
+  My FIRST pass configured only the addresses and skipped the cross-subnet
+  routes the .md explicitly lists. Result: pc-a -> pc-b = 100% loss, and
+  traceroute LEAKED to the host net (172.20.20.1 -> 192.168.1.1) because pc-a
+  fell through to its Docker default gateway. That was MY miss, not a lab
+  defect. Adding the documented routes fixed it. Recorded so no one mistakes
+  it for a lab bug.
+
+--- END-TO-END AFTER CORRECT WORK ---
+  pc-a -> pc-b : 3 sent, 3 recv, 0% loss  (ttl=63 = one router hop)
+  pc-b -> pc-a : 3 sent, 3 recv, 0% loss
+  traceroute -n from pc-a: hop 1 = 10.0.1.253 (r1), hop 2 = 10.0.2.1 (pc-b)
+  => PATH PROVEN: the packet transits r1, exactly as drawn.
+
+--- API GRADER: 5/5 PASSED, all score 1.0 ---
+  pc-a 1.0 (addr + ping sw1 + ping r1 + ping pc-b)
+  pc-b 1.0 (addr + ping pc-a)
+  sw1  1.0 real SR Linux irb0.0 10.0.1.254
+  sw2  1.0 real SR Linux irb0.0 10.0.2.254
+  r1   1.0 (both addrs + ip_forward ON)
+
+--- TWO REAL SWITCHES, not one box twice ---
+  sw1 image ghcr.io/nokia/srlinux:latest FDB: 2 learnt MACs (e1-1,e1-2) + 1 IRB MAC
+  sw2 image ghcr.io/nokia/srlinux:latest FDB: 2 learnt MACs (e1-1,e1-2) + 1 IRB MAC
+  distinct IRB MACs (1A:09:03:FF:00 vs 1A:66:04:FF:00) => independent bridges.
+
+--- CAPABILITY PROBE ANSWER ---
+  Two real switches + a real router between them DEPLOYS and GRADES end to end
+  through the product API. Lab packs can be built on this shape.
+
+--- STILL TRUE (declared design, NOT a leak) ---
+  The two switches' IRBs ship pre-configured, and the lab .md SAYS SO
+  ("The two switches' IRBs arrive pre-configured (that is deliberate: this lab
+  is about the routed path, not about switch bring-up)."). The teaching target
+  is the routed boundary; the switches are the fixed substrate. This is
+  consistent with task 1.
+
+CLEANUP: session 60b008b9 stop+destroy (next step). :8000 untouched.
+NOT COMPLETE. Completion is Dad's call alone.
+======================================================================
