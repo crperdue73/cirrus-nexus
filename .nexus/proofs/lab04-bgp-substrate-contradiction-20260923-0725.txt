@@ -1,0 +1,67 @@
+======================================================================
+DRIVE 2026-09-23 ~07:18-07:30 EDT  (aegis-demo2-drive)
+DEFECT B ROOT-CAUSED: lab-04 (BGP) vs the substrate — a SCOPING CONTRADICTION
+======================================================================
+LAST HOUR: lab-04-two-as-peering refuses to deploy (409) because it declares
+requires_daemons: [bgpd] and aegis/frr:latest has bgpd=no.
+
+I tried to fix it by BUILDING a BGP substrate (Dockerfile.frr-bgp, bgpd=yes).
+What I found is bigger than a missing flag. THREE facts, each verified:
+
+(1) THE TREE ALREADY EXPECTS A BGP SUBSTRATE.
+    backend/main.py `_pinned_substrate_digests` docstring:
+      "AEGIS ships more than one substrate: the base (static routing) and the
+       BGP variant (bgpd enabled, for lab-04). Each is a legitimate,
+       install-verified substrate ... the install record publishes a SET."
+    And the host's pin FILE agrees — assets/installed-image-id.txt:
+      installed_substrate_digests=sha256:bb7ef23a...  sha256:f69c7345...
+    i.e. TWO accepted digests, not one.
+
+(2) BUT install.sh DELIBERATELY REMOVED THE BGP SUBSTRATE.
+    install.sh line 168 (verbatim):
+      "# (Dockerfile.frr-bgp removed 2026-09-20 — that substrate is not part of
+       this product.)"
+    So the installer says "not part of this product"; the resolver + the pin
+    file say "the second substrate is legitimate." DIRECT CONTRADICTION.
+
+(3) MY REBUILT BGP IMAGE IS CORRECTLY REFUSED.
+    Built aegis/frr-bgp:latest (bgpd=yes asserted at build; verified
+    `grep bgpd /etc/frr/daemons` -> bgpd=yes vs base bgpd=no).
+    Layer-chain identity (same algo as install.sh / _image_layers_sha):
+      aegis/frr:latest       -> sha256:bb7ef23a07dcb6c6b34e225dd77fa2eb...  (PINNED, matches)
+      aegis/frr-bgp:latest   -> sha256:244c88aab5bb1869842ade5798328e03...  (NOT pinned)
+      pinned 2nd digest      -> sha256:f69c7345c8c520ff8bfec7702e9d1cd2...  (no local image)
+    Deploy result via a fresh backend: HTTP 500
+      "Could not resolve runtime digest from running containers; refusing to
+       start an unattributable session"
+    => the bgpd GATE passed (image has bgpd=yes); a LATER attribution guard
+       refused because my image is not the installer-verified digest. That guard
+       is behaving CORRECTLY — it won't run an unverified substrate.
+
+WHAT THIS MEANS:
+  - The bgpd=no refusal is not a bug in the guard; it is the guard correctly
+    enforcing a product decision.
+  - The real issue is a CONTRADICTION between install.sh (BGP substrate removed)
+    and the resolver+pin (BGP substrate expected, digest f69c7345... published).
+  - The pinned digest f69c7345... corresponds to a BGP image that existed on
+    2026-09-20 and is no longer present locally. So on THIS host, lab-04 cannot
+    deploy: the image it needs is gone, its expected digest points at nothing,
+    and a fresh build won't match.
+
+CLEANUP: Dockerfile.frr-bgp created (a tested OPTION, left in the tree for Dad
+  — it is NOT wired into install.sh). Deploy orphans from the bgp test
+  (6 x clab-aegis-two-as-peering-5d8bb0dc-*) force-removed; clab baseline
+  restored 41 -> 35. Temp lab YAML removed; lab-definitions diff IDENTICAL to
+  pre-test (9 yml). Alt backend killed. Dad's :8000 200, sessions 0.
+
+DECISION REQUIRED (Dad's, not mine):
+  (a) Restore a BGP substrate: re-add Dockerfile.frr-bgp to install.sh, rebuild,
+      re-publish its digest in installed_substrate_digests, point lab-04 at it.
+      I have a working Dockerfile.frr-bgp staged and verified (bgpd=yes).
+  (b) OR drop lab-04-two-as-peering from the pack (the installer already says
+      the BGP substrate "is not part of this product").
+  Either way: install.sh and main.py currently DISAGREE about whether a BGP
+  substrate exists. That disagreement is the defect.
+
+NOT COMPLETE. Completion is Dad's call alone.
+======================================================================

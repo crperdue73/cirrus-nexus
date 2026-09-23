@@ -1,0 +1,36 @@
+======================================================================
+DRIVE 2026-09-23 ~07:05-07:15 EDT  (aegis-demo2-drive)
+FIX VERIFIED THROUGH THE REAL PRODUCT PATH (not just file inspection)
+======================================================================
+CONTEXT: last hour I fixed grader_tier02_crossing.py (dispatch `rtr` -> `rtr`
+or `r1`) because 03-crossing-subnets.yml ships the router as `r1` and it could
+never be graded. The LIVE :8000 process still returned "Unknown node: r1" --
+diagnosed as the _GRADER_CACHE staleness (process started Sep 22 16:03, edit
+06:07). Restarting Dad's :8000 is his call, so I verified a different way.
+
+METHOD: launched a SECOND, independent backend process on a DIFFERENT port
+(127.0.0.1:8099) from the same tree, WITHOUT touching :8000. Fresh process =>
+empty _GRADER_CACHE => loads my edited grader. Deployed lab-01-crossing-subnets
+there and graded node `r1`.
+
+RESULT (fresh backend :8099, session e42f1cfe):
+  r1: passed=False score=0.2   <-- GRADED, no "Unknown node"
+    ❌ Router hostname not set to RTR
+    ⚠️  No enable password found (enable secret recommended)
+    ❌ RTR eth1 not properly configured (expected 10.0.1.1/24)
+    ❌ RTR eth2 not properly configured (expected 10.0.2.1/24)
+    ✅ RTR has 2 connected routes (eth1 + eth2)
+    ⚠️  Missing one or more interface configs
+  pc-a: passed=False score=0.1  (cold, as expected)
+  => THE FIX WORKS through the product API. `r1` now grades with real per-check
+     feedback instead of being rejected. Still FAILS COLD (20/100 < 70) =>
+     the lab correctly requires student work; the fix did not create a leak.
+
+CONTRAST (stale :8000, same lab, earlier this hour): r1 -> "Unknown node: r1".
+  => confirms the only reason the live port shows the old behavior is the
+     module cache. File is correct; a :8000 restart applies it.
+
+CLEANUP: alt backend (:8099) killed (0 procs). Session e42f1cfe destroyed, 0
+leftover containers. Dad's :8000 untouched, 200. clab baseline 35.
+NOT COMPLETE. Completion is Dad's call alone.
+======================================================================
