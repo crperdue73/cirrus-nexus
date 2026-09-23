@@ -1,0 +1,68 @@
+======================================================================
+DEFECT REPORT — 2026-09-22 ~21:03-21:20 EDT  (aegis-demo2-drive)
+GRADING HOLE: one grader has NO switch-authenticity guard
+======================================================================
+Severity: medium-high (a student can score full marks on a fake switch)
+Scope   : 1 grader — grader_demo_01 (lab demo-01-two-pcs-and-a-switch)
+Status  : identified + reproduced by running it. FIX NOT APPLIED (Dad's call).
+
+--------------------------------------------------------------------------
+WHAT I FOUND
+--------------------------------------------------------------------------
+Three graders exist for the same "two PCs and a switch" idea. Two of them
+enforce that the switch IS a real switch; one does not.
+
+  grader_demo_01          (plain, Alpine "switch")  -> NO authenticity guard
+  grader_demo_01_srl      (SR Linux)                -> refuses non-switches
+  grader_demo_01_cumulus  (Cumulus)                 -> fingerprints os-release
+
+Source evidence:
+  - grader_demo_01.py: grep for sr_cli|vtysh|os-release|real switch -> NONE.
+    Its only switch requirement is: "10.0.1.254/24 up on br0".
+  - grader_demo_01_srl.py: "The switch check reads the IRB via sr_cli, so a
+    Linux-PC fake cannot..." ; emits "sr_cli not available — node is not an
+    SR Linux switch".
+  - grader_demo_01_cumulus.py: "must be a REAL Cumulus switch (fingerprint:
+    real /etc/os-release naming Cumulus Linux AND vtysh present)".
+
+--------------------------------------------------------------------------
+REPRODUCED LIVE (throwaway :8018, session a345541f; Dad's :8000 untouched)
+--------------------------------------------------------------------------
+The lab's "switch" node is genuinely a fake:
+  switch /etc/os-release -> NAME="Alpine Linux", no vtysh.
+
+1) PLAIN grader, after configuring the fake switch:
+     curl .../submit?node=switch  ->  passed=True  score=0.5
+       "✅ switch: 10.0.1.254/24 present on br0"
+
+2) SRL grader's authenticity probe run BY HAND on the SAME fake switch:
+     sr_cli 'show interface irb0'
+       -> sh: sr_cli: not found
+       -> "REFUSED: sr_cli not available — node is not an SR Linux switch"
+
+So the whole difference is the guard. The plain grader ACCEPTS a plain Alpine
+Linux PC as "the switch"; the SRL grader REFUSES it. (Last hour I also showed
+the plain lab's pc-a grades passed=True score=1.0 — the full pass condition —
+with that same fake switch.)
+
+--------------------------------------------------------------------------
+WHY IT MATTERS
+--------------------------------------------------------------------------
+Dad's ask was exactly: the switch must be a REAL switch, not a Linux PC. The
+plain lab violates that requirement *at the grading layer*, silently. If it
+ships, a correct-looking student run reports success on a fake switch, and the
+lab teaches nothing about switches.
+
+--------------------------------------------------------------------------
+OPTIONS (yours to choose — I did not implement either)
+--------------------------------------------------------------------------
+A. Add an authenticity guard to grader_demo_01 (fingerprint the switch OS the
+   way the SRL/Cumulus graders do), OR
+B. Retire demo-01-two-pcs-and-a-switch as the "real switch" lab and use the
+   SRL/Cumulus variants (which already guard).
+Either way, the pack should not claim "real switch" from the plain lab.
+
+CLEANUP: session stopped 200; 0 leftover containers; clab baseline 35; :8018
+down; Dad's :8000 = 200 (his PID the only main.py); temp removed.
+
+NOT COMPLETE. Completion is Dad's call alone.
