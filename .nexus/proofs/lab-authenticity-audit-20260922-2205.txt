@@ -1,0 +1,68 @@
+======================================================================
+DRIVE 2026-09-22 ~22:03-22:10 EDT  (aegis-demo2-drive)
+LAB AUTHENTICITY / PRE-SOLVED AUDIT — read-only, no deploys
+======================================================================
+Dad's ask, restated: (1) the switch must be a REAL switch, not a Linux PC.
+(2) demo lab 2 must actually deploy and grade. Both were verified live
+earlier this drive (proofs: final-both-tasks-live-20260922-1725.txt,
+fake-switch-grades-green-20260922-2020.txt). This run produces the ONE
+artifact still missing: a per-lab inventory so the lab-pack decision rests
+on evidence instead of on my memory of the day.
+
+METHOD: static lint over every lab YAML (tools/lint_lab_pack.py), no
+containers started. Dad's :8000 (PID 702017) untouched.
+
+--- A. SWITCH AUTHENTICITY (6 labs still model the switch as a Linux PC) ---
+   tier-01-foundation        -> switch(linux:alpine:latest)
+   lab-02-switch-in-the-middle -> sw1(linux:aegis/frr:latest)
+   tier-03-router-switch-pc  -> sw1(linux:aegis/frr:latest)
+   lab-03-lock-it-down       -> sw1(linux:aegis/frr:latest)
+   neteng-capstone           -> sw1(linux:alpine:latest)
+   demo-01-two-pcs-and-a-switch -> switch(linux:alpine:latest)
+
+   Note this is the DEFINITION of the defect Dad named. demo-01 plain is
+   the one I reproduced end-to-end at 20:20 (it grades the full pass
+   condition green while the switch is Alpine with no switch OS).
+
+--- B. PRE-SOLVED (grades green with ZERO student work — 3 labs) --------
+   demo-01-two-pcs-and-a-real-switch-cumulus
+   demo-01-two-pcs-and-a-real-switch        (SRL)
+   demo-02-two-switches-one-router
+   These are the SOLVED reference variants. They are legitimate as answer
+   keys, but must not be shipped as the lab the student is handed.
+
+--- C. UNSOLVED — CORRECT (student does the work) -----------------------
+   demo-01-two-pcs-and-a-switch              (0/3 seeded)
+   demo-01-two-pcs-and-a-real-switch-unsolved (0/2 seeded)
+   demo-02-two-switches-one-router-unsolved  (0/2 seeded)
+
+--- D. NOT CHECKED — pre-solved status UNKNOWN (7 labs) -----------------
+   tier-02-router-basics, lab-01-crossing-subnets,
+   lab-02-switch-in-the-middle, tier-03-router-switch-pc,
+   lab-03-lock-it-down, neteng-capstone, lab-04-two-as-peering
+   Cause: these graders expose no literal node->IP EXPECTED map, so the
+   static pre-solved check cannot read them. An AST call-arg extractor was
+   tried at 16:05 and REVERTED as imprecise (cross-attributed IPs between
+   node branches; counted neteng subnet masks). "Not checked" is the
+   truthful status and the lint now prints it as an explicit block so
+   silence cannot be read as a pass. Closing this needs either an EXPECTED
+   map in those graders or a per-lab cold run.
+
+--- WHAT CHANGED THIS RUN ------------------------------------------------
+   * demo-01-two-pcs-and-a-switch.md now carries a banner at the top:
+     connectivity yes, switch authenticity no, with the proof pointer.
+     (commit 2ef159b)
+   * This inventory is the first per-lab count produced from ANY mutation
+     of the lint, never from a variant that got reverted.
+
+--- WHAT IS DAD'S CALL ---------------------------------------------------
+   1. Which of the 6 fake-switch labs (section A) get migrated to a real
+      switch OS, and in which pack.
+   2. Whether section B's solved reference variants leave the student-facing
+      set entirely.
+   3. `:8000` restart (already flagged, not buried).
+
+CLEANUP: no containers started, no sessions, no servers touched.
+Dad's :8000 = HTTP 200, his PID the only main.py.
+
+NOT COMPLETE. Nexus completion is Dad's call alone.
