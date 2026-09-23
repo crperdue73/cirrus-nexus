@@ -1,0 +1,72 @@
+======================================================================
+DRIVE 2026-09-23 ~01:05-01:30 EDT  (aegis-demo2-drive)
+PROBE: does tier-03's "switch" require a real switch OS, or is it a PC?
+======================================================================
+Question being tested (Dad's ask 1, second half): I already proved demo-01's
+plain grader accepts a fake switch. This probe asks whether that defect is
+CONTAINED to demo-01 or whether the TEACHING labs have it too.
+
+METHOD: deployed tier-03-router-switch-pc on a throwaway :8020 (copy of the
+live backend; Dad's :8000 PID 702017 never touched). Graded sw1 in three
+states so each variable is isolated.
+
+--- sw1's OS (what every "switch" node in this pack actually ships) ---
+    docker exec ... head -2 /etc/os-release
+      NAME="Alpine Linux"
+      ID=alpine
+    vtysh present (/usr/bin/vtysh, FRRouting 10.5.3)
+  i.e. NOT a switch OS. The lab's "switch" is a Linux box running FRR.
+
+--- STATE 1: cold (nothing configured) ---
+    grade sw1 -> passed=False score=0.1 (10/100)
+      "✅ Bridge forwarding table populated"   <- 0.10 awarded with NO config
+--- STATE 2: addressed as a PLAIN LINUX BRIDGE, no frr/vtysh at all ---
+    ip link add br0 type bridge; enslave eth1,eth2; ip addr add 10.0.1.2/24; gw
+    pgrep -x zebra -> NO   (no FRR running at all)
+    grade sw1 -> passed=False score=0.1
+      Still: SVI br0 not configured / no enable password / no default route.
+      NOTE: the grader CANNOT see the 10.0.1.2/24 I just put on br0, because it
+      reads that address out of `vtysh -c 'show running-config'`, and on an
+      Alpine box vtysh does not reflect OS-level iproute2 state.
+--- STATE 3: FRR started + `hostname SW1` + enable password via vtysh ---
+    grade sw1 -> passed=False score=0.2 (20/100)
+      "✅ SW1 hostname set" / "✅ Enable password configured"
+      Still "SVI br0 not configured" — FRR has no br0 interface, so the lab's
+      own answer key cannot be satisfied through its own tooling as written.
+
+--- THE DECIDING TEST (Dad's actual pass condition) ---
+    pc-a: 10.0.1.10/24 on eth1
+    pc-a -> sw1 (10.0.1.2):   2 sent, 2 received, 0% loss   PASS
+    sw1  -> pc-a (10.0.1.10): 2 sent, 2 received, 0% loss   PASS
+  So the REAL pass condition IS satisfiable — by configuring the switch with
+  plain Linux tooling (iproute2), not with switch CLI.
+
+======================================================================
+WHAT THIS ESTABLISHES (read carefully — the nuance matters)
+======================================================================
+1. The "switch" in the teaching labs is a Linux PC (Alpine + FRR), the SAME
+   defect class as demo-01's plain lab. tier-03, tier-01, lab-02, lab-03,
+   capstone and neteng-capstone all ship sw1 as kind: linux.
+2. BUT the teaching labs are NOT wide open like demo-01 was: their graders
+   REQUIRE vtysh/FRR state ("hostname SW1" via vtysh, enable password), so a
+   bare Alpine bridge alone does NOT reach the 0.7 pass bar. demo-01's plain
+   grader had no such requirement — that is exactly why it graded the full
+   pass condition green on a fake switch.
+   => The severity is NOT the same. demo-01 = hole. teaching labs = a switch
+      that is a PC, gated by a check that only a PC CAN satisfy.
+3. NEW DEFECT FOUND THIS HOUR (tier-03, real): its own stated answer key is
+   UNREACHABLE. grade_sw1 scores 0.25 for `interface br0` + `10.0.1.2/24`
+   appearing in `vtysh show running-config`, but the substrate's FRR has no
+   br0 — the bridge lives in the kernel, invisible to vtysh. Max score a
+   student can reach on sw1 as written is well under the 70 bar, so sw1 is
+   FAIL-HARD no matter how correctly the student does the lab. This is a
+   grader bug, independent of the authenticity question.
+
+NOT COMPLETE. Two separate things for Dad to decide, and they are his call:
+  A. the 6 fake-switch labs' migration to a real switch OS (unchanged), and
+  B. whether tier-03's sw1 sub-check should read OS state (iproute2) instead of
+     vtysh, since the substrate cannot produce the vtysh form it demands.
+
+CLEANUP: sessions 9218c53d, e22305d9, 1e61e707 all stopped/destroyed; clab
+baseline unchanged; throwaway :8020 down (see ledger entry); /opt/aegis
+untouched; :8000 = 200, PID 702017.

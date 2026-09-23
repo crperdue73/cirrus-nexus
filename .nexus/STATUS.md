@@ -1608,3 +1608,38 @@ Options (Dad's call, NOT implemented):
 CLEANUP: stopped 200; 0 leftovers; clab 35; :8018 down; :8000 = 200; temp removed.
 Proof: proofs/defect-plain-grader-no-auth-guard-20260922-2120.txt
 NOT COMPLETE. Dad's call alone.
+
+---
+
+## 2026-09-23 ~01:30 EDT — aegis-demo2-drive (switch-authenticity probe, teaching labs)
+
+Ran the probe left implicit by the 21:20 finding: is demo-01's fake-switch
+acceptance CONTAINED to demo-01, or do the TEACHING labs have it too?
+
+Deployed tier-03-router-switch-pc on throwaway :8020 (copy of live backend;
+Dad's :8000 PID 702017 untouched). Graded sw1 cold / as-a-plain-Linux-bridge /
+with-FRR-started, then ran Dad's actual pass condition both directions.
+
+  sw1 OS: NAME="Alpine Linux" (with vtysh, FRR 10.5.3) — a PC, not a switch OS.
+  cold            -> 0.1   (awards the FDB point with nothing configured)
+  plain bridge    -> 0.1   (VTYS for SVI failed: OS wg, not vtysh, and on Alpine
+                            br0/10.0.1.2 does NOT show up in `vtysh show run`)
+  FRR started +
+  hostname/enable -> 0.2   (still "SVI br0 not configured" — FRR has no br0)
+  DECIDING TEST: pc-a -> 10.0.1.2  0% loss  PASS ; sw1 -> 10.0.1.10  0% loss PASS
+
+FINDINGS:
+ 1. Teaching labs' switch is the same PC defect class as demo-01 (kind: linux).
+ 2. NOT equally severe: teaching graders REQUIRE vtysh/FRR state, so a bare
+    Alpine bridge does not clear the 0.7 bar. demo-01's plain grader demanded
+    nothing switch-specific — that is why it graded full pass on a fake switch.
+ 3. NEW: tier-03's own answer key is UNREACHABLE. grade_sw1 pays 0.25 for
+    `interface br0` + `10.0.1.2/24` in `vtysh show running-config`, but the
+    substrate's FRR has no br0 (the bridge is kernel-side, invisible to vtysh).
+    sw1 fails no matter how correctly the student does the lab. Grader bug,
+    separate from the authenticity question.
+
+CLEANUP: sessions 9218c53d / e22305d9 / 1e61e707 all stopped+destroyed; clab
+  baseline unchanged; :8020 down; /opt/aegis untouched; :8000 = 200.
+ARTIFACT: proofs/switch-authenticity-tier03-probe-20260923-0130.txt
+NOT COMPLETE. Both open items are Dad's call (lab migration; tier-03 sub-check).
