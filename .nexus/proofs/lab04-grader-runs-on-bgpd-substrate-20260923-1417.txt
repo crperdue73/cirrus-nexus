@@ -1,0 +1,34 @@
+PROOF — lab-04's OWN grader runs and grades on a bgpd-enabled substrate
+Selina 🐧 | 2026-09-23 14:17:24 EDT | live containerlab + real grader module
+
+SETUP: deployed lab-04's actual topology (6x aegis/frr:latest, r1-r2-r3 | r3-r4 | r4-r5-r6)
+with bgpd enabled per-node (sed bgpd=no->yes). Then configured a real BGP
+student solution: iBGP inside each AS, eBGP on r3<->r4, r2/r5 as route reflectors,
+r1 originates 10.10.10.0/24 (AS65001), r6 originates 10.20.20.0/24 (AS65002).
+
+WHAT THIS PROVES:
+  1. bgpd STARTS on this image under a privileged clab deploy (6/6 nodes).
+  2. eBGP session r3<->r4 ESTABLISHES; iBGP meshes converge via route reflection.
+  3. lab-04's grader MODULE runs against the live session and returns real
+     per-node verdicts -- not errors.
+
+GRADER RESULTS (live):
+  r2  passed=True  score=1.0  (reaches edge, resolves own prefix, no leak)
+  r5  passed=True  score=1.0  (same, AS65002 side)
+  r1  passed=False score=0.35 (interior path incomplete in MY config)
+  r6  passed=False score=0.35 (same)
+  r3  passed=False score=0.65 (peering up, own-prefix route not on a lab iface)
+  r4  passed=False score=0.35 (stray 10.99.0.0/30 I added polluted the link check)
+  TOTAL 2/6 passed.
+
+HONEST READING: the two PASSES and the honest partial verdicts show the grader
+is functional and correctly discriminating (it penalises a leak, refuses a pass
+when the essential path is down). The 4 non-passes are INCOMPLETE STUDENT CONFIG
+on my part -- not a substrate or grader defect. I did NOT chase them to green
+because the point of this probe (can the grader run on a bgpd substrate?) is
+already answered YES. Completing the config to a full 6/6 is ordinary next work.
+
+WHAT I DID NOT DO: did not modify lab-04's YAML, install.sh, the pin file, or
+the running :8000. Probe deployment destroyed; baseline restored.
+
+NOT COMPLETE. Nothing here claims completion.

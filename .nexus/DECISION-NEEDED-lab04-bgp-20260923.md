@@ -47,6 +47,32 @@ Make the product ship what it says it ships.
 - Pinned 2nd digest `f69c7345…` currently matches **no local image** (its history
   is unknown to me — I inferred it; see my self-audit WISH entry).
 
+## Option C — ENABLE the daemon that is ALREADY in the image (NEW, 2026-09-23 14:14)
+**This supersedes the premise of Options A and B.** A live probe today shows the
+"missing BGP substrate" is actually a **one-line daemon flag**, not a missing
+image. Full evidence: `.nexus/proofs/lab04-bgpd-is-a-flag-not-a-substrate-20260923-1414.txt`.
+
+- `aegis/frr:latest` **already contains** `/usr/lib/frr/bgpd` (2.8 MB binary). Its
+  `/etc/frr/daemons` ships `bgpd=no` — disabled, not absent.
+- Under a real (privileged) clab deploy, adding
+  `sed -i 's/^bgpd=no/bgpd=yes/' /etc/frr/daemons` before `frrinit.sh start` makes
+  **bgpd run** and a **BGP session ESTABLISH** between two nodes (verified:
+  `show bgp summary` peer `10.0.0.2` AS65002, MsgRcvd/Sent 3/3, ping 0% loss).
+- Why Option A's rebuild looked necessary: my earlier bare `docker run` failed on
+  **missing caps** (`cap_net_admin`/`cap_sys_admin`), which is a *plain-docker*
+  artifact — containerlab runs lab containers privileged, so it never hits this.
+  The base image was never the problem.
+
+**Work required (pick one, both tiny):**
+  (a) add the `sed` line to lab-04's per-node `exec:` in the YAML, or
+  (b) ship a substrate image with `bgpd=yes` baked in — a 1-line change to the
+      EXISTING Dockerfile, rebuilt in place (no new substrate, no install.sh
+      surgery, and no new pin digest needed if rebuilt under the same tag).
+**Cost:** ~5 min. No install-path change, no lab deleted, no substrate repin.
+**Caveat (honest):** I have NOT yet run lab-04's own grader against this. The
+probe proves bgpd + peering works; proving the *grader* passes it end-to-end is
+separate and I will report it when run.
+
 ## Option B — DROP lab-04 from the product
 Accept that the fundamentals substrate is the product, and lab-04 is future work.
 - Work required: remove/retire `lab-04-two-as-peering.yml` +
