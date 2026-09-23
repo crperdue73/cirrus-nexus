@@ -137,3 +137,35 @@ The family porch is not a DM, but this is still work, and Dad gates completion
 info is on the record and Dad can route it. If asked, I will hand it over.
 
 NOT COMPLETE. Completion is Dad's call alone.
+
+======================================================================
+ADDENDUM 06:58 — r1/rtr FIX APPLIED + VERIFIED IN FILE; LIVE VERIFY BLOCKED BY
+BACKEND CACHE (restart = Dad's call)
+======================================================================
+FIX: lab-definitions/grader_tier02_crossing.py
+  before: elif node == "rtr":
+  after:  elif node in ("rtr", "r1"):
+VERIFIED BY FRESH IMPORT (in-process, no cache):
+  dispatch line now reads:  elif node in ("rtr", "r1"):
+  => the file change is correct and loads.
+
+LIVE VERIFY ATTEMPTED: redeployed lab-01-crossing-subnets (session e0d76375)
+and graded node `r1`:
+  passed=False score=0.0  ->  "❌ Unknown node: r1"
+i.e. the LIVE api still returns the OLD verdict. Cause, measured not guessed:
+  - :8000 process started  Tue Sep 22 16:03:40 (uptime 14h48m at check time)
+  - my grader edit mtime   2026-09-23 06:07:53
+  - backend/main.py _load_grader() CACHES modules in _GRADER_CACHE after first
+    load, and imported the pre-edit module earlier this hour (my own cold run).
+  => The running process serves a stale cached grader. The fix is real but will
+     only take effect on a :8000 RESTART.
+  RESTART IS DAD'S CALL (established rule: don't restart his running server
+  unilaterally). Logged for him: "restart :8000 to pick up the r1/rtr grader
+  fix." A process ~15h staler than the tree is itself worth his attention.
+
+STATUS THIS HOUR: both of Dad's asks re-verified for BOTH switch options;
+7 previously-unknown graders resolved cold (6 safe, 1 undeployable);
+2 new defects found (A: r1/rtr grader mismatch -- fixed in file; B: lab-04
+bgpd=no -- undeployable). Cleanup: sessions 0, clab baseline 35, :8000 200.
+NOT COMPLETE. Completion is Dad's call alone.
+======================================================================
