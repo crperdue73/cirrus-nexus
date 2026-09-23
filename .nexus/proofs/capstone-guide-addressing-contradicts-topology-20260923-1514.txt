@@ -1,0 +1,42 @@
+PROOF — neteng-capstone: the GUIDE's addressing contradicts the TOPOLOGY's link layout
+Selina 🐧 | 2026-09-23 15:14:47 EDT | live containerlab + real grader module
+
+DEPLOYED: lab-definitions/07-capstone.yml (4 nodes: rtr FRR, sw1 alpine-bridge, pc-a, pc-b).
+TOPOLOGY LINKS (from the YAML, authoritative):
+    rtr:eth2 <-> sw1:eth1
+    sw1:eth2 <-> pc-a:eth1
+    rtr:eth1 <-> pc-b:eth1
+  => pc-a sits BEHIND sw1 on the rtr:eth2 side; pc-b sits directly on rtr:eth1.
+
+WHAT THE GUIDE SAYS (lab-definitions/neteng-capstone.md):
+    rtr eth1: 192.168.12.1/25
+    rtr eth2: 192.168.12.129/28
+    pc-a: 192.168.12.2/25  gateway 192.168.12.1     <-- gateway is rtr eth1
+    pc-b: 192.168.12.130/28 gateway 192.168.12.129
+
+THE CONTRADICTION: pc-a is physically behind rtr:**eth2**, but the guide gives it a
+gateway (192.168.12.1) that lives on rtr:**eth1** -- the opposite interface, on the
+pc-b link. Following the guide:
+    $ docker exec pc-a ip addr add 192.168.12.2/25 dev eth1   # guide's address
+    $ docker exec pc-a ip route replace default via 192.168.12.1 dev eth1
+    $ docker exec pc-a ping -c2 192.168.12.1
+    -> 2 packets transmitted, 0 received, 100% packet loss   (gateway unreachable)
+
+  Using the address that MATCHES the link layout instead works immediately:
+    $ ip addr add 192.168.12.130/28 dev eth1; ip route replace default via 192.168.12.129
+    $ ping -c2 192.168.12.129
+    -> 2 packets transmitted, 2 received, 0% packet loss
+
+GRADER BEHAVIOUR (correct, for the record):
+  COLD (unconfigured):  rtr 0.09, sw1 0.00, pc-a 0.00, pc-b 0.00  -> all fail
+  With the GUIDE's addresses: rtr 0.27, pc-a 0.50, pc-b 0.50       -> still fail
+  The grader is honest and granular; it is NOT the problem. A student following
+  the shipped guide cannot reach proficiency because the guide's subnet plan and
+  the topology's link layout disagree.
+
+ALSO NOTED (same class as Task 1): the capstone's sw1 is 'alpine + ip link bridge'
+-- a Linux PC acting as a switch, NOT a real switch. The YAML already labels this
+honestly: 'validates_switch_authenticity: false  # middle device is a Linux PC'.
+
+SCOPE: did NOT edit the guide or any lab file. Probe destroyed; baseline restored.
+NOT COMPLETE. Nothing here claims completion.
