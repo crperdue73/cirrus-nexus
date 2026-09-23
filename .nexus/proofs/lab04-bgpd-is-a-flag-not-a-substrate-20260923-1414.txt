@@ -1,0 +1,45 @@
+PROOF — lab-04's 'missing BGP substrate' is actually a ONE-LINE daemon flag
+Selina 🐧 | 2026-09-23 14:14:04 EDT | live containerlab run
+
+WHY THIS MATTERS: DECISION-NEEDED-lab04-bgp-20260923.md frames lab-04 as a
+substrate contradiction needing either a rebuild+repin (Option A) or deleting
+a shipped lab (Option B). Both are expensive. This evidence says neither is
+necessary: the base image ALREADY CONTAINS bgpd.
+
+EVIDENCE 1 — the binary is present in the shipped image:
+  $ docker run --rm --entrypoint sh aegis/frr:latest -c 'ls -la /usr/lib/frr/bgpd'
+  -rwxr-xr-x  2788648  /usr/lib/frr/bgpd
+  and /etc/frr/daemons ships:  bgpd=no   (disabled, not absent)
+
+EVIDENCE 2 — why my earlier bare 'docker run' failed: MISSING CAPS, not bgpd:
+  privs_init: initial cap_set_proc failed: Operation not permitted
+  Wanted caps: cap_net_bind_service,cap_net_admin,cap_net_raw,cap_sys_admin=p
+  Have   caps: (no cap_net_admin, no cap_sys_admin)
+  -> a plain 'docker run' has no NET_ADMIN/SYS_ADMIN. containerlab runs its lab
+     containers PRIVILEGED (verified: docker inspect <lab> -> Privileged=true),
+     which is why every existing FRR lab starts its daemons fine.
+
+EVIDENCE 3 — under a real (privileged) clab deploy, bgpd RUNS:
+  $ sudo clab deploy -t bgptest.yml   # 2x aegis/frr:latest, exec: sed bgpd=yes; frrinit.sh start
+  ps: watchfrr -d mgmtd zebra bgpd staticd
+      bgpd -d -F traditional -A 127.0.0.1
+
+EVIDENCE 4 — a real BGP session ESTABLISHES between two nodes:
+  r1: router bgp 65001 / neighbor 10.0.0.2 remote-as 65002
+  r2: router bgp 65002 / neighbor 10.0.0.1 remote-as 65001
+  $ vtysh -c 'show bgp summary'
+    Neighbor   V    AS   MsgRcvd MsgSent Up/Down   State
+    10.0.0.2   4  65002       3       3  00:00:07  (Policy)
+  ping r1->r2 10.0.0.2: 2/2, 0% packet loss
+
+CONCLUSION: lab-04 does NOT need a rebuilt substrate image and does NOT need
+to be deleted. It needs the daemon enabled ON THE NODE (add
+  sed -i 's/^bgpd=no/bgpd=yes/' /etc/frr/daemons
+before frrinit.sh start, exactly as this probe did), OR a substrate image that
+ships bgpd=yes (a 1-line Dockerfile change to the EXISTING image - no new
+substrate, no install.sh surgery, no new pin digest needed if built in place).
+
+WHAT I DID NOT DO: I did not modify install.sh, the pin file, lab-04's YAML,
+or the running :8000. This is evidence + a revised option, for Dad to rule on.
+
+NOT COMPLETE. Nothing here claims completion.
