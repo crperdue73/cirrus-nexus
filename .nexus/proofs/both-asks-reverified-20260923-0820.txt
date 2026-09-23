@@ -1,0 +1,51 @@
+======================================================================
+DRIVE 2026-09-23 ~08:06-08:25 EDT  (aegis-demo2-drive)
+FRESH RE-VERIFICATION OF BOTH OF DAD'S ASKS (things drift; do not trust handoff)
+======================================================================
+Session 0, baseline 35, :8000 200 at start. All in-repo images present
+(srlinux 2.35GB, networkop/cx 733MB, aegis/frr 52.3MB).
+
+--- ASK 1: real switch, student can ping BOTH switch AND the other PC --------
+Lab: demo-01-two-pcs-and-a-real-switch-unsolved   (session 24b0f459, 3/3 nodes)
+
+COLD (no student work):
+  pc-a passed=False score=0.0 | pc-b passed=False score=0.0 | sw1 passed=True 1.0
+  (sw1 is pre-configured by design; PCs are the student's job.)
+
+AFTER student work (address both PCs):
+  pc-a -> 10.0.1.254 (switch): 3/3, 0% loss
+  pc-a -> 10.0.1.2   (PC-B):   3/3, 0% loss
+  => PASS CONDITION MET, un-softened. PC-to-PC alone did not carry it; the
+     SWITCH itself answered.
+
+SWITCH IS REAL (not a Linux PC):
+  sr_cli show version -> Chassis Type: 7220 IXR-D2L  (Nokia SR Linux)
+  show interface irb0 -> IRB present in BOTH ip-vrf-1 AND mac-vrf-1,
+                          IPv4 10.0.1.254/24 on irb0.0
+
+FINAL GRADER: pc-a passed=True 1.0 (addr + ping switch + ping PC-B),
+              pc-b passed=True 0.5 (addr present)
+
+--- ASK 2: DEMO LAB 2  pc-a -> sw1 -> ROUTER -> sw2 -> pc-b -----------------
+Lab: demo-02-two-switches-one-router-unsolved   (5/5 nodes)
+
+COLD: pc-a -> 10.0.2.1 (pc-b) = 100% packet loss  (routed path fails, correct)
+BOTH SWITCHES REAL: sw1 AND sw2 -> Chassis Type 7220 IXR-D2L (SR Linux)
+
+AFTER the lab's OWN documented student work:
+  pc-a -> 10.0.1.254 (sw1, local switch): 3/3, 0% loss
+  pc-a -> 10.0.1.253 (r1, the router):    3/3, 0% loss
+  pc-a -> 10.0.2.1   (pc-b across r1):    3/3, 0% loss
+  traceroute: hop 1 = 10.0.1.253 (r1), hop 2 = 10.0.2.1 (pc-b)
+
+GRADER on all 5 nodes (session 13ad4218):
+  pc-a 1.0 | pc-b 1.0 | r1 1.0 | sw1 1.0 | sw2 1.0   => 5/5
+
+CAPABILITY-PROBE ANSWER: this 5-node shape (two real SR Linux switches, one
+real router between them, two PCs) DEPLOYS AND GRADES end to end. Nothing in
+the shape blocks a lab pack.
+
+CLEANUP: sessions 24b0f459/ae491761/fb99408a/13ad4218 all stopped, 0 leftover
+containers, live sessions 0, clab baseline 35, :8000 200, 0 stray labs.
+NOT COMPLETE. Completion is Dad's call alone.
+======================================================================
