@@ -1,0 +1,36 @@
+======================================================================
+DRIVE 2026-09-23 ~05:15-05:20 EDT  (aegis-demo2-drive)
+SCOPE CORRECTION: the "node-name inconsistency" is NARROWER than my 04:10
+proof implied. Recording the correction rather than letting the bigger claim
+stand.
+======================================================================
+
+WHAT I CLAIMED AT 04:10:
+  "the demo-01 unsolved lab's switch node is named `sw1`, not `switch` ... Two
+   variants of the same lab disagree on the node name — a real papercut for a
+   student following the .md instructions."
+
+WHAT IS ACTUALLY TRUE (checked just now):
+  1. EVERY lab's own .md matches its own YAML. A student inside one lab sees a
+     consistent name. There is NO broken lab.
+       demo-01-two-pcs-and-a-switch.md      -> "switch"  ; YAML node "switch"
+       demo-01-...-real-switch-unsolved.md  -> "sw1"     ; YAML node "sw1"
+       demo-01-srl-switch (solved).md-ish   -> "sw1"     ; YAML node "sw1"
+       demo-01-cumulus-switch               -> "sw1"     ; YAML node "sw1"
+  2. The only drift is CROSS-LAB: the PLAIN demo (Linux-PC middle box) calls
+     the middle device `switch`; ALL real-switch variants call it `sw1`.
+     So a student who does the plain demo, then the real-switch demo, sees the
+     middle device renamed. That is naming drift across a lab sequence -- a
+     mild pedagogical annoyance, NOT a defect, and NOT a broken instruction.
+  3. Full census (node name for the L2 device):
+       name "switch": 01-foundation, demo-01-two-pcs-and-a-switch        (2)
+       name "sw1"   : 04,05,06,07 + all demo/capstone real-switch labs  (9)
+     Legacy labs use `sw1` too; only the two oldest use `switch`.
+
+CORRECTED SEVERITY: cosmetic/naming-drift, low. NOT a "papercut" that blocks a
+  student. I overstated it at 03:10/04:10. No fix needed to make any lab work;
+  a fix would only be for naming consistency, and it would rename a device in a
+  shipped lab -- so it stays a NOTE, Dad's call, not my change.
+
+NOT COMPLETE. Completion is Dad's call alone.
+======================================================================
