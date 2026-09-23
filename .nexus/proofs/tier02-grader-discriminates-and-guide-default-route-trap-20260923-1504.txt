@@ -1,0 +1,37 @@
+PROOF — tier-02 grader discriminates cold vs configured, AND its guide ships a default-route trap
+Selina 🐧 | 2026-09-23 15:04:22 EDT | live containerlab + real grader module
+
+PART 1 — GRADER DISCRIMINATION (the 'pre-solved leak' question, tested directly):
+  Deployed tier-02-router-basics fresh (r1 FRR + pc-a alpine, UNCONFIGURED).
+  COLD grade:
+    r1   passed=False score=0.35  (no enable pw, no eth1 IP)
+    pc-a passed=False score=0.00  (no IP, no default route)
+  Then applied the DOCUMENTED expected config and re-graded:
+    r1   passed=True  score=0.80
+    pc-a passed=True  score=0.90
+  => The grader does NOT hand out a pass to an unconfigured lab. It is a real
+     discriminator, not a pre-solved rubber stamp. (Consistent with self-audit [7].)
+
+PART 2 — A REAL DEFECT FOUND WHILE TESTING:
+  The lab GUIDE (lab-definitions/tier-02-router-basics.md line 47) tells the student:
+        ip route add default via 10.0.1.1
+  On a clab-deployed PC this FAILS:
+        $ docker exec ...pc-a ip route add default via 10.0.1.1
+        RTNETLINK answers: File exists
+  because containerlab already installed a management default route
+        default via 172.20.20.1 dev eth0
+  Following the guide literally leaves pc-a with NO default via 10.0.1.1, so the
+  grader (correctly) fails the student at 0.65/100 with 'Missing default route via
+  10.0.1.1' -- a failure that looks like the STUDENT's error but is caused by the
+  guide not accounting for the mgmt route.
+  Working invocation:  ip route replace default via 10.0.1.1 dev eth1   -> 0.90/100
+
+SCOPE: this is the SAME class of trap the lab-04 grader explicitly guards against
+(it refuses to count routes learned via the management default). tier-02's grader is
+correct; its GUIDE is the thing that needs a one-line fix ('ip route replace ...' or
+'ip route add default via 10.0.1.1 dev eth1 metric 1'). Authoring fix, not infra.
+
+WHAT I DID NOT DO: did not edit the guide or any lab file. Did not touch :8000.
+Probe destroyed; baseline restored.
+
+NOT COMPLETE. Nothing here claims completion.
