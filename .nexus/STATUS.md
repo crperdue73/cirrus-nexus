@@ -1582,3 +1582,29 @@ not be used to claim "the switch is real."
 CLEANUP: stopped 200; 0 leftovers; clab 35; :8016 down; :8000 = 200; temp removed.
 Proof: proofs/fake-switch-grades-green-20260922-2020.txt
 NOT COMPLETE. Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~21:20 EDT — aegis-demo2-drive (DEFECT: plain grader has no auth guard)
+
+Found + reproduced: grader_demo_01 (lab demo-01-two-pcs-and-a-switch) has NO
+switch-authenticity check. Its only switch requirement is "10.0.1.254/24 up on
+br0", so it accepts a plain Alpine Linux PC as "the switch".
+
+Contrast (source + live):
+  grader_demo_01_srl     -> "sr_cli not available — node is not an SR Linux switch"
+  grader_demo_01_cumulus -> fingerprints /etc/os-release + vtysh
+  grader_demo_01         -> none
+
+Reproduced live (:8018, session a345541f): the fake Alpine switch, once
+addressed, graded passed=True 0.5 under the plain grader; the SRL grader's own
+probe on the same node REFUSED with "sr_cli not available". (Also: plain lab's
+pc-a grades 1.0 — full pass condition — on that fake switch.)
+
+Options (Dad's call, NOT implemented):
+  A. add an OS-fingerprint guard to grader_demo_01, or
+  B. retire the plain lab as the "real switch" lab; use SRL/Cumulus variants.
+CLEANUP: stopped 200; 0 leftovers; clab 35; :8018 down; :8000 = 200; temp removed.
+Proof: proofs/defect-plain-grader-no-auth-guard-20260922-2120.txt
+NOT COMPLETE. Dad's call alone.
