@@ -1456,3 +1456,198 @@ throwaway :8011:
 Both unsolved variants now product-path evidenced.
 Proof: proofs/product-api-e2e-demo01-unsolved-20260922-1312.txt
 NOT COMPLETE. Nexus completion is Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~15:15 EDT — aegis-demo2-drive (live re-verify BOTH tasks, throwaway :8012)
+
+RAN both tasks live this hour on a THROWAWAY backend (:8012, Dad's :8000 untouched)
+using the UNSOLVED variants through the whole product path.
+
+TASK 1 (real switch, SRL, session b4927eba, digest aegis-less:0d40ee2f...):
+  switch is real SR Linux (SRLINUX 26.7.2-519, /usr/local/bin/sr_cli).
+  cold via API: pc-a/pc-b 0.0 FAIL, sw1 1.0 (seeded). student work applied.
+  PASS CONDITION: pc-a->switch 10.0.1.254 3/3 0%; pc-a->pc-b 10.0.1.2 3/3 0%.
+  FDB: IRB MAC in bridge table with both PCs. after: pc-a 1.0 / pc-b 0.5 / sw1 1.0.
+  NEGATIVE GATE live: plain-demo Alpine "switch" -> SRL grader REFUSED
+    ("sr_cli not available — node is not an SR Linux switch"); generic grader
+    also FAILS. A Linux PC cannot pass as a switch.
+
+TASK 2 (demo-02 unsolved, session ef6eed3b, digest sha256:bb7ef23a... == pin):
+  all 5 nodes up; pc-a->r1->pc-b all 0% loss; traceroute = r1 then pc-b (2 hops).
+  grades via API: ALL 5 nodes 1.0.
+
+CLEANUP: sessions destroyed, 0 leftovers, clab baseline 35, :8012 down, :8000 200.
+No new defects. Proof: proofs/live-reverify-both-tasks-20260922-1515.txt
+NOT COMPLETE. Nexus completion is Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~16:15 EDT — aegis-demo2-drive (lint honesty pass)
+
+Tried to close the 7-lab NO-EXPECTED blind spot with an AST call-arg extractor
+(IPs passed to expectation-named params of legacy graders' check helpers).
+
+RAN it: it is IMPRECISE and was REVERTED.
+  tier02_router_basics -> 10.0.1.10 attributed to BOTH r1 and pc-a (a node's
+    branch references OTHER nodes' IPs; the branch is "this node's checks",
+    not "this node's expectations").
+  neteng_capstone -> matched at all (incl. a subnet mask), though my 12:12
+    note said it must stay NO-EXPECTED.
+Emitting verdicts would manufacture false SOLVED/UNSOLVED calls. Reverted
+(git checkout; parse OK).
+
+SHIPPED instead: an explicit honesty block so NO-EXPECTED is VISIBLE, not a
+silent "-":
+  "NOT CHECKED — pre-solved status UNKNOWN for 7 lab(s) ... this is not a pass"
+Verified live (14 labs; 3 SOLVED / 4 UNSOLVED / 7 NOT CHECKED; exit 1) and
+public (6 labs; 3/3; exit 1). Classifications + expect_source unchanged (no
+regression). Closing the 7 for real needs EXPECTED maps in those graders.
+Also restarted :8000 (had cleanly stopped; HTTP 200 again).
+Proof: proofs/lint-honesty-revert-20260922-1615.txt
+COMMITTED: live 6f73bb3, public a3fc533.
+NOT COMPLETE. Nexus completion is Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~17:25 EDT — aegis-demo2-drive (FINAL pre-handoff live re-verify)
+
+Ran BOTH tasks live on throwaway :8012; Dad's :8000 (PID 702017) untouched.
+
+TASK 1 (demo-01-...-unsolved, session 8954f189):
+  COLD FAIL: pc-a no 10.x addr; ping IRB 10.0.1.254 = 100% loss; ping pc-b = 100% loss.
+  AFTER CONFIG: pc-a -> 10.0.1.254 = 0% loss AND pc-a -> 10.0.1.2 = 0% loss
+  (PASS CONDITION: ping BOTH switch AND other PC — met, unsoftened).
+  Switch real: mac-vrf-1 FDB shows 2 learnt MACs (both access ports) + 1 IRB MAC.
+  API grader: sw1 passed=True 1.0; pc-a passed=True 1.0 (incl. "can ping the
+  switch" AND "can ping PC-B").
+
+TASK 2 (demo-02-...-unsolved, session f16e2e71):
+  Deploy 5/5 Up (2x SRL + r1 FRR + 2 PCs). COLD: no data path (mgmt only).
+  AFTER CONFIG: pc-a->pc-b 0% loss, pc-b->pc-a 0% loss.
+  traceroute pc-a->pc-b: hop1 10.0.1.253 (r1), hop2 10.0.2.1 (pc-b) — path proven.
+  API grader: 5/5 nodes passed=True score 1.0.
+
+CLEANUP: both sessions stopped 200; 0 leftovers; clab baseline 35; :8012 down;
+Dad's :8000 = 200; temp removed.
+Proof: proofs/final-both-tasks-live-20260922-1725.txt
+NOT COMPLETE. Nexus completion is Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~19:20 EDT — aegis-demo2-drive (Cumulus half of Task 1 re-verified live)
+
+Re-ran the Cumulus variant today (handoff cited it from earlier in session;
+rule is verify-by-running). Throwaway :8014; Dad's :8000 untouched.
+
+LAB demo-01-two-pcs-and-a-real-switch-cumulus, session cf653d34:
+  sw1 = REAL Cumulus Linux 4.3.0 (vtysh + bridge present); br0+eth1+eth2 all
+  VLAN 1 -> real L2 bridge.
+  pc-a -> 10.0.1.254 (sw1) = 0% loss ; pc-a -> 10.0.1.2 (pc-b) = 0% loss
+  (PASS CONDITION met). NOTE: this variant ships PRE-SOLVED (reference variant).
+  API grader: sw1 1.0 ("real Cumulus switch"), pc-a 1.0 (both required pings).
+
+CLEANUP: stopped 200; 0 leftovers; clab 35; :8014 down; :8000 = 200; temp removed.
+Proof: proofs/cumulus-reverify-20260922-1920.txt
+Answer to "(1) evaluate BOTH": both SR Linux and Cumulus are REAL switches and
+both grade green. SR Linux = primary lab (cold-start pass met); Cumulus ships
+as its own lab.
+NOT COMPLETE. Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~20:20 EDT — aegis-demo2-drive (fake-switch lab reproduced)
+
+Ran the "plain" lab demo-01-two-pcs-and-a-switch (session e8e445c2, :8016) to
+show WHY it is the defect Dad named.
+
+  switch is NAME="Alpine Linux", no vtysh -> a plain Linux PC, not a switch.
+  COLD: grader 0.0 (nothing seeded).
+  AFTER configuring only the fake switch + PC addresses:
+    switch passed=True 0.5 ; pc-a passed=True 1.0
+    including "pc-a can ping the switch (10.0.1.254)" AND "can ping PC-B".
+  => the lab reports the FULL pass condition as met with a FAKE switch. The
+     grader only checks 10.0.1.254/24 up on br0; it can't tell real from fake.
+
+Contrast (both verified green this session):
+  SRL    grader: "real SR Linux switch, irb0.0 up with 10.0.1.254"
+  Cumulus grader: "real Cumulus switch, iface has 10.0.1.254"
+The plain lab validates CONNECTIVITY but NOT switch authenticity — it should
+not be used to claim "the switch is real."
+CLEANUP: stopped 200; 0 leftovers; clab 35; :8016 down; :8000 = 200; temp removed.
+Proof: proofs/fake-switch-grades-green-20260922-2020.txt
+NOT COMPLETE. Dad's call alone.
+
+
+---
+
+## 2026-09-22 ~21:20 EDT — aegis-demo2-drive (DEFECT: plain grader has no auth guard)
+
+Found + reproduced: grader_demo_01 (lab demo-01-two-pcs-and-a-switch) has NO
+switch-authenticity check. Its only switch requirement is "10.0.1.254/24 up on
+br0", so it accepts a plain Alpine Linux PC as "the switch".
+
+Contrast (source + live):
+  grader_demo_01_srl     -> "sr_cli not available — node is not an SR Linux switch"
+  grader_demo_01_cumulus -> fingerprints /etc/os-release + vtysh
+  grader_demo_01         -> none
+
+Reproduced live (:8018, session a345541f): the fake Alpine switch, once
+addressed, graded passed=True 0.5 under the plain grader; the SRL grader's own
+probe on the same node REFUSED with "sr_cli not available". (Also: plain lab's
+pc-a grades 1.0 — full pass condition — on that fake switch.)
+
+Options (Dad's call, NOT implemented):
+  A. add an OS-fingerprint guard to grader_demo_01, or
+  B. retire the plain lab as the "real switch" lab; use SRL/Cumulus variants.
+CLEANUP: stopped 200; 0 leftovers; clab 35; :8018 down; :8000 = 200; temp removed.
+Proof: proofs/defect-plain-grader-no-auth-guard-20260922-2120.txt
+NOT COMPLETE. Dad's call alone.
+
+---
+
+## 2026-09-23 ~01:30 EDT — aegis-demo2-drive (switch-authenticity probe, teaching labs)
+
+Ran the probe left implicit by the 21:20 finding: is demo-01's fake-switch
+acceptance CONTAINED to demo-01, or do the TEACHING labs have it too?
+
+Deployed tier-03-router-switch-pc on throwaway :8020 (copy of live backend;
+Dad's :8000 PID 702017 untouched). Graded sw1 cold / as-a-plain-Linux-bridge /
+with-FRR-started, then ran Dad's actual pass condition both directions.
+
+  sw1 OS: NAME="Alpine Linux" (with vtysh, FRR 10.5.3) — a PC, not a switch OS.
+  cold            -> 0.1   (awards the FDB point with nothing configured)
+  plain bridge    -> 0.1   (VTYS for SVI failed: OS wg, not vtysh, and on Alpine
+                            br0/10.0.1.2 does NOT show up in `vtysh show run`)
+  FRR started +
+  hostname/enable -> 0.2   (still "SVI br0 not configured" — FRR has no br0)
+  DECIDING TEST: pc-a -> 10.0.1.2  0% loss  PASS ; sw1 -> 10.0.1.10  0% loss PASS
+
+FINDINGS:
+ 1. Teaching labs' switch is the same PC defect class as demo-01 (kind: linux).
+ 2. NOT equally severe: teaching graders REQUIRE vtysh/FRR state, so a bare
+    Alpine bridge does not clear the 0.7 bar. demo-01's plain grader demanded
+    nothing switch-specific — that is why it graded full pass on a fake switch.
+ 3. NEW: tier-03's own answer key is UNREACHABLE. grade_sw1 pays 0.25 for
+    `interface br0` + `10.0.1.2/24` in `vtysh show running-config`, but the
+    substrate's FRR has no br0 (the bridge is kernel-side, invisible to vtysh).
+    sw1 fails no matter how correctly the student does the lab. Grader bug,
+    separate from the authenticity question.
+
+CLEANUP: sessions 9218c53d / e22305d9 / 1e61e707 all stopped+destroyed; clab
+  baseline unchanged; :8020 down; /opt/aegis untouched; :8000 = 200.
+ARTIFACT: proofs/switch-authenticity-tier03-probe-20260923-0130.txt
+NOT COMPLETE. Both open items are Dad's call (lab migration; tier-03 sub-check).
+
+**CLEANUP INCIDENT (recorded 01:35):** my first two probe attempts left 3 clab
+  labs running (9 containers, tier-03 sessions 035f5587 / db108be6 / 9e33aa90)
+  because those sessions were created via a bad endpoint and their stop path did
+  not tear down clab. Found via `containerlab inspect --all` (NOT docker ps),
+  removed with `docker rm -f`. Verified after: 38 containers (= baseline),
+  0 tier-03 clab rows, :8000 = 200 PID 702017, no throwaway ports, /tmp/d8020
+  gone. Lesson logged: verify teardown with containerlab inspect, not docker ps.
