@@ -1643,3 +1643,11 @@ CLEANUP: sessions 9218c53d / e22305d9 / 1e61e707 all stopped+destroyed; clab
   baseline unchanged; :8020 down; /opt/aegis untouched; :8000 = 200.
 ARTIFACT: proofs/switch-authenticity-tier03-probe-20260923-0130.txt
 NOT COMPLETE. Both open items are Dad's call (lab migration; tier-03 sub-check).
+
+**CLEANUP INCIDENT (recorded 01:35):** my first two probe attempts left 3 clab
+  labs running (9 containers, tier-03 sessions 035f5587 / db108be6 / 9e33aa90)
+  because those sessions were created via a bad endpoint and their stop path did
+  not tear down clab. Found via `containerlab inspect --all` (NOT docker ps),
+  removed with `docker rm -f`. Verified after: 38 containers (= baseline),
+  0 tier-03 clab rows, :8000 = 200 PID 702017, no throwaway ports, /tmp/d8020
+  gone. Lesson logged: verify teardown with containerlab inspect, not docker ps.
