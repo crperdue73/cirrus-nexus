@@ -1,0 +1,51 @@
+======================================================================
+DRIVE 2026-09-23 ~10:03-10:30 EDT  (aegis-demo2-drive)
+DEMO LAB 2 CAPABILITY PROBE -- NOW ANSWERED ON CUMULUS TOO
+======================================================================
+Dad's demo-02 ask was a CAPABILITY PROBE: "we need to know what actually
+deploys and grades before lab packs can be built." Until now that probe had
+only ever been run on Nokia SR Linux. This hour it was run on CUMULUS.
+
+BUILT:
+  lab-definitions/cumulus-demo/demo-02-cumulus-two-switch-router-unsolved.yml
+  lab-definitions/grader_demo_02_cumulus.py   (new, switch-agnostic for Cumulus)
+  + a matching student guide .md (to follow with the export sync)
+
+STANDALONE probe first (raw clab, before writing any grader):
+  5/5 containers running: 2x networkop/cx + 3 linux (aegis/frr router).
+  pc-a -> sw1 SVI 0% | pc-a -> r1 0% | pc-a -> pc-b ACROSS router 0%
+  traceroute: hop1 10.0.1.253 (r1), hop2 10.0.2.1 (pc-b)
+  both switches: NAME="Cumulus Linux"
+
+FULL PRODUCT PATH (fresh backend :8098, Dad's :8000 untouched):
+  session 16a04c07, 5/5 nodes.
+
+  RUN 1 -- COLD:
+    pc-a ping pc-b: 100% packet loss
+    grade: pc-a 0.0 | pc-b 0.0 | r1 0.2 | sw1 1.0 | sw2 1.0
+    (hosts+router fail; switches pre-configured. Correct.)
+
+  RUN 2 -- AFTER the lab's own documented student work:
+    pc-a -> 10.0.1.254 (sw1 SVI):   0% loss
+    pc-a -> 10.0.1.253 (r1):        0% loss
+    pc-a -> 10.0.2.1   (pc-b ACROSS the router): 0% loss
+    traceroute: hop1 = 10.0.1.253 (r1), hop2 = 10.0.2.1 (pc-b)
+    grade: pc-a 1.0 | pc-b 1.0 | r1 1.0 | sw1 1.0 | sw2 1.0   => 5/5
+    LAB VERDICT (grade_all): PASSED -- gated on both hosts end-to-end AND both
+    switches real AND router forwarding.
+
+  NEGATIVE CONTROL (grader honesty):
+    stripped /etc/os-release + /usr/bin/vtysh from sw1 ->
+      sw1 passed=False 0.0, "node is not a real Cumulus switch (os-release not
+      Cumulus)". Restored -> sw1 1.0. A plain Linux bridge cannot pass.
+
+CAPABILITY-PROBE ANSWER, BOTH OPTIONS: the 5-node shape
+  pc-a -> sw1 -> ROUTER -> sw2 -> pc-b
+deploys AND grades end to end on BOTH Nokia SR Linux (verified earlier today,
+5/5 @ 1.0) and Cumulus (5/5 @ 1.0 here), each with a real-switch negative
+control that refuses a fake. Nothing in the shape blocks a lab pack.
+
+CLEANUP: probe destroyed; session 16a04c07 stopped, 0 leftover containers;
+fresh backend :8098 killed; live sessions 0; clab baseline 35; :8000 200.
+NOT COMPLETE. Completion is Dad's call alone.
+======================================================================
