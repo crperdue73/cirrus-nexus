@@ -1,0 +1,50 @@
+======================================================================
+DRIVE 2026-09-23 ~05:04-05:12 EDT  (aegis-demo2-drive)
+TASK 1 / BRANCH B: CUMULUS switch — live re-verification (Dad asked for BOTH)
+Lab: demo-01-two-pcs-and-a-real-switch-cumulus  (solved reference variant)
+Path: backend API, :8000 = 200. session 4627db5c, 3/3 nodes up.
+======================================================================
+
+--- SWITCH IS A REAL NOS, NOT A LINUX PC ---
+  sw1 /etc/os-release:
+    NAME="Cumulus Linux"  VERSION_ID=4.3.0  VERSION="Cumulus Linux 4.3.0"
+  vtysh present at /usr/bin/vtysh
+  (image networkop/cx:latest, 733MB)
+  bridge fdb show br br0 (learnt, non-permanent):
+    aa:c1:ab:a5:cc:11 dev eth1 vlan 1 master br0
+    aa:c1:ab:88:45:5c dev eth2 vlan 1 master br0
+  bridge vlan show: eth1/eth2/br0 all PVID 1 egress-untagged  => real VLAN-aware L2
+
+--- DAD'S UN-SOFTENED PASS CONDITION ---
+  From pc-a:
+    ping 10.0.1.254 (the switch SVI): 3 sent, 3 recv, 0% loss
+    ping 10.0.1.2   (PC-B):           3 sent, 3 recv, 0% loss
+  => MET. PC-to-PC alone would not have counted; the switch itself answers.
+
+--- API GRADER (no softening) ---
+  pc-a 1.0 (addr + ping switch + ping PC-B, separate checks)
+  pc-b 1.0 (addr present)
+  sw1  1.0 "real Cumulus switch ... iface has 10.0.1.254"
+
+--- NEGATIVE CONTROL (does the "real switch" claim mean anything?) ---
+  Temporarily removed the fingerprint (/etc/os-release + /usr/bin/vtysh):
+    sw1 -> passed=False score=0.0
+    "node is not a real Cumulus switch (os-release cumulus=False, vtysh=False)"
+  Restored both:
+    sw1 -> passed=True score=1.0
+  => The grader genuinely refuses a plain Linux bridge dressed as Cumulus.
+
+--- WHERE CUMULUS STANDS vs SR LINUX (both verified, evidence-based) ---
+  SR Linux (primary shipping choice):
+    - real NOS (v26.7.2), IRB in BOTH mac-vrf-1 AND ip-vrf-1, 2 learnt MACs
+    - student-facing UNSOLVED variant exists (demo-01-...-unsolved)
+  Cumulus (networkop/cx):
+    - also real (Cumulus Linux 4.3.0 + vtysh), SVI on br0, 2 learnt MACs
+    - ONLY ships as the SOLVED reference variant; no unsolved variant built
+  Both meet Dad's un-softened condition. SR Linux is the primary because it
+  has a real unsolved student lab + the richer mac-vrf/ip-vrf modelling;
+  Cumulus ships as its own lab. This matches the 09-22 handoff choice.
+
+CLEANUP: session 4627db5c stop+destroy (next step). :8000 untouched.
+NOT COMPLETE. Completion is Dad's call alone.
+======================================================================
