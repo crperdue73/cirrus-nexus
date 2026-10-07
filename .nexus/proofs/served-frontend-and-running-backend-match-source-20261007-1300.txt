@@ -1,0 +1,20 @@
+RUN 260 — LAB-A/B artifact integrity — 2026-10-07
+
+QUESTION (run 259's next-step): is what a student's browser receives the same code that is in the
+repo source AND in the freshly-rebuilt bundle?
+
+MEASURED LIVE:
+  GET / (served)                -> 200, 42368 bytes, sha256 5304db2e6f523ab9217c18055629395fa8334e8a2def21d0294663de5b0e423b
+  frontend/index.html (tree)    ->            sha256 5304db2e6f523ab9217c18055629395fa8334e8a2def21d0294663de5b0e423b
+  bundle's index.html           ->            sha256 5304db2e6f523ab9217c18055629395fa8334e8a2def21d0294663de5b0e423b
+  cmp: served == tree; tree == bundle.  The run-248 panel fix is present in the SERVED page (grep=1).
+
+BACKEND leg (same theme): the running service loads backend/main.py from the tree path; service
+ActiveEnter 2026-10-07 03:00:52 > main.py mtime 2026-10-07 01:02:08, so the running code is the
+current source (not a stale pre-restart copy).
+
+CONCLUSION: no defect. Served frontend == repo source == bundle, byte-for-byte; the running backend
+executes the current source. Combined with run 258 (bundle rebuilt + guarded) and run 259, the
+artifact-integrity thread is closed for both labs.
+
+Cleaned: no session started (no clab containers). No code changes.
