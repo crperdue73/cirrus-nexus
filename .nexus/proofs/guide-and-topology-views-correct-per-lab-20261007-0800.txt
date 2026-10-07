@@ -1,0 +1,22 @@
+RUN 255 — LAB-B thread (student-facing views) — 2026-10-07
+
+QUESTION: do the guide + topology views return the RIGHT per-lab content for the two shipping labs,
+with nothing leaked from a quarantined lab?
+
+MEASURED LIVE:
+  /api/labs/demo-01.../guide      -> 200, 2159 bytes, "Two PCs and a Real Switch", PCs ship unconfigured
+  /api/labs/demo-01.../topology   -> 200, names pc-a pc-b sw1 (and NO r1/sw2)
+  /api/labs/demo-02.../guide      -> 200, 2696 bytes, "Two Switches and a Router", PCs+router unconfigured;
+                                     mentions 10.0.1.1/10.0.2.1/10.0.1.253/10.0.2.253/ip_forward
+  /api/labs/demo-02.../topology   -> 200, names pc-a pc-b sw1 sw2 r1
+  /api/labs/tier-02-router-basics/guide (QUARANTINED) -> 404
+
+CONCLUSION: no defect. Each lab serves its own correct guide and topology; neither leaks the other's
+devices; a quarantined lab is refused. This closes the last student-facing surface inside the
+"two labs only" scope lock.
+
+SCOPE STATUS (named): inside the fence, the student-facing product is now covered — catalog,
+start response, start-success view, running-sessions panel, restart/adoption, grade, reconnect,
+guide, topology — across both labs. No code changes this run.
+
+Cleaned: nothing started this run (no session needed); 0 clab containers.
