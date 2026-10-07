@@ -1,0 +1,17 @@
+RUN 250 — LAB-A — 2026-10-07
+
+QUESTION (run 249's next-step): after a restart/adoption, is LAB-A's aegis-less digest re-resolved
+off its re-adopted node set (including the SR Linux switch), or does it come back blank?
+
+MEASURED LIVE (session 3f67aeb0, LAB-A):
+  before restart: substrate_image '', digest aegis-less:0d40ee2f53920a9d...
+  systemctl restart nexus.service  (SESSIONS dropped; reconcile re-adopts from containers)
+  after  restart: student_name '(reconciled)', substrate_image '', digest
+                  aegis-less:0d40ee2f53920a9d7c069fe03b23311457294f998292656326fa7d5478a327b3, matches True.
+
+CONCLUSION: no defect. The aegis-less identity is re-resolved off the re-adopted node set after a
+restart — the SAME hash comes back (not blank), including the SR Linux switch, and substrate_image
+is correctly '' (LAB-A runs no aegis/frr node). Combined with run 249 (LAB-B keeps its pinned image
++ digest across a restart), both labs' identities are restart-stable in the panel a human reads.
+
+Cleaned: stop 0/0, 0 clab containers left. No code changes.
