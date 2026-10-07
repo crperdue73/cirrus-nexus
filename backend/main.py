@@ -2274,6 +2274,23 @@ def get_lab_guide(lab_id: str):
     raise HTTPException(status_code=404, detail="No guide available for this lab")
 
 
+# RUN 245 (2026-10-07): the install record is the ONLY thing that makes an aegis/frr lab attributable
+# (run 244's baseline: LAB-B's r1 IS the pinned substrate, and demo-02 grades off the installer's
+# installed_layers_sha256). It was read lazily, only at start/grade time, and NOTHING asserted it was
+# there -- measured live: hide assets/installed-image-id.txt, restart, and the log says nothing at all
+# ("[aegis] serving on 0.0.0.0:8000" and no more). The first to find out would be a student whose
+# aegis/frr lab start dies with a 500. Warn by name at startup, deliberately NOT refuse: an absent
+# install record only disables the aegis/frr labs (demo-01 is three alpines with no substrate and
+# still starts and grades), so refusing would take a working product offline to report a missing file.
+# _installed_pin is defined far above, so calling it here (module level) is safe -- run 239's lesson.
+if not _installed_pin():
+    print(f"[startup] WARNING: no installer-published image identity found (looked for "
+          f"{BASE_DIR / 'assets' / 'installed-image-id.txt'} and "
+          f"/opt/aegis/assets/installed-image-id.txt) -- labs that run the pinned aegis/frr "
+          f"substrate (e.g. demo-02) cannot be started or graded and will be refused as "
+          f"unattributable. Labs with no aegis/frr node (e.g. demo-01) are unaffected.",
+          file=sys.stderr)
+
 # --- Serve Frontend ---
 
 FRONTEND_DIR = BASE_DIR / "frontend"
