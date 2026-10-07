@@ -13,10 +13,11 @@ unverifiable claims, no screenshots of a build that isn't here.
 - [x] Promote `projects/aegis` to the shipping tree; push to `origin/main` (2026-10-06)
 - [x] Repo description + topics set (networking, containerlab, frr, srlinux, education, …)
 - [x] Apache-2.0 `LICENSE` added
-- [ ] **README hardening** — badges (license, python, containerlab), a real feature list, a text
+- [x] **README hardening** — badges (license, python, containerlab), a real feature list, a text
       architecture diagram, an honest lab table, the grading model (pass/fail/refused), and a
       "what this is / what this is NOT" section (static routing only; no BGP/OSPF/EVPN)
-- [ ] `docs/` — split install, running, adding-a-lab, and grading-model out of the README
+- [x] `docs/OPERATIONS.md` — bundle rebuild, digests, concurrency, running, drift moved out of the README
+- [ ] `docs/` — adding-a-lab + grading-model guides
 - [ ] `CONTRIBUTING.md`
 - [ ] `CITATION.cff`
 - [ ] `architecture.md` + a diagram committed as source (mermaid or SVG)
