@@ -1,0 +1,23 @@
+RUN 261 — LAB-B — 2026-10-07
+
+QUESTION (run 260's next-step): do the instructions in the SERVED GUIDE — the markdown a student
+actually reads at /api/labs/demo-02.../guide — actually work when followed literally?
+
+METHOD: fetched the served guide, executed its three config blocks verbatim at the terminals, then
+ran ITS OWN verification commands.
+  PC-A: ip addr add 10.0.1.1/24 dev eth1; link up; ip route add 10.0.2.0/24 via 10.0.1.253
+  PC-B: ip addr add 10.0.2.1/24 dev eth1; link up; ip route add 10.0.1.0/24 via 10.0.2.253
+  r1  : sysctl -w net.ipv4.ip_forward=1; 10.0.1.253/24 eth1; up; 10.0.2.253/24 eth2; up
+
+GUIDE'S OWN VERIFICATION, reproduced:
+  from PC-A: ping 10.0.1.254 OK, ping 10.0.1.253 OK, ping 10.0.2.1 OK
+  from PC-B: ping 10.0.1.1 OK
+  traceroute -n 10.0.2.1 -> hop1 10.0.1.253 (r1), hop2 10.0.2.1 (pc-b)  [exactly as the guide says]
+
+GRADED ALL FIVE: pc-a/pc-b/sw1/sw2/r1 ALL passed=True score=1.0 severity=graded (ALL PASS True).
+
+CONCLUSION: no defect. The served guide is correct — a student following it literally gets a
+passing grade, and its stated traceroute path matches reality. The student-facing instructions and
+the grader agree.
+
+Cleaned: stop 0/0, 0 clab containers left. No code changes.
