@@ -23,6 +23,10 @@ python3 tools/check_self_contained.py     # a bare clone is installable
 
 ## Adding or editing a lab
 
+The full contract — file layout, the metadata schema, the load-time validation the
+loader refuses by name, and the grader interface — is in
+[`docs/ADDING-A-LAB.md`](docs/ADDING-A-LAB.md). The short version:
+
 - A lab is a YAML topology (`lab-definitions/<name>.yml`) plus a grader
   (`lab-definitions/grader_<name>.py`). Ship both.
 - Lab definitions are cached in memory — after editing, `POST /api/labs/reload` (see

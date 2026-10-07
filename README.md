@@ -157,6 +157,8 @@ is a snapshot, not a symlink. The exact command, and the reasons behind each exc
 | doc | contents |
 |-----|----------|
 | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) | bundle rebuild, runtime digests, concurrency, running without the service, substrate details, known drift |
+| [`docs/ADDING-A-LAB.md`](docs/ADDING-A-LAB.md) | what a lab is, the metadata schema, the load-time validation the loader refuses by name, the grader interface |
+| [`docs/GRADING-MODEL.md`](docs/GRADING-MODEL.md) | pass / fail / refused, per-node vs lab verdict, the digest gate, the refusal vocabulary |
 | [`docs/GITHUB-PLAN.md`](docs/GITHUB-PLAN.md) | repo-hardening backlog |
 
 ---

@@ -17,7 +17,8 @@ unverifiable claims, no screenshots of a build that isn't here.
       architecture diagram, an honest lab table, the grading model (pass/fail/refused), and a
       "what this is / what this is NOT" section (static routing only; no BGP/OSPF/EVPN)
 - [x] `docs/OPERATIONS.md` — bundle rebuild, digests, concurrency, running, drift moved out of the README
-- [ ] `docs/` — adding-a-lab + grading-model guides
+- [x] `docs/` — adding-a-lab + grading-model guides
+      (`docs/ADDING-A-LAB.md`, `docs/GRADING-MODEL.md`, 2026-10-07)
 - [x] `CONTRIBUTING.md`
 - [ ] `CITATION.cff`
 - [ ] `CITATION.cff` + `.github/ISSUE_TEMPLATE/` + `PULL_REQUEST_TEMPLATE.md`
