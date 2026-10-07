@@ -18,13 +18,14 @@ unverifiable claims, no screenshots of a build that isn't here.
       "what this is / what this is NOT" section (static routing only; no BGP/OSPF/EVPN)
 - [x] `docs/OPERATIONS.md` — bundle rebuild, digests, concurrency, running, drift moved out of the README
 - [ ] `docs/` — adding-a-lab + grading-model guides
-- [ ] `CONTRIBUTING.md`
+- [x] `CONTRIBUTING.md`
 - [ ] `CITATION.cff`
+- [ ] `CITATION.cff` + `.github/ISSUE_TEMPLATE/` + `PULL_REQUEST_TEMPLATE.md`
 - [ ] `architecture.md` + a diagram committed as source (mermaid or SVG)
-- [ ] CI: GitHub Actions that at least byte-compiles the backend and runs any unit tests
-- [ ] `.github/ISSUE_TEMPLATE/` + `PULL_REQUEST_TEMPLATE.md`
+- [x] CI: GitHub Actions (backend compile, `bash -n install.sh`, self-contained check, secret scan)
 - [ ] Screenshots: the student UI + a terminal mid-lab (real captures only)
-- [ ] `CHANGELOG.md` seeded from history
+- [x] **Self-contained**: repo proven installable from a bare clone (`tools/check_self_contained.py`)
+- [x] `CHANGELOG.md` seeded from history
 
 ## Rules for the polish runs
 
