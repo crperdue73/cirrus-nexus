@@ -1,0 +1,24 @@
+RUN 253 — LAB-B — 2026-10-07
+
+QUESTION: does LAB-B's student path work end to end BY HAND at the terminals (not a canary script)?
+
+MEASURED LIVE (session 5861f59a, LAB-B, 5 nodes pc-a/pc-b/sw1/sw2/r1):
+  configured per the lab's own instructions:
+    pc-a: 10.0.1.1/24 dev eth1, up; route 10.0.2.0/24 via 10.0.1.253
+    pc-b: 10.0.2.1/24 dev eth1, up; route 10.0.1.0/24 via 10.0.2.253
+    r1  : ip_forward=1; 10.0.1.253/24 eth1; 10.0.2.253/24 eth2; both up
+    sw1/sw2: SR Linux IRBs ship pre-configured (10.0.1.254 / 10.0.2.254)
+  sanity: pc-a -> pc-b ping across the router: 0% packet loss.
+  graded all FIVE nodes (POST /submit):
+    pc-a passed=True 1.0  (eth1 10.0.1.1/24; pings sw1 .254, r1 .253, pc-b 10.0.2.1 across the router)
+    pc-b passed=True 1.0  (eth1 10.0.2.1/24; pings pc-a 10.0.1.1 across the router)
+    sw1  passed=True 1.0  (real SR Linux switch, irb0.0 10.0.1.254)
+    sw2  passed=True 1.0  (real SR Linux switch, irb0.0 10.0.2.254)
+    r1   passed=True 1.0  (eth1 10.0.1.253/24, eth2 10.0.2.253/24, ip_forward=1)
+  identity: start digest == grade digest == sha256:bb7ef23a07dcb6c6b34e225dd77fa2eb592700975843ad1f1aa0105f49f9220c (MATCH True).
+
+CONCLUSION: no defect. BOTH labs now verified end to end for a student BY HAND — LAB-A (run 252,
+3/3) and LAB-B (this run, 5/5) — with passing verdicts that cite the run's identity. The
+"labs actually work for a student" half of Dad's asks holds for both shipping labs.
+
+Cleaned: stop 0/0, 0 clab containers left. No code changes.
