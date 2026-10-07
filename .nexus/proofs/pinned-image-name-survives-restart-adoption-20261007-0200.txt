@@ -1,0 +1,24 @@
+RUN 249 — LAB-B — 2026-10-07
+
+QUESTION (run 248's next-step): run 248 made the LIST name the pinned image by looking the lab up
+per session. Does that still hold after a restart, when SESSIONS is gone and sessions are
+re-adopted from live containers — i.e. is the image name lost, leaving only the opaque digest?
+
+CODE READ: reconcile() re-adopts containers and stores `lab_id` in the rebuilt SESSIONS entry
+(from the container's lab label, or from the topology), and re-resolves the digest OFF the running
+containers. So the image name is re-derivable from lab_id — the record does not need to store the
+image itself.
+
+MEASURED LIVE (session 704f44ce, LAB-B):
+  before restart: LIST -> substrate_image 'aegis/frr:latest', digest sha256:bb7ef23a07dcb6c6b...
+  systemctl restart nexus.service  (SESSIONS dropped; reconcile re-adopts)
+  after restart : LIST -> sid 704f44ce, student_name '(reconciled)', substrate_image
+                  'aegis/frr:latest', digest sha256:bb7ef23a07dcb6c6b..., matches True.
+
+CONCLUSION: no defect. After a restart/adoption the LIST still names the pinned image AND the
+digest, and matches stays True — the panel a human reads keeps naming the substrate across a
+restart. The one residual edge (not in scope, flagged): if a session's lab were removed from the
+catalog, _get_lab would return None and the image name would fall back to '' while the digest
+remains — an honest blank, not a wrong name.
+
+Cleaned: stop 0/0, 0 clab containers left. No code changes.
