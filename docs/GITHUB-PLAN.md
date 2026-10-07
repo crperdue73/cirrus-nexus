@@ -20,8 +20,8 @@ unverifiable claims, no screenshots of a build that isn't here.
 - [x] `docs/` — adding-a-lab + grading-model guides
       (`docs/ADDING-A-LAB.md`, `docs/GRADING-MODEL.md`, 2026-10-07)
 - [x] `CONTRIBUTING.md`
-- [ ] `CITATION.cff`
-- [ ] `CITATION.cff` + `.github/ISSUE_TEMPLATE/` + `PULL_REQUEST_TEMPLATE.md`
+- [x] `CITATION.cff` (2026-10-07)
+- [ ] `.github/ISSUE_TEMPLATE/` + `PULL_REQUEST_TEMPLATE.md`
 - [ ] `architecture.md` + a diagram committed as source (mermaid or SVG)
 - [x] CI: GitHub Actions (backend compile, `bash -n install.sh`, self-contained check, secret scan)
 - [ ] Screenshots: the student UI + a terminal mid-lab (real captures only)

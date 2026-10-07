@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use AEGIS in a classroom, a curriculum, or a publication, please cite it as below."
+title: "AEGIS — Networking Labs for the Classroom"
+abstract: >-
+  AEGIS turns a single Linux host into a small, self-contained networking lab bench.
+  Students get real FRR and Nokia SR Linux routers and switches in a browser tab, with
+  an automated grader that scores their configuration against the live devices. It ships
+  two labs (demo-01-two-pcs-and-a-real-switch-unsolved and
+  demo-02-two-switches-one-router-unsolved) and covers static routing and L2 switching
+  only — no OSPF, BGP, EVPN, or VPNs.
+type: software
+authors:
+  - family-names: Perdue
+    given-names: Robbie
+    email: robbie@crperdue.com
+repository-code: "https://github.com/crperdue73/cirrus-nexus"
+url: "https://github.com/crperdue73/cirrus-nexus"
+license: Apache-2.0
+keywords:
+  - networking
+  - containerlab
+  - frr
+  - srlinux
+  - education
+  - static-routing
+  - l2-switching
