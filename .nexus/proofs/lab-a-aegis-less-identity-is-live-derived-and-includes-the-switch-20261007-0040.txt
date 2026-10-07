@@ -1,0 +1,32 @@
+RUN 246 — LAB-A (demo-01-two-pcs-and-a-real-switch-unsolved) — 2026-10-07
+
+QUESTION (from run 245's next-step): LAB-A has no aegis/frr node, so its identity is
+`aegis-less:<sha256>` — a hash over each node's `name=layer-chain`, not a pin. Is a
+silently-updated SR Linux image invisible, or does the identity reflect it?
+
+MEASURED LIVE. Started LAB-A via the product (session b06767ea, 3 nodes: pc-a, pc-b, sw1).
+Reported digest: aegis-less:0d40ee2f53920a9d7c069fe03b23311457294f998292656326fa7d5478a327b3
+Then recomputed the identity independently from the RUNNING containers, exactly as
+_aegis_less_identity() does (per-node: docker inspect -> image -> RootFS layer chain ->
+sha256; then sha256 over the sorted "name=layers" lines):
+
+  pc-a  image=sha256:3cb067eab609...  layers_sha=06758cf2dc51afef
+  pc-b  image=sha256:3cb067eab609...  layers_sha=06758cf2dc51afef
+  sw1   image=sha256:0787d541fbff...  layers_sha=e6a79106046cdb0c
+
+  computed aegis-less:0d40ee2f53920a9d7c069fe03b23311457294f998292656326fa7d5478a327b3
+  reported aegis-less:0d40ee2f53920a9d7c069fe03b23311457294f998292656326fa7d5478a327b3
+  MATCH: True.  sw1 (SR Linux) is included in the identity: True.
+
+CONCLUSION: no defect. The aegis-less identity is LIVE-DERIVED and covers every node,
+including the SR Linux switch — so a changed switch image changes the digest; it is not
+silently invisible.
+
+THE REMAINING GAP (a design decision, flagged for Dad, NOT auto-fixed): unlike the FRR
+substrate, which is pinned (assets/frr-image.pin) and asserted at install, the SR Linux
+image is PULLED and NOT pinned. So while a silent `docker pull` of a new :latest produces a
+different-but-HONEST digest, nothing flags it as "this is not the image the lab was authored
+against" — there is no expected value to compare to. Closing that would mean pinning the
+SR Linux image digest and asserting on start; that changes product behaviour and is Dad's call.
+
+Cleaned up: stop 0/0, 0 clab containers left. No code changes.
