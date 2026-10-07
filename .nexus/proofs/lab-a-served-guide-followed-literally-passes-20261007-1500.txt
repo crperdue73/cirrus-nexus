@@ -1,0 +1,18 @@
+RUN 262 — LAB-A — 2026-10-07
+
+QUESTION: does LAB-A's SERVED GUIDE work when followed literally (run 261's next-step, LAB-A leg)?
+
+METHOD: fetched /api/labs/demo-01.../guide, executed its two config blocks verbatim, ran its own
+verification.
+  PC-A: ip addr add 10.0.1.1/24 dev eth1; ip link set eth1 up
+  PC-B: ip addr add 10.0.1.2/24 dev eth1; ip link set eth1 up
+
+GUIDE'S OWN VERIFICATION, reproduced:
+  from PC-A: ping 10.0.1.254 (switch) OK, ping 10.0.1.2 (PC-B) OK
+
+GRADED: pc-a passed=True 1.0, pc-b passed=True 1.0, sw1 passed=True 1.0  (ALL PASS True).
+
+CONCLUSION: no defect. Both labs' served guides are correct when followed literally (LAB-B 5/5 run
+261; LAB-A 3/3 this run). Student instructions and grader agree for both shipping labs.
+
+Cleaned: stop 0/0, 0 clab containers left. No code changes.
