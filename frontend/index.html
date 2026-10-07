@@ -496,9 +496,12 @@ async function loadLiveSessions() {
             ' \u00b7 ' + (s.nodes ? s.nodes.length : 0) + ' nodes \u00b7 id ' +
             escapeHtml(s.session_id) + '</div>' +
             '<div style="font-size:11px;opacity:0.55;font-family:monospace;">substrate: ' +
+            escapeHtml(s.substrate_image ? s.substrate_image + ' \u00b7 ' : '') +
             escapeHtml(digest || '(no digest)') + '</div>' +
             (s.runtime_digest_matches === false
-                ? '<div style="font-size:11px;color:var(--error);">\u26a0\ufe0f substrate changed since this lab started \u2014 grades will refuse; end and restart the lab</div>'
+                ? '<div style="font-size:11px;color:var(--error);">\u26a0\ufe0f substrate changed since this lab started \u2014 now ' +
+                  escapeHtml(String(s.runtime_digest_live || '(unreadable)').slice(0, 24)) +
+                  '; grades will refuse; end and restart the lab</div>'
                 : '') +
             '</div>' +
             '<div style="display:flex;gap:8px;white-space:nowrap;">' + reconnectBtn +

@@ -1921,9 +1921,15 @@ def list_sessions(request: Request = None):
     """
     sessions = []
     for sid, s in SESSIONS.items():
+        # RUN 248: the panel a human reads could say "substrate changed" but never WHAT it changed
+        # to, and never named the pinned image. Carry the lab's substrate image alongside the digest
+        # so the panel can name it, the same way the start-success view does (run 247). A lab with no
+        # aegis/frr node reports '' (run 247), so the panel shows no false image name.
+        _lab = _get_lab(s.get("lab_id", "")) if s.get("lab_id") else None
         sessions.append({
             "session_id": sid,
             "lab_id": s.get("lab_id", ""),
+            "substrate_image": (_lab.substrate_image if _lab else ""),
             "student_name": s.get("student_name", ""),
             "status": s.get("status", ""),
             "created_at": s.get("created_at", 0),

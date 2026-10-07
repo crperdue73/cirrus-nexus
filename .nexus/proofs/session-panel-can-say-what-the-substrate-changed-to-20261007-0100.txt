@@ -1,0 +1,30 @@
+RUN 248 — LAB-A thread (panel is shared) — 2026-10-07
+
+QUESTION (run 247's next-step): the Running-sessions panel reads the LIST route, which
+carried only the opaque digest and no substrate image — so a reader told "substrate changed
+since this lab started" could not see WHAT it changed to, or which image was pinned.
+
+MEASURED BEFORE (live): GET /api/sessions returned runtime_digest / runtime_digest_live /
+runtime_digest_matches but NO substrate image, and the panel rendered a bare labeled digest.
+
+FIX (2 files; backup via safe-backup.sh):
+  backend/main.py  LIST entry now carries "substrate_image" (the lab's, '' for a lab with no
+                   aegis/frr node — run 247's rule), looked up per session.
+  frontend/index.html  the panel line now reads "substrate: <image> · <short digest>" and, on a
+                   mismatch, "substrate changed since this lab started — now <live short>".
+
+VERIFIED LIVE (session 938ede4a, LAB-B):
+  healthy  -> GET /api/sessions: substrate_image 'aegis/frr:latest', digest == live
+              sha256:bb7ef23a07dcb6c6b34e225..., matches True
+  mismatch -> substituted r1 (the aegis/frr node) with an alpine container under the same name
+              (run-230 technique): matches False, pinned sha256:bb7ef23a..., live
+              aegis-less:6c6a04de9e80554a870ce...  => the panel now shows BOTH what was pinned and
+              what it is now. (Substituting sw1 first changed nothing — sw1 is not the substrate
+              node; only r1 is. Correct, and noted.)
+  served index.html grep-confirmed to contain the new panel string.
+  catalog unchanged: demo-01 substrate_image '' / demo-02 'aegis/frr:latest' (run 247).
+
+Both labs share the panel code path; measured on LAB-B because a mismatch needs a pinned
+substrate node to diverge. NOTE: I found TWO live LAB-B sessions — one left running from the
+run-247 recon this session did not stop. Both stopped; 0 clab containers left.
+No code changes beyond the two files.
