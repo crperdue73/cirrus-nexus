@@ -1,0 +1,23 @@
+RUN 252 — LAB-A — 2026-10-07
+
+QUESTION (the pivot off identity): does the lab actually work for a STUDENT end to end — configure
+from the terminals, then grade, and get a PASSING verdict that cites that run's identity?
+
+MEASURED LIVE (session e0d33875, LAB-A, 3 nodes pc-a/pc-b/sw1):
+  followed the lab's own instructions via the containers:
+    pc-a: ip addr add 10.0.1.1/24 dev eth1 ; ip link set eth1 up   -> eth1 UP 10.0.1.1/24
+    pc-b: ip addr add 10.0.1.2/24 dev eth1 ; ip link set eth1 up   -> eth1 UP 10.0.1.2/24
+  graded both PCs (POST /submit):
+    pc-a: passed=True score=1.0 status=graded
+          feedback: "eth1 has 10.0.1.1/24" / "can ping the switch (10.0.1.254)" / "can ping PC-B (10.0.1.2)"
+    pc-b: passed=True score=1.0 status=graded
+          feedback: "eth1 has 10.0.1.2/24"
+
+  identity: start digest == grade digest == aegis-less:0d40ee2f53920a9d7c069fe03b23311457294f998292656326fa7d5478a327b3 (MATCH True).
+
+CONCLUSION: no defect. LAB-A's student path works end to end — a student following the lab
+instructions gets a PASSING verdict, and the verdict cites the same identity the session started
+with. This is the "does the lab work for a student" half of Dad's asks, and it holds for LAB-A.
+(LAB-B's full solve was verified separately, run 247's canary: 5/5 nodes passed=True 1.0.)
+
+Cleaned: stop 0/0, 0 clab containers left. No code changes.
