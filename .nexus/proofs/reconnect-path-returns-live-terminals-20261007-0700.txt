@@ -1,0 +1,18 @@
+RUN 254 — LAB-A — 2026-10-07
+
+QUESTION: does a returning student (page refresh) get their RUNNING terminals back, and does the
+session stay gradeable — the ttyd reconnect the code advertises?
+
+MEASURED LIVE (session 92d36e7e, LAB-A):
+  start response carried a ttyd map: pc-a -> http://127.0.0.1:8781 (pid alive), pc-b 8782, sw1 8783.
+  GET /api/sessions (what the page reload reads) carried the SAME ttyd URLs -> the UI can offer
+  Reconnect instead of only a Stop button.
+  terminal liveness: curl http://127.0.0.1:8781 -> HTTP 200 (ttyd is serving).
+  still gradeable after the "refresh": POST /submit?node=pc-a -> HTTP 200, status=graded
+  (passed=False is correct: pc-a was left unconfigured this run).
+
+CONCLUSION: no defect. The reconnect path works — a refreshed page gets the live terminal URLs
+back and the session remains gradeable. URLs are host-rewritten to the request's Host header (run
+50), so a student hitting the box's LAN address gets reachable URLs.
+
+Cleaned: stop 0/0, 0 clab containers left. No code changes.
