@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Backend compiles
+        run: python3 -m py_compile backend/main.py
+
+      - name: Installer is valid shell
+        run: bash -n install.sh
+
+      - name: Repo is self-contained (clone-and-install completeness)
+        run: python3 tools/check_self_contained.py
+
+      - name: No obvious secrets committed
+        run: |
+          if grep -rInE 'gho_[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|BEGIN [A-Z ]*PRIVATE KEY' \
+               --include='*.py' --include='*.sh' --include='*.yml' --include='*.json' \
+               --include='*.html' --include='*.md' . ; then
+            echo "::error::possible secret committed"; exit 1
+          fi
+          echo "no secrets found"

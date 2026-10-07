@@ -1,0 +1,5 @@
+# Runtime dependencies for the AEGIS backend.
+# install.sh installs these; kept here so CI and tooling share one source of truth.
+fastapi
+uvicorn
+pyyaml

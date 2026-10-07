@@ -194,9 +194,9 @@ else
     warn "No assets/ dir found — FRR image must be built from source instead"
 fi
 
-# Fix the start_server.py path if it references the old workspace
-sed -i 's|/home/student/.openclaw/workspace-selina/projects/aegis|'"${AEGIS_DIR}"'|g' \
-    "${AEGIS_DIR}/start_server.py" 2>/dev/null || true
+# start_server.py resolves its own path (Path(__file__).parent), so no path fix-up is
+# needed. The old sed that rewrote a hard-coded development path was removed 2026-10-06
+# so the installer carries no reference to any developer's working directory.
 
 # Create a service user if it doesn't exist
 if ! id "${SERVICE_USER}" &>/dev/null; then
