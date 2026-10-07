@@ -1,0 +1,18 @@
+RUN 258 — LAB-A/B artifact integrity — 2026-10-07
+
+FOUND: the shippable bundle frontend/nexus-release.tar.gz was STALE. It was built 00:17; runs 247
+and 248 then edited backend/main.py and frontend/index.html (01:02) WITHOUT rebuilding it.
+MEASURED: the bundle's backend/main.py lacked the "RUN 248" marker present in the tree; cmp showed
+both main.py and index.html differed from the tree. (This is the exact failure class the README
+records: a bundle left stale and referenced by nothing, so nothing flags it.)
+
+FIX: rebuilt the bundle with the documented command (docs/OPERATIONS.md). Verified:
+  backend/main.py IN SYNC, frontend/index.html IN SYNC (cmp).
+  23 entries, 0 private keys (.key/.pem), 20,514,575 bytes, sha256 354a3730577e795f96614250dd9ee2dc0938ff3f26e98b81781cac8fc6175caf.
+  pre-rebuild copy kept at /tmp/nexus-release.tar.gz.pre-r258 (not committed; bundle is gitignored).
+
+GUARD: added tools/check_bundle_fresh.sh (fails if the bundle's main.py/index.html differ from the
+tree) and wired it into the daily nexus-repo-hygiene cron so it rebuilds when stale. Tested: exits 0
+when in sync.
+
+Cleaned: no session started (no clab containers).
