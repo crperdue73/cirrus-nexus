@@ -1,0 +1,23 @@
+RUN 263 — LAB-B — 2026-10-07
+
+QUESTION (run 262's next-step): does the grader DISCRIMINATE — fail a subtly-wrong config with an
+accurate, specific message, not only fail an unconfigured node?
+
+METHOD: configured pc-a, pc-b and r1 fully correct EXCEPT r1 with IP forwarding OFF (one defect).
+  sanity: pc-a -> pc-b ping FAILS (path broken), as expected.
+
+GRADED WITH THE DEFECT:
+  r1   passed=False score=0.8   [OK eth1 10.0.1.253/24][OK eth2 10.0.2.253/24][FAIL "IP forwarding OFF (ip_forward=0)"]
+  pc-a passed=False score=0.833 [OK eth1 10.0.1.1/24][OK pings sw1][OK pings r1][FAIL "cannot ping pc-b across the router"]
+
+FIXED THE ONE DEFECT (ip_forward=1), re-graded:
+  r1   passed=True score=1.0
+  pc-a passed=True score=1.0
+
+CONCLUSION: no defect. The grader discriminates precisely — it named the forwarding defect
+specifically (addresses still passed) and the downstream ping failure, and both recovered to full
+credit when the one defect was fixed. Partial scores (0.8 / 0.833) reflect the checks that passed.
+This is the sharp test past the happy path: the grader catches a subtly-wrong config, not just an
+empty one.
+
+Cleaned: stop 0/0, 0 clab containers left. No code changes.
