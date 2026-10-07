@@ -1,0 +1,24 @@
+RUN 251 — LAB-B — 2026-10-07
+
+QUESTION (run 250's next-step): does a submitted GRADE cite the same identity the panel shows, or
+leave it machine-only?
+
+MEASURED LIVE (session c819527d, LAB-B):
+  panel digest (GET /api/sessions):              sha256:bb7ef23a07dcb6c6b34e225dd7...
+  grade digest (POST /submit?node=r1, HTTP 200): sha256:bb7ef23a07dcb6c6b34e225dd7...
+  MATCH: True.  grade keys: [competencies, feedback, node, passed, runtime_digest, score, status].
+
+CODE: GraderResult carries runtime_digest; grade_config pins it at start and (run 230) re-resolves
+the live digest and REFUSES if the substrate changed, so a graded verdict's digest always equals
+the session's pinned digest — the two can never disagree.
+
+CONCLUSION: no defect. The grade and the panel cite the SAME identity. The student-facing grade
+CARD does not re-render the digest, but the panel on the same page does, so a human can match them.
+
+THREAD STATUS (named, not manufactured): the identity/attribution surface is now closed for BOTH
+labs across every reader — start response (247), start-success view (247), running-sessions panel
+(248), restart/adoption (249 LAB-B, 250 LAB-A), and the grade (251). Runs 249-251 all returned
+"no defect". Continuing to mine this theme would be manufacturing work. The next step PIVOTS to the
+other half of Dad's asks: does the lab actually work for a student end to end.
+
+Cleaned: stop 0/0, 0 clab containers left. No code changes.
