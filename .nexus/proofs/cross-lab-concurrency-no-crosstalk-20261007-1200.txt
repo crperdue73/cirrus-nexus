@@ -1,0 +1,20 @@
+RUN 259 — LAB-A + LAB-B — 2026-10-07
+
+QUESTION: with one LAB-A and one LAB-B running AT ONCE, is there any port/container cross-talk, and
+does each grade cite its own lab's identity?
+
+MEASURED LIVE:
+  LAB-B 579491e7: sha256:bb7ef23a07dcb6c6b..., 5 nodes, ttyd ports 8796-8800
+  LAB-A 40af19f6: aegis-less:0d40ee2f53920a9d..., 3 nodes, ttyd ports 8801-8803
+  PORT COLLISION: set() — none.  8 clab containers total, distinct names.
+  graded a node in each:
+    LAB-B r1   -> digest sha256:bb7ef23a... (== LAB-B start), passed False
+    LAB-A pc-a -> digest aegis-less:0d40ee2f... (== LAB-A start), passed False
+  CROSS-TALK: B-grade == A-digest -> False; A-grade == B-digest -> False.
+  SELF-CONSISTENT: B grade == B start True; A grade == A start True.
+
+CONCLUSION: no defect. The two labs coexist with no port or container collision, and each verdict
+cites its own lab's identity — no cross-talk. (passed False is correct: the nodes were left
+unconfigured this run.)
+
+Cleaned: both sessions stopped, 0 clab containers left. No code changes.
