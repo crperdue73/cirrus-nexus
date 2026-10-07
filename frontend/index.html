@@ -495,7 +495,7 @@ async function loadLiveSessions() {
             '<div style="font-size:12px;opacity:0.7;">' + escapeHtml(s.student_name || '') +
             ' \u00b7 ' + (s.nodes ? s.nodes.length : 0) + ' nodes \u00b7 id ' +
             escapeHtml(s.session_id) + '</div>' +
-            '<div style="font-size:11px;opacity:0.55;font-family:monospace;">' +
+            '<div style="font-size:11px;opacity:0.55;font-family:monospace;">substrate: ' +
             escapeHtml(digest || '(no digest)') + '</div>' +
             (s.runtime_digest_matches === false
                 ? '<div style="font-size:11px;color:var(--error);">\u26a0\ufe0f substrate changed since this lab started \u2014 grades will refuse; end and restart the lab</div>'
@@ -808,6 +808,28 @@ function getSessionHTML(data) {
     var tip = lab.tip || '';
     var gradeableNodes = lab.gradeable_nodes || [];
 
+    // RUN 247: the start-success view is where a student actually reads about their session, and
+    // it said nothing about WHICH substrate the session is pinned to. The identity lived only in
+    // the side panel, as a truncated unlabeled hash, and the pinned image's NAME was shown
+    // nowhere a human looks -- so a student (or the operator) could not tell 'aegis/frr' from
+    // anything else. Surface the identity here, in words.
+    var substrateHtml = '';
+    var _digest = String(data.runtime_digest || '');
+    var _img = String(lab.substrate_image || '');
+    var _short = _digest ? _digest.slice(0, 24) : '';
+    if (_digest.indexOf('sha256:') === 0) {
+        substrateHtml = '<p style="font-size:12px;color:var(--text-muted);margin:4px 0 0 0;">' +
+            '\u{1f512} Pinned substrate: ' + escapeHtml(_img || 'AEGIS substrate') +
+            (_short ? ' \u00b7 ' + escapeHtml(_short) : '') + '</p>';
+    } else if (_digest.indexOf('aegis-less:') === 0) {
+        substrateHtml = '<p style="font-size:12px;color:var(--text-muted);margin:4px 0 0 0;">' +
+            '\u{1f512} Pinned substrate: none \u2014 this lab runs no AEGIS substrate ' +
+            '(identity is a hash over its node images' + (_short ? ': ' + escapeHtml(_short) : '') + ')</p>';
+    } else {
+        substrateHtml = '<p style="font-size:12px;color:var(--text-muted);margin:4px 0 0 0;">' +
+            '\u{1f512} Pinned substrate: (no runtime identity)</p>';
+    }
+
     // Build dynamic instructions
     var instructionsHtml = '';
     if (instructions.length > 0) {
@@ -840,7 +862,9 @@ function getSessionHTML(data) {
     return '<div class="lab-session">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
         '<div><h2 style="font-size:18px;">\u{1f9ea} ' + escapeHtml(lab.name || '') + '</h2>' +
-        '<p style="font-size:13px;color:var(--text-muted);">Session: ' + escapeHtml(data.session_id || '') + '</p></div>' +
+        '<p style="font-size:13px;color:var(--text-muted);">Session: ' + escapeHtml(data.session_id || '') + '</p>' +
+        substrateHtml +
+        '</div>' +
         '<div><button class="btn btn-danger" onclick="stopSession()">\u2715 End Lab</button></div></div>' +
 
         instructionsHtml +

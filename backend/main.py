@@ -142,11 +142,13 @@ class LabDef(BaseModel):
     # said so. This field makes that honest on the wire, not just in a
     # markdown banner nobody in the UI reads.
     validates_switch_authenticity: bool = False
-    # The substrate image THIS lab's routers run. Defaults to the pinned base
-    # substrate. The capability gate below reads the image the lab ACTUALLY
-    # deploys (not a global default), so capability and deployability can never
-    # disagree: a lab that needs a daemon the substrate disables is (correctly)
-    # refused rather than deployed onto an image that can only grade it red.
+    # The substrate image THIS lab's routers run, read from the lab's own
+    # topology (RUN 247): the `aegis/frr...` image its routers deploy, or ""
+    # when the lab runs NO aegis/frr node (e.g. demo-01, which is alpine PCs
+    # plus a real Nokia SR Linux switch and has an `aegis-less:` identity). The
+    # capability gate below reads `substrate_image or AEGIS_SUBSTRATE_IMAGE`, so
+    # a lab that needs a daemon still gets checked against the pinned base; but
+    # the CATALOG no longer advertises a substrate a lab does not run.
     substrate_image: str = ""
 
 
@@ -416,16 +418,28 @@ def _parse_yaml_metadata(path: Path) -> dict | None:
 def _substrate_image_for(topology_file: str) -> str:
     """Detect which AEGIS substrate a lab's routers run, from its topology.
 
-    Scans node specs for the first `aegis/frr...` image. Falls back to the
-    pinned base. This makes the topology the source of truth for capability:
-    the gate reads exactly the image the lab will deploy, so a lab and its
-    substrate cannot drift apart (lab-04 vs. a bgpd=no base was that drift).
+    Scans node specs for the first `aegis/frr...` image and returns it. This
+    makes the topology the source of truth for capability: the gate reads
+    exactly the image the lab will deploy, so a lab and its substrate cannot
+    drift apart (lab-04 vs. a bgpd=no base was that drift).
+
+    RUN 247: this used to FALL BACK to `AEGIS_SUBSTRATE_IMAGE` (aegis/frr) even
+    when the lab runs no `aegis/frr` node at all, so the served catalog told a
+    lie about the shipping demo: `demo-01` is alpine PCs + a Nokia SR Linux
+    switch and runs NO aegis/frr node (its identity is `aegis-less:` -- see
+    docs/OPERATIONS.md), yet `/api/labs/demo-01-...` reported
+    `substrate_image: aegis/frr:latest`. A field that names a substrate the lab
+    does not run is not a default, it is a false statement about the lab.
+    Returns "" when the topology contains no `aegis/frr` node; callers that
+    need the pinned base as a fallback (the capability gate) already write
+    `lab.substrate_image or AEGIS_SUBSTRATE_IMAGE`, so their behaviour is
+    unchanged.
     """
     try:
         with open(LABS_DIR / topology_file) as f:
             data = yaml.safe_load(f) or {}
     except (OSError, yaml.YAMLError):
-        return AEGIS_SUBSTRATE_IMAGE
+        return ""
     nodes = (data.get("topology") or {}).get("nodes") or {}
     if isinstance(nodes, dict):
         for spec in nodes.values():
@@ -434,7 +448,7 @@ def _substrate_image_for(topology_file: str) -> str:
             image = spec.get("image")
             if isinstance(image, str) and image.startswith("aegis/frr"):
                 return image
-    return AEGIS_SUBSTRATE_IMAGE
+    return ""
 
 
 def _discover_labs() -> list[dict]:

@@ -1,0 +1,79 @@
+RUN 247 — LAB-B (demo-02-two-switches-one-router-unsolved) — 2026-10-07
+
+QUESTION (run 246's next-step): the REFUSAL path already speaks (run 245's startup warning,
+the run-182 refusal text). Does the SUCCESS path of start tell the student WHICH substrate
+image their session is pinned to — is the identity surfaced where a HUMAN reads it, or is it
+only machine-comparable?
+
+MEASURED LIVE. Started LAB-B via the product (session de49a1d2, 5 nodes: pc-a, pc-b, r1,
+sw1, sw2). Start response carried:
+    runtime_digest = sha256:bb7ef23a07dcb6c6b34e225dd77fa2eb592700975843ad1f1aa0105f49f9220c
+    lab.substrate_image = aegis/frr:latest
+So the two facts ARE in the payload. But the places a human reads them did not show them:
+
+  * START-SUCCESS VIEW (frontend getSessionHTML): renders lab name, session id, instructions,
+    terminals, and the Check buttons — and NOT the digest and NOT the image name. Rendered the
+    ACTUAL served function against the real start response (node harness extracting getSessionHTML
+    from the served index.html): "shows digest? false", "names image aegis/frr? false". A student
+    completing a lab was never told what substrate they ran on.
+  * SESSION RECORD (GET /api/sessions/{id}): exposes runtime_digest / _live / _matches — and NO
+    field naming an image. (list(record.keys()) has no 'image'/'substrate' entry.)
+  * RUNNING-SESSIONS PANEL (GET /api/sessions -> the only human-facing place the digest appears):
+    showed the identity as a bare, unlabeled, 24-char-truncated monospace line
+    "sha256:bb7ef23a07dcb6c6b34e225" with nothing saying it was the substrate.
+
+CONCLUSION: the identity was MACHINE-COMPARABLE ONLY. Every reader was a machine comparing
+two values; no human-facing surface named the pinned substrate image.
+
+WHILE SURFACING IT, FOUND AND FIXED A SECOND THING: the catalog MIS-NAMED the substrate for the
+no-substrate lab). `substrate_image` is served at /api/labs/{id}. For demo-01 it read
+"aegis/frr:latest" — but demo-01 is alpine PCs + a Nokia SR Linux switch and runs NO aegis/frr node
+at all (its identity is `aegis-less:` — docs/OPERATIONS.md; run 246). `_substrate_image_for()` fell
+back to the pinned base whenever a topology named no `aegis/frr` node, so the catalog advertised a
+substrate the lab does not run. A field that names a substrate a lab does not run is not a default;
+it is a false statement about the lab.
+
+FIX (2 files; backups via safe-backup.sh -> .nexus/bundle-archive):
+  1. backend/main.py — `_substrate_image_for()` now returns "" when the topology contains no
+     `aegis/frr` node (and "" on unreadable topology). The capability gate is unchanged: it already
+     writes `lab.substrate_image or AEGIS_SUBSTRATE_IMAGE`, so it still checks the pinned base.
+     Verified live: /api/labs -> demo-01 substrate_image '' (was 'aegis/frr:latest'),
+     demo-02 substrate_image 'aegis/frr:latest' (unchanged, correct).
+  2. frontend/index.html — the start-success view now shows the pinned substrate in words:
+     "🔒 Pinned substrate: aegis/frr:latest · sha256:bb7ef23a07dcb6c6b" when the digest is a
+     `sha256:` (a pinned AEGIS substrate), or "none — this lab runs no AEGIS substrate (identity is
+     a hash over its node images: aegis-less:...)" for an aegis-less lab. The panel digest line is
+     now labeled "substrate: ".
+
+VERIFIED (both labs, both directions):
+  * LAB-B real start (de49a1d2): view renders "🔒 Pinned substrate: aegis/frr:latest ·
+    sha256:bb7ef23a07dcb6c6b"; instructions and Check buttons still present (no regression).
+  * LAB-A real start (949834e2): view renders "🔒 Pinned substrate: none — this lab runs no AEGIS
+    substrate (identity is a hash over its node images: aegis-less:0d40ee2f53920)"; view does NOT
+    name aegis/frr (correct).
+  * render test runs the ACTUAL served getSessionHTML (extracted from the served index.html), not a
+    copy — the served file was also grep-confirmed to carry the new lines over HTTP.
+  * CANARY (no regression): LAB-B full solve 5/5 pc-a/pc-b/r1/sw1/sw2 all passed=True score=1.0,
+    each citing sha256:bb7ef23a07dcb6c6b34e225... ; session verdict -> "submitted",
+    runtime_digest_matches True.
+  * cleaned 0/0/0 (both sessions destroyed, 0 clab containers, 0 clab dirs); bundle rebuilt
+    frontend/nexus-release.tar.gz sha256 8e5dc5201880cbe9c334df17d43cc7a99ab78191b62b695684e94b4b4c996552,
+    23 entries, 0 private keys, backend/main.py AND frontend/index.html byte-identical to the tree.
+
+RESIDUAL / FLAGGED (not fixed):
+  * The pinned substrate IMAGE is named, but the digest is still an opaque hash and the LAB-A
+    SWITCH image (ghcr.io/nokia/srlinux:latest, a mutable tag) is still not named anywhere a human
+    looks — that is run 246's flagged "SR Linux is pulled, not pinned" product decision, and it is
+    Dad's call, not mine.
+  * A TEMPORAL ANOMALY in the record, flagged not repaired: the immediately-prior entries in
+    logs/nexus-forward.log are stamped 00:20 (run 245) and 00:45 (run 246) while the system clock
+    read 00:13 EDT and the run-246 proof file's mtime was 00:10:51 — i.e. the log timestamps sit
+    AHEAD of the clock that wrote the files. I did not edit them; I am naming it so the next reader
+    knows the log's clock is not the host's clock. (Run 229's lesson: a record without a trustworthy
+    time is a claim about an unknown moment.)
+
+MY ERRORS: none in the demonstration. The render harness stubs `document` for escapeHtml (a trivial
+escaping helper); everything asserted about the substrate line comes from the real served function
+and the real API response.
+
+No claim of completion — that is Dad's word alone.
