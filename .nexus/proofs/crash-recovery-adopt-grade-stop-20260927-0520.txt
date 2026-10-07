@@ -1,0 +1,35 @@
+VERIFICATION — crash/restart recovery chain: adopt -> grade -> stop
+Date: 2026-09-27 ~05:20 EDT   By: Selina   Trigger: hourly cron run 9
+
+WHY THIS TEST (the real-world case nobody had proven)
+  All prior proofs started a lab and graded it in one process life. The actual
+  production failure is: the service restarts (deploy, crash, box reboot) WHILE a
+  student's lab is running. Before reconcile existed, SESSIONS was in-memory, so a
+  restart made the app forget every live lab - GET /api/sessions said 0 with live
+  containers on the box, and those orphans could not be graded or stopped by id.
+  Nobody had proven the fix end to end. So I did.
+
+THE CHAIN (live, in order)
+  1. start LAB-A -> HTTP 200, id be249a51, 3/3 containers, registry 1
+  2. systemctl restart nexus.service  <-- lab deliberately LEFT RUNNING
+     after restart: service active, 3/3 containers STILL UP
+  3. GET /api/sessions/be249a51 ->
+       {"session_id":"be249a51", "student_name":"(reconciled)",
+        "status":"running", "runtime_digest":"aegis-less:0d40ee2f..."}
+     => ADOPTED automatically. Note "(reconciled)" and, critically, the digest was
+        RESOLVED OFF THE RUNNING CONTAINERS rather than left empty - so the
+        adopted session still satisfies the Step 5 invariant.
+  4. GRADE a reconciled session (the real test):
+       POST /api/sessions/be249a51/submit?node=sw1 -> passed=True score=1.0
+       "sw1: real SR Linux switch, SR Linux irb0.0 up with 10.0.1.254"
+     => a session the app FORGOT and RE-ADOPTED is fully gradeable.
+  5. STOP it -> {"status":"destroyed"} HTTP 200 -> 0 containers, 0 registry, 0 ttyd.
+     => adopted sessions are stoppable, i.e. NOT orphans.
+
+RESULT: restart -> adopt -> grade -> stop, all four links proven live.
+  The "silent dark lab" failure mode (a lab the product cannot see, grade, or stop)
+  no longer occurs for labelled sessions across a restart.
+
+SCOPE NOTE: this is reconcile_sessions() working as designed plus my ghost reaper
+  on the timer. Both are inside the 2-lab scope (their session lifecycle).
+  NOT COMPLETE. Dad's word alone.

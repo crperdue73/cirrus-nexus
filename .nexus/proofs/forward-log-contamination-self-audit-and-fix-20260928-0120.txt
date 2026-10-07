@@ -1,0 +1,40 @@
+SELF-AUDIT — my own audit log was 95% noise; found and fixed the writer
+Date: 2026-09-28 ~01:20 EDT   By: Selina   Trigger: hourly cron run 29
+
+WHY: 28 runs verified the product. Nobody had audited my OWN proof trail since
+run 19. Run 19's audit caught me citing a number I had not re-run. Same idea,
+tonight's work.
+
+WHAT I FOUND (my own defect):
+  logs/nexus-forward.log held 1121 lines: 56 real entries, 1065 junk lines (95%).
+  The junk was the cron prompt text and the agent CLI's echoed response - i.e.
+  MY OWN CRON COMMAND was writing into MY OWN AUDIT LOG:
+
+    openclaw agent --agent selina -m "$PROMPT" >> "${WS}/logs/nexus-forward.log" 2>&1
+
+  The CLI echoes the prompt back, so every hour the log grew by ~60 lines of
+  prompt text. Consequence: anything reading the log with `tail` (including my
+  own audits) got garbage instead of entries - I hit exactly this during this
+  run when `tail -6` returned a cron prompt line. The log got polluted silently
+  because I only ever read MY OWN appended lines, never the file.
+
+  This is the same failure class I keep catching: assert a fact without reading
+  the source. Here the source was the file I myself write.
+
+FIX (reversible): the CLI's output now goes to its own
+  logs/nexus-forward-runner.log; nexus-forward.log holds ONLY the entries appended
+  deliberately (per the cron's "append ONE line" instruction). Backup:
+  scripts/nexus-forward.sh.bak-2026-09-28-logfix
+  Then re-extracted the 56 real entries into a clean nexus-forward.log and kept
+  the polluted original as logs/nexus-forward.log.polluted-20260928 (evidence,
+  not deleted).
+
+VERIFIED AFTER:
+  script: bash -n OK; the two redirects now target different files
+  clean log: 56 lines, RUN 2..28, NO gaps
+  citations: 28 unique proof paths cited across the whole log - ALL exist, 0 missing
+  (an earlier empty result in this run was my own grep using the wrong path prefix;
+   re-tested with the real prefix - every citation resolves)
+
+STATE: 0 clab containers, service active, /api 200.
+NOT COMPLETE. Dad's word alone.

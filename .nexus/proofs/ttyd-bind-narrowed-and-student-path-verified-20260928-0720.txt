@@ -1,0 +1,47 @@
+FIX — student lab shells were exposed on EVERY interface, not just the LAN
+Date: 2026-09-28 ~07:20 EDT   By: Selina   Trigger: hourly cron run 36 (LAB-A focus)
+
+WHAT I WAS DOING: the last unexamined surface was not code paths but the STUDENT
+EXPERIENCE - the real click-path (name -> pick lab -> start -> terminals -> grade)
+in a real browser. Started LAB-A live and followed the terminal delivery.
+
+WHAT IS GENUINELY WELL-BUILT (verified, not assumed):
+  * TTYD URL host is DERIVED live from `hostname -I`, preferring the LAN IP and
+    skipping docker bridges (172.x) and loopback. Not hardcoded.
+  * Each ttyd runs as a child of nexus.service, does `docker exec -it <container> sh`
+    into the REAL container, `-W` writable. ttyd sends no X-Frame-Options/CSP, so
+    the cross-origin iframe embedding works. Verified: iframe LOADED ok.
+  * Teardown is clean: stop 200 -> containers 0, ttyd 0, session gone.
+
+DEFECT FOUND:
+  start_ttyd_process bound ttyd with `-i 0.0.0.0` while ADVERTISING the LAN IP in
+  the URL. So the bound interface and the URL disagreed: a student's live,
+  WRITABLE root shell in their lab container was reachable from ANY host on the
+  network (any routable interface), not only the LAN address the UI points at.
+  There is no auth on ttyd. On a demo LAN this is likely intended-ish, but it is
+  wider than the advertised contract and it was not a deliberate-looking choice -
+  the hardcoded 0.0.0.0 sat right next to code that carefully derived the host.
+
+FIXED (reversible): hoisted host detection into `_detect_ttyd_host()` and used it
+  for BOTH the bind and the advertised URL, so they cannot disagree. Falls back to
+  0.0.0.0 only when detection yields nothing. Backup:
+  backend/main.py.bak-2026-09-28-ttydbind
+
+VERIFIED LIVE:
+  py_compile OK; service active; /api 200
+  live LAB-A (a9bfa4da): all 3 ttyd procs now bind `-i 192.168.1.110` (was 0.0.0.0)
+  student path intact: http://192.168.1.110:<port>/ -> 200; iframe LOADED ok
+  exposure narrowed: http://172.17.0.1:<port>/ -> 000 (connection refused)
+  grading unaffected: pc-b -> False 0.0 status graded
+  stop 200 -> containers 0, ttyd 0
+
+MY OWN ERROR IN THIS RUN (4th of the night): I reported "containers: 0" while a
+  session was still running, then saw 3 ttyd procs next to it, and nearly filed a
+  GHOST-CONTAINER bug ("containers died but ttyd lived"). It was MY PROBE: the
+  count ran in a shell whose `sleep` raced the previous stop, and my follow-up
+  probe crashed on `nodes.keys()` because nodes is a LIST. Re-read the source and
+  the live session (status running, 3 containers, 3 ttyd) = fully consistent.
+  No ghost. Same class as runs 32/33/34: check the probe before the product.
+
+STATE: 0 clab containers, 0 ttyd, service active, /api 200.
+NOT COMPLETE. Dad's word alone.

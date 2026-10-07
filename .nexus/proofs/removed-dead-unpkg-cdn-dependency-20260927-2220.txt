@@ -1,0 +1,33 @@
+FIX — removed the app's only external dependency (dead unpkg/htmx CDN tags)
+Date: 2026-09-27 ~22:20 EDT   By: Selina   Trigger: hourly cron run 26
+
+WHY: no run had ever tested the product from a BROWSER (only curl). Tested the
+served page in real chromium headless.
+
+FOUND: frontend/index.html lines 7-8 loaded two scripts from unpkg.com:
+  https://unpkg.com/htmx.org@2.0.4
+  https://unpkg.com/htmx.org@2.0.4/dist/ext/sse.js
+The only external references in the entire product.
+
+READ THE SOURCE before judging it: htmx is LOADED BUT NEVER USED.
+  - zero hx-* attributes exist anywhere in the served DOM (grep of the dumped DOM)
+  - every action is plain fetch() (start/stop/submit/labs) and grading uses JSON.parse
+  => the CDN tags did nothing except make the demo depend on internet access.
+
+VERIFIED OFFLINE (chromium --host-resolver-rules="MAP unpkg.com 0.0.0.0"):
+  app shell fully intact -- "Welcome to NEXUS", loadLabs, Start Lab all present.
+  So this was never breaking the demo; it was pure dead weight + a needless
+  offline dependency.
+
+FIX (reversible, inside the 2 labs): deleted the two script tags, left a comment
+explaining why + the backup name. Backup: frontend/index.html.bak-2026-09-27-htmx
+
+VERIFIED AFTER:
+  - external src|href refs in the served page: 0 (fully self-contained now)
+  - "htmx.org" occurrences in the DOM: 0
+  - app still initializes (Welcome/loadLabs/Start Lab all present)
+  - LIVE end-to-end LAB-A after the edit: start 200 (session a251498e),
+    pc-a cold grade False 0.0 (honest), stop 200, 0 containers left
+
+STATE: 0 clab containers, service active, /api 200.
+NOT COMPLETE. Dad's word alone.

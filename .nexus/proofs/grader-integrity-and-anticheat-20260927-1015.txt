@@ -1,0 +1,41 @@
+VERIFICATION — grader integrity + anti-cheat (the claim, tested not assumed)
+Date: 2026-09-27 ~10:15 EDT   By: Selina   Trigger: hourly cron run 14
+
+WHY: 13 runs tested the API surface. This run went BELOW it and tested whether the
+grader tells the truth — a green score is worthless if a fake can earn it.
+
+STEP 1 — I thought I found a bug. I was wrong, and the source says so.
+  On a "cold" start, sw1 graded 1.0 WITH NO CONFIGURATION APPLIED. I nearly filed
+  it. Rule applied: READ THE SOURCE BEFORE REACTING TO THE NUMBER.
+  The lab guide states it outright: "The two switches' IRBs arrive pre-configured
+  (that is deliberate: this lab is about the routed path, not about switch
+  bring-up)." The grader's own table says sw1 "full credit when: shipped
+  pre-configured."
+  => 1.0 cold is CORRECT. The LAB intentionally tests the ROUTED path; the PCs
+     and router ship unconfigured (and correctly fail cold: pc-a 0.0).
+     NOT a bug. My instinct was wrong, evidence won.
+
+STEP 2 — is the switch REAL? (N3's concern, applied to our own lab)
+  sw1 `sr_cli 'show interface irb0'`:
+    irb0.0 is up; mac-vrf-1 + ip-vrf-1; IPv4 10.0.1.254/24 (static, primary)
+    chassis: 7220 IXR-D2L   <- a real SR Linux model
+  => genuine SR Linux, not a Linux PC wearing a switch label.
+
+STEP 3 — THE ANTI-CHEAT, PROVEN DIRECTLY (not narrated)
+  The grader's `_srl_irb_ok(container, ip)` reads the IRB via sr_cli and REQUIRES
+  the SR Linux fingerprint. Called it directly:
+    _srl_irb_ok(sw1, "10.0.1.254") -> (True,  "SR Linux irb0.0 up with 10.0.1.254")
+    _srl_irb_ok(sw1, "10.9.9.9")   -> (False, "10.9.9.9 not found on irb0.0")
+  CONTROL (the one that matters): I planted the switch's EXACT expected address
+  (10.0.2.254) on pc-b — a plain Linux PC with no sr_cli — and asked the grader to
+  accept pc-b as sw2:
+    _srl_irb_ok(pc-b, "10.0.2.254") -> (False, "sr_cli not available — node is not
+                                              an SR Linux switch")
+  => having the right IP is NOT enough. The fake is refused. The anti-cheat works.
+
+CONCLUSION
+  The 2 labs grade honestly: real switches required, fakes refused, and the one
+  "cold pass" is a documented design decision, not a hole. This is the property
+  Dad wanted when he asked for a real-switch check.
+
+NOT COMPLETE. Dad's word alone.

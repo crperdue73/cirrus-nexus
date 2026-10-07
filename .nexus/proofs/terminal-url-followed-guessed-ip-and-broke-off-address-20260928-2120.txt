@@ -1,0 +1,64 @@
+TERMINAL URLS ADVERTISED A GUESSED LAN IP AND REFUSED EVERY OTHER CLIENT (LAB-A)
+Date: 2026-09-28 ~21:20 EDT   By: Selina   Trigger: cron run 50 (LAB-A focus)
+
+WHY THIS RUN: runs 41-49 audited the grader and the happy path. This run walked
+the STUDENT's terminal path on LAB-A (the way the frontend actually opens a shell)
+and found a demo-day footgun in the session API.
+
+THE DEFECT (found live):
+  The host has TWO real LAN addresses: 192.168.1.110 and 192.168.1.188.
+  _detect_ttyd_host() picks the FIRST 192.168.* from `hostname -I` (.110) and that
+  single guess was (a) used as the ttyd BIND and (b) stored in the session as the
+  terminal URL for every client forever. Two failures follow:
+
+    1. WRONG HOST ADVERTISED. A browser that reached the frontend at .188 (or by
+       hostname, or over a tunnel) was handed terminal URLs on .110.
+    2. REFUSED CONNECTION. ttyd was bound to 192.168.1.110 only (run-36 narrowed
+       it from 0.0.0.0), and the API listens on 0.0.0.0:8000. So the frontend
+       LOADED at .188/localhost while every terminal URL was REFUSED.
+
+LIVE PROOF OF THE BUG (before the fix, addressed to the OTHER address):
+    GET /api/sessions  via 192.168.1.188  ->  ttyd urls all said
+    http://192.168.1.110:<port>   (.188 client handed .110 URLs)
+  Reachability on a running session:
+    http://192.168.1.110:8799 -> 200
+    http://127.0.0.1:8799     -> REFUSED
+    http://localhost:8799     -> REFUSED
+
+THE FIX (reversible, inside the 2 labs):
+  backend/main.py:
+   - new _rewrite_ttyd_urls(ttyd_info, request): swaps each URL's HOST for the
+     request's Host header; URL SHAPE (http://<host>:<port>) is unchanged, no new
+     route invented. No Host header -> leave the derived URL alone.
+   - start_lab(...) and list_sessions(...) now take `request: Request` and return
+     _rewrite_ttyd_urls(...). list_sessions is the reconnect path, so a reconnect
+     from a different address than the original start also resolves.
+   - start_ttyd_process bind reverted to 0.0.0.0 so whichever address the browser
+     used can actually reach the terminal. The URL is now request-derived, so a
+     narrow bind only breaks valid clients; access control belongs at the proxy.
+   - `Request` imported from fastapi (it was NOT imported; `request: Request`
+     would have failed at import time).
+  Backup: backend/main.py.bak-2026-09-28-ttydhosturl
+  NOTE: my FIRST attempt invented a /ttyd/<port>/ proxy URL shape that has no
+  route in this codebase - reverted before it shipped. (Read the source, don't
+  invent an interface.)
+
+PROOF OF THE FIX (service restarted, one session started via .188):
+    start via 192.168.1.188 -> ttyd urls http://192.168.1.188:8765/8766/8767
+    GET /api/sessions via .110      -> http://192.168.1.110:8765
+    GET /api/sessions via localhost -> http://localhost:8765
+    reachability of the advertised url on all three: .188 -> 200, .110 -> 200,
+    localhost -> 200
+  => the URL now follows the origin the browser actually used.
+
+ALSO VERIFIED THIS RUN (clean, no defect):
+  - LAB-A switch startup-config really applies: sw1 irb0.0 up, 10.0.1.254/24,
+    member of mac-vrf-1 AND ip-vrf-1 (README's "pre-configured" claim is true).
+  - The L2 claim is real: pc-a<->pc-b ping 0% loss, and sw1 shows
+    "Total Learnt Macs: 2 Active" - the switch genuinely learns on e1-1/e1-2.
+  - Duplicate-IP beginner error is graded honestly: pc-b given 10.0.1.1 ->
+    passed=False 0.0 "10.0.1.2 not found on eth1"; pc-a -> 0.75 naming the
+    exact failing check ("cannot ping PC-B (10.0.1.2)").
+
+TEARDOWN: both test sessions stop=200 -> 0 containers, 0 clab dirs, 0 ttyd.
+STATE: nexus.service active, /api 200. NOT COMPLETE. Dad's word alone.

@@ -1,0 +1,40 @@
+VERIFICATION — reboot survival, DONE CORRECTLY (after my own error invalidated the first try)
+Date: 2026-09-27 ~14:20 EDT   By: Selina   Trigger: hourly cron run 18
+
+FIRST: MY OWN ERROR, STATED PLAINLY.
+  I claimed "the ghost reaper failed — session stuck at running with no containers."
+  That was WRONG, and the failure was MINE, not the product's.
+  I tried to kill the lab with:
+    docker rm -f $(docker ps -q --filter name=clab-aegis-$S)
+  It matched NOTHING. Container names are
+    clab-aegis-demo-02-srl-two-switch-router-<sid>-<node>
+  — the session id sits in the MIDDLE, not adjacent to `clab-aegis`. Two layers
+  of the same mistake:
+    (1) `--filter name=clab-aegis-<sid>` -> 0 matches (sid not at that position)
+    (2) my follow-up grep `clab-aegis-<sid>-` -> 0 matches (same wrong assumption)
+  The containers were never killed. The create-times proved it (14:00:41 = the
+  original deploy). So I "simulated a reboot" by doing nothing, then blamed the
+  reaper for not reacting to a state I never created.
+  => SAME failure class I criticize in the field: trusting the command did what I
+     meant instead of verifying what it did. Badge over body, in my own shell.
+
+THEN: THE REAL SIMULATION (kill the containers correctly, then restart).
+  Matched with `grep -- "-<sid>-"` -> 5 containers, removed, verified 0 remain.
+  Restarted nexus (as a reboot would).
+  IMMEDIATELY after restart: GET /api/sessions/<sid> -> 404, registry 0.
+  => NO GHOST EVER FORMED. reconcile_sessions() rebuilds sessions ONLY from
+     running labelled containers; with the lab dead there is nothing to adopt,
+     so the session is simply absent from memory.
+  The reaper had nothing to reap because the state was already honest.
+
+RESULT — reboot behavior is CORRECT, in two distinct shapes:
+  * API restart with containers ALIVE -> session ADOPTED, graded successfully
+    (re-confirmed this run, and proven in run 9). Work survives an API restart.
+  * Containers GONE (host reboot / docker restart) -> session is GONE. The
+    product does NOT claim a dead lab is running. Honest refusal to lie.
+  The only real consequence: after a genuine host reboot a running lab is LOST
+  (containerlab containers carry restart=no, and no restore-on-boot unit exists
+  for the 2 labs). That is a BEHAVIOR FACT for Dad to decide on, not a defect I
+  should fix unilaterally — a restore unit changes lifecycle semantics.
+
+NOT COMPLETE. Dad's word alone.

@@ -1,0 +1,51 @@
+RUN 51 — LAB-B — 2026-09-28 22:00 EDT
+lab-b-off-address-session-full-green-and-both-fixes-confirmed
+
+WHY THIS RUN: runs 49/50 fixed two defects but each was verified mostly on one lab.
+Run 49's mask fix was proven on LAB-B only via a single node (pc-a /32); run 50's
+ttyd-URL fix was proven only on LAB-A's 3-node topology. Nobody had run a LAB-B
+session ENTIRELY over the off-address (.188) and carried it cold->warm->teardown.
+
+VERIFICATION 1 — RUN-50 FIX HOLDS ON LAB-B'S 5-NODE TOPOLOGY
+  start via 192.168.1.188 (query params, per the source): session bbda80f0, 5 nodes, 50s.
+  GET /api/sessions via .188 -> every ttyd url  http://192.168.1.188:<8768-8772>
+  GET /api/sessions via .110 -> every ttyd url  http://192.168.1.110:<8768-8772>
+  Same session, same ports, host follows the REQUESTING address. Fix is not LAB-A-only.
+  REACHABILITY (the claim that matters): :8768 answered 200 on .188, .110, localhost, 127.0.0.1.
+
+VERIFICATION 2 — RUN-49 MASK FIX HOLDS ON LAB-B'S WHOLE GRADER
+  pc-a deliberately configured 10.0.1.1/32 (device truth: "eth1 10.0.1.1/32"):
+    -> passed=False score=0.0
+    -> "eth1 has 10.0.1.1/32, expected 10.0.1.1/24"   (honest, names the real mask)
+  Before run 49 this returned full credit AND printed a /24 the device never had.
+
+VERIFICATION 3 — SERVED GUIDE IS SUFFICIENT AND CORRECT (cold->warm end to end)
+  Cold grades on bbda80f0: pc-a 0.0, pc-b 0.0, r1 0.2, sw1 1.0, sw2 1.0
+    (switches ship pre-configured BY DESIGN; grader header + guide both say so)
+  Applied the SERVED guide verbatim (guide fetched from /api/labs/<id>/guide):
+    pc-a -> sw1   0% loss      pc-a -> r1    0% loss
+    pc-a -> pc-b  0% loss (across the routed boundary)
+    pc-b -> pc-a  0% loss
+    traceroute -n 10.0.2.1: hop1 10.0.1.253 (r1), hop2 10.0.2.1 (pc-b)  == guide's promise
+  WARM grades: pc-a 1.0, pc-b 1.0, r1 1.0, sw1 1.0, sw2 1.0  (5/5, all passed=True)
+    -> the mask fix did NOT break the happy path; feedback prints the VERIFIED mask.
+
+VERIFICATION 4 — TEARDOWN VIA THE OFF-ADDRESS
+  stop called on .188 -> {"status":"destroyed"} HTTP 200
+  -> 0 clab containers, 0 clab dirs, 0 ttyd, registry 0. No orphan dir named after the sid.
+
+MY PROBE ERRORS (stated, both caught by reading the source):
+  (1) I POSTed a JSON body to /api/sessions/start -> 422 "missing query lab_id".
+      The route takes QUERY params (frontend: /api/sessions/start?lab_id=...). Redone correctly.
+  (2) I guessed POST /api/sessions/<id>/grade -> "Method Not Allowed". The real route is
+      POST /api/sessions/<id>/submit?node=... (read the route table, didn't invent one).
+  Both are the SAME class as runs 32/34/48: my instrument misfired, the product was right.
+
+STATE AFTER: nexus.service active, /api 200, 16 labs served, 0 containers/dirs/ttyd.
+
+NEXT STEP: LAB-A gets the off-address treatment next run (the mirror of this one), then
+audit the ONE remaining untested student path — the ttyd terminal itself (websocket
+session inside the iframe: does a real shell open and accept input). Nothing else in
+runs 47-51 has driven an actual terminal, only its HTTP handshake.
+
+NOT COMPLETE - Dad's word alone.

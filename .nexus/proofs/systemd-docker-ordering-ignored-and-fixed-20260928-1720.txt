@@ -1,0 +1,43 @@
+SYSTEMD UNIT: DOCKER ORDERING WAS IN [Service] AND SILENTLY IGNORED (LAB-B focus)
+Date: 2026-09-28 ~17:20 EDT   By: Selina   Trigger: cron run 46
+
+TRIGGER: run 28 found installer-vs-live unit divergence (aegis.service vs
+nexus.service, User=aegis vs student) but never evaluated CORRECTNESS. This run
+read both units and verified them with systemd itself.
+
+DEFECT 1 (installer, real): install.sh generated `Requires=docker.service`.
+  systemd.unit(5): Requires= "declares that if the unit bound to is stopped, this
+  unit will be stopped too". docker.service on this host is Restart=always and the
+  journal shows ~30 start/stop events in the last 200 lines - it DOES restart.
+  So the installer's unit would tear down AEGIS (and every running lab) every time
+  docker restarts. The live unit used Wants=, and nothing documented why.
+  FIXED (reversible): the generated unit now uses
+  `After=docker.service network-online.target` + `Wants=docker.service network-online.target`,
+  with a comment explaining why Requires= is wrong here.
+  Backup install.sh.bak-2026-09-28-requires-docker
+
+DEFECT 2 (LIVE unit, real, pre-existing): nexus.service put
+  `After=docker.service` and `Wants=docker.service` inside the [Service] section.
+  systemd-analyze verify: "Unknown key 'After' in section [Service], ignoring." and
+  the same for Wants. So the unit's own comment ("keep this unit from starting
+  before they are up") asserted an ordering that DID NOT EXIST.
+  MEASURED: `systemctl show nexus.service -p After | grep -c docker` = 0 before.
+  Impact: on boot AEGIS could start BEFORE docker; a lab deploy at that moment
+  would fail. A live product defect, not just a docs issue.
+  FIXED (reversible): moved both keys into [Unit]. Verified: systemd-analyze verify
+  clean; `docker now in effective After: 1`; daemon-reload OK; service active; /api 200.
+  Backup: .nexus/nexus.service.bak-2026-09-28-unitfix
+
+MY OWN ERROR (stated): my first patch ATTEMPT failed (assertion "anchor missing") -
+I assumed the systemd heredoc lines were indented by two spaces; `cat -A` showed
+they are flush-left. Caught by the assertion instead of a silent no-op. Re-ran with
+the exact bytes.
+
+VERIFIED:
+  install.sh bash -n OK; generated unit text extracts and passes systemd-analyze verify
+  shipped bundle rebuilt; `grep -c '^Requires=docker.service'` in shipped install.sh = 0
+  LIVE regression: LAB-B 8e52745f, sw1 True 1.0, r1 cold False 0.2 (honest partial),
+    stop 200 -> 0 containers, 0 clab dirs, 0 ttyd
+
+STATE: service active, /api 200, docker in effective After, 0 containers/dirs/ttyd.
+NOT COMPLETE. Dad's word alone.

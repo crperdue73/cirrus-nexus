@@ -1,0 +1,40 @@
+RUN 40's OUTSTANDING SAFETY TEST — CLOSED; dir-sweep is safe for LIVE labs
+Date: 2026-09-28 ~12:20 EDT   By: Selina   Trigger: cron run 41 (LAB-A focus)
+
+WHAT WAS OUTSTANDING: run 40 installed a startup sweep that removes orphaned
+containerlab runtime dirs, and PROVED it works (it removed 13 dirs / 4.3M live,
+logged "[dir-sweep] removed 13 orphaned topology dir(s)"). Run 40 was interrupted
+before proving the SAFETY property: that the sweep never removes a LIVE lab's dir.
+
+ACCIDENTAL EVIDENCE FIRST (run 40's own interrupted restart had already tested it):
+  - Run 40 started LAB-B, then restarted nexus.service. The sweep ran (log line
+    2061, "removed 13 orphaned") and LAB-B's live dir SURVIVED, and its session was
+    re-adopted ("adopted 1 running session"). That session stayed up 55 minutes -
+    found still running at the top of run 41.
+
+DELIBERATE TEST (clean, this run):
+  - Started LAB-A live (631960bc). Live dir exists: YES. Live clab dirs present: 2
+    (LAB-A's + LAB-B's).
+  - Restarted nexus.service (this is when the sweep fires).
+  - AFTER: LAB-A live dir STILL PRESENT (YES). LAB-A containers STILL 3.
+    log: "[dir-sweep] removed 13 orphaned topology dir(s)" (that line is from the
+    earlier startup; the same startup also logged "[reconcile] adopted 2 running
+    session(s)" - BOTH live labs re-adopted, NEITHER dir removed).
+  - Post-restart, LAB-A was driven as a student and graded: pc-a True 1.0,
+    pc-b True 1.0, sw1 True 1.0. So the session survived the restart with working
+    containers, working terminals, and working grading.
+
+SAFETY PROPERTY (now proven, not believed):
+  The sweep removes ONLY dirs with no matching live container. A live lab's dir
+  survives a restart+sweep, and its session is re-adopted by reconcile_sessions().
+  Guard: `if any(c == name or c.startswith(name+"-") for c in live): continue`.
+
+TEARDOWN: both live labs stopped (b5b91c43=200, 631960bc=200) -> 0 containers,
+  0 clab dirs, 0 ttyd. The sweep leaves the shipping lab folders clean.
+
+STILL OPEN (Dad): whether startup dir-sweeps are wanted at all, and their scope.
+  Current behavior is conservative: startup-only, live-container-guarded, and
+  disableable with NEXUS_SWEEP_ORPHAN_DIRS=0.
+
+STATE: 0 clab containers, 0 clab dirs, 0 ttyd, service active, /api 200.
+NOT COMPLETE. Dad's word alone.

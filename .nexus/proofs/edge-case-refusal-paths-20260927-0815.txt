@@ -1,0 +1,30 @@
+VERIFICATION — API edge cases / refusal paths (the cases a student WILL hit)
+Date: 2026-09-27 ~08:15 EDT   By: Selina   Trigger: hourly cron run 12
+
+WHY: 11 runs tested the happy path + concurrency races. What nobody had tested:
+what the product does when a student does something WRONG. A demo dies on a 500
+as fast as on a broken lab. All results live.
+
+RESULTS
+ 1. grade a node that does not exist
+    -> HTTP 200, passed=false score=0.0
+       "Node 'does-not-exist' not found in session."   <- explicit, not a crash
+ 2. grade a node with a WRONG answer (pc-a given the wrong IP)
+    -> passed=false score=0.25 (1 of 4 checks: the switch was pingable)
+       partial credit is CORRECT - checks are independent, so the one true thing
+       still scores. No all-or-nothing collapse, no false pass.
+ 3. submit to an ALREADY-STOPPED session
+    -> HTTP 404 {"detail":"Session not found"}   <- clean
+ 4. start a lab id that does not exist
+    -> HTTP 404 {"detail":"Lab not found"}       <- clean
+ 5. GET a session the reaper already dropped
+    -> HTTP 404 {"detail":"Session not found"}   <- clean
+ 6. start with an empty lab_id
+    -> HTTP 404 {"detail":"Lab not found"}       <- clean
+
+CONCLUSION
+  Every refusal path returns a deliberate HTTP status + a human-readable detail.
+  No 500s, no raw tracebacks, no silent false PASSES. The product fails SAFELY,
+  which matters more for a live demo than any single green lab.
+
+NOT COMPLETE. Dad's word alone.

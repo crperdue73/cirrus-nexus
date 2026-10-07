@@ -1,0 +1,43 @@
+STALE RELEASE BUNDLE FOUND AND REBUILT (LAB-B focus) — deploy-story defect
+Date: 2026-09-28 ~13:20 EDT   By: Selina   Trigger: cron run 42
+
+Dad's 2nd ask is "deployed" = installable. Every run so far verified the RUNNING
+host; none audited whether the product INSTALLS from its own artifacts.
+
+FOUND: frontend/nexus-release.tar.gz, dated 2026-06-13 08:38 - 3.5 months stale,
+predating every fix and one shipping lab. Verified contents of the OLD bundle:
+  - contains NEITHER shipping lab (demo-01 ABSENT, demo-02 ABSENT); it carries the
+    old set (01-foundation, 02-router-basics, 07-capstone, ...)
+  - backend/main.py lacks dir-sweep, _detect_ttyd_host, the reconnect ttyd map
+  - frontend/index.html still has the dead unpkg htmx/sse CDN tags (2) and lacks
+    the submitGrade guard
+  - referenced by NOTHING (grep 0 hits) -> nothing would ever flag it as stale
+An operator who found that file would ship a 3.5-month-old product with the WRONG
+labs. Same defect class as run 27's README deploy-command bug.
+
+FIXED (reversible):
+  1. Preserved the stale artifact as evidence: nexus-release.tar.gz.stale-20260928-june13
+  2. Rebuilt the bundle from the CURRENT tree, 2 shipping labs only (19 entries,
+     48431 bytes). First build attempt MISSED the graders - they live at
+     lab-definitions/ top level, not in the lab subdirs - and swept in .bak/.pyc.
+     Rebuilt with an explicit grader list + --exclude '*.bak*'/'__pycache__'/'*.pyc'.
+  3. Documented a "## Release Bundle" section in README with the exact rebuild
+     command and WHY it exists. Backup README.md.bak-2026-09-28-release
+
+VERIFIED (bundle extracted fresh and tested, not just listed):
+  shipped main.py py_compile OK; shipped install.sh bash -n OK; shipped
+  index.html JS node --check OK
+  both topologies parse and match graders: demo-01 (pc-a,pc-b,sw1), demo-02
+    (pc-a,pc-b,r1,sw1,sw2); both graders expose grade + grade_all
+  switch assets present (demo-01 sw1.cfg; demo-02 sw1.cfg, sw2.cfg)
+  LIVE regression on the real service: LAB-B r1 cold 0.2 (partial, honest),
+    sw1 1.0; stop 200 -> 0 containers, 0 clab dirs, 0 ttyd
+
+MY OWN PROBE ERRORS (2, both stated):
+  - grepped the tarball for "demo-01-two-pcs-and-a-real-switch.yml" and read the
+    empty result as "lab missing"; the real filename has "-unsolved" -> matched.
+  - read "unpkg refs: 2" as a CDN regression; they are the explanatory COMMENT I
+    left in run 26, not script tags.
+
+STATE: 0 containers, 0 dirs, 0 ttyd, service active, /api 200.
+NOT COMPLETE. Dad's word alone.

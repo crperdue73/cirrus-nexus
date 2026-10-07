@@ -2,6 +2,7 @@
 """Start the AEGIS demo server.
 Portable — resolves the backend path relative to this script.
 """
+import re
 import subprocess
 import sys
 import os
@@ -14,7 +15,11 @@ BASE_DIR = Path(__file__).parent.resolve()
 subprocess.run(["pkill", "-f", "ttyd.*docker exec"], capture_output=True)
 
 # Kill any existing aegis server on port 8000
-subprocess.run(["pkill", "-f", "aegis.*main.py"], capture_output=True)
+# Narrowed 2026-10-04: the old pattern `aegis.*main.py` also matched the installed
+# systemd unit's ExecStart, so running this on a shared host could kill the live service.
+# Match only a server started from THIS tree.
+subprocess.run(["pkill", "-f", re.escape(str(BASE_DIR / "backend" / "main.py"))],
+               capture_output=True)
 
 # Start the AEGIS server
 backend_path = BASE_DIR / "backend" / "main.py"

@@ -1,0 +1,39 @@
+AUDIT — does the served API agree with itself and with the grader code?
+Date: 2026-09-28 ~02:20 EDT   By: Selina   Trigger: hourly cron run 31 (LAB-B focus)
+
+WHY: runs 26-30 audited the outside (browser, README, installer, my own log).
+This run audited the SERVED API against the FILESYSTEM and the GRADER CODE -
+the question "is the registry telling the truth", not "is it returning 200".
+
+METHOD + FINDINGS:
+1. /api/labs -> 16 labs. Every lab's declared topology_file resolves on disk
+   (16 resolve / 0 missing). Our 2 labs present with correct topo paths:
+     LAB-A -> srl-demo-unsolved/demo-01-two-pcs-and-a-real-switch-unsolved.yml
+     LAB-B -> srl-demo2-unsolved/demo-02-two-switches-one-router-unsolved.yml
+
+2. DECLARED vs ACTUAL grader agreement (the real test):
+     LAB-A: declares gradeable_nodes [pc-a,pc-b,sw1]; grader_demo_01_srl.py
+            references exactly [pc-a,pc-b,sw1]  -> MATCH
+     LAB-B: declares [pc-a,pc-b,r1,sw1,sw2]; grader_demo_02.py references
+            exactly [pc-a,pc-b,r1,sw1,sw2]     -> MATCH
+   Both graders export `grade` and `grade_all` - the two entry points the backend
+   expects (submit uses grade; the run-19 status helper uses grade_all).
+
+   NOTE ON MY OWN ERROR THIS RUN: my first probe printed "grader file NOT FOUND"
+   for both labs. That was MY script joining lab-definitions/<module> without the
+   ".py" - the files are lab-definitions/grader_demo_01_srl.py and
+   grader_demo_02.py and existed all along. I read _load_grader() before
+   concluding anything: it resolves lab-definitions/<module>.py then
+   backend/graders/<module>.py. Re-ran with the correct path - both match. Not
+   filed as a defect; my probe was wrong, the registry was right.
+
+3. LIVE LAB-B end-to-end (least recently moved):
+     start 200 -> session 367df7ff, detail status=running nodes=5, 5 containers
+     cold pc-a False 0.0 (honest), cold r1 False 0.2 (correct: two missing /24s),
+     cold sw1 True 1.0 (ships pre-configured, documented design)
+     status after partial grading = "running" (the run-19 truthfulness fix holds:
+     partial credit does not flip the lab to submitted)
+     stop 200 -> 0 containers
+
+STATE: 0 clab containers, service active, /api 200.
+NOT COMPLETE. Dad's word alone.

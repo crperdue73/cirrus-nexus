@@ -1,0 +1,48 @@
+DEFECT FOUND + FIXED — concurrent lab starts race on the shared "clab" network
+Date: 2026-09-27 ~06:15 EDT   By: Selina   Trigger: hourly cron run 10
+
+THE TEST
+  Start LAB-A and LAB-B at the same moment (two students). Previously untested:
+  all prior proofs were one lab at a time.
+
+BEFORE THE FIX — REAL FAILURE
+  A (demo-01) -> HTTP 200 in 35.6s
+  B (demo-02) -> HTTP 500 in 0.19s   <-- failed almost instantly
+  B's detail: "ContainerLab deploy failed: ... Creating docker network name=clab
+               IPv4 subnet=172.20.20.0/24 ... ERROR ... Error response from daemon:
+               network with name clab already exists."
+  Retrying B ALONE succeeded (HTTP 200). => the failure is RACE, not config.
+
+ROOT CAUSE
+  containerlab creates a SHARED docker network named "clab" on the host's first
+  deploy. FastAPI runs sync route handlers (`def start_lab`, no async) in a
+  threadpool, so concurrent POSTs /api/sessions/start run in PARALLEL THREADS.
+  Two deploys both find no "clab", both try to create it, the loser gets
+  "network with name clab already exists" and its whole deploy aborts with a 500.
+  grep confirmed ZERO locking anywhere in backend/main.py. So the second student
+  to click Start at the same time as the first simply could not start a lab.
+
+IMPACT (why it matters for deploy)
+  A product demo with two people is the normal case. Student 1 clicks, student 2
+  clicks one second later, student 2 gets a 500. It also explains any "it worked
+  when I tried it" that later failed in front of someone else.
+
+THE FIX (backend/main.py, backup main.py.bak-2026-09-27-deploylock)
+  Added `_DEPLOY_LOCK = threading.Lock()` and wrapped the deploy call:
+      with _DEPLOY_LOCK:
+          containers = deploy_lab(lab, session_id)
+  Deploys are heavy (35-90s) and rare; serializing them costs nothing and removes
+  the race. No route semantics changed. ~4 lines, fully reversible.
+
+AFTER THE FIX — PROVEN LIVE (3 concurrent starts, the exact race)
+  start 1 -> HTTP 200 (126.5s, serialized) -> session 5c2080a9, 3 containers, demo-01
+  start 2 -> HTTP 200 ( 51.2s)             -> session 7413a9ec, 5 containers, demo-02
+  start 3 -> HTTP 200 ( 87.7s)             -> session 8aa562c4, 3 containers, demo-01
+  ZERO 500s. Deploys serialized (times add up), each session complete and distinct.
+  Isolation verified: no container belongs to two sessions (no double-booking).
+  Gradeable verified: 5c2080a9/sw1 = 1.0, 7413a9ec/sw1 = 1.0.
+  Teardown verified: all 3 stopped -> 0 containers, 0 registry, 0 ttyd. CLEAN.
+
+  => Concurrent students now work. This was a real defect on the ship path.
+
+NOT COMPLETE. Dad's word alone.

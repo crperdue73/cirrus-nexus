@@ -1,0 +1,44 @@
+AUDIT — hostile/malformed input. Result: API is honest. My probe was wrong twice.
+Date: 2026-09-28 ~03:20 EDT   By: Selina   Trigger: hourly cron run 32 (LAB-A focus)
+
+WHY: 31 runs verified VALUES (nodes, IPs, grades). None had verified the product
+under malformed/hostile requests. 3 AM, no students - the right time to hit it.
+
+RESULT: the API handles hostile input correctly. AND I made the same mistake twice
+in one run - recorded here because the mistake is the more useful finding.
+
+MY ERROR #1 - "missing lab_id returns the wrong message":
+  I probed POST /api/sessions/start with no lab_id using plain `curl <url>` - and
+  curl issues a GET by default. GET does not match the POST route, so FastAPI
+  matched GET /api/sessions/{session_id} with session_id="start" and correctly
+  answered 404 "Session not found".
+  I read that as the product answering wrong. It was MY probe dropping the verb.
+  With -X POST the same call returns 422 {"type":"missing","loc":["query","lab_id"],
+  "msg":"Field required"} - exactly right.
+
+MY ERROR #2 - chained from #1:
+  Because "does-not-exist" also returned "Session not found" on the GET probe, I
+  went looking for a route-shadowing bug and re-read start_lab's code. start_lab
+  is correct: bad lab -> 404 "Lab not found". Confirmed live: POST returns exactly
+  that. There was never a shadowing bug. My second probe reused the same missing
+  verb.
+
+This is the same failure class as earlier in the run ("grader file NOT FOUND" -
+my path join lacked the ".py") and as runs 21/29: my INSTRUMENT misfired and I
+started to file it as a product defect. Stop and check the probe before the product.
+
+HOSTILE BATCH, REDONE WITH CORRECT VERBS - all clean:
+  POST start, bad lab_id        -> 404 "Lab not found"
+  POST start, no lab_id         -> 422 "Field required" (proper validation)
+  POST start, traversal         -> 404 "Lab not found"
+  POST start, lab_id with slash -> 404 "Lab not found"
+  POST submit, no session       -> 404 "Session not found"
+  POST submit, node=";rm -rf /" -> no injection, session 404 returned
+  POST stop, no session         -> 404 "Session not found"
+  GET  session, missing         -> 404 "Session not found"
+  GET  labs                     -> 200 (16 labs)
+  GET  guide, bad lab           -> 404 "No guide available for this lab"
+  service alive after the batch: /api 200, unit active, 0 containers
+
+STATE: 0 clab containers, service active, /api 200.
+NOT COMPLETE. Dad's word alone.

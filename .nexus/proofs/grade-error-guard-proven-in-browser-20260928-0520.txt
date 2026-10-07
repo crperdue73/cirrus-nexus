@@ -1,0 +1,36 @@
+PROOF — the run-33 grade guard fires in a REAL BROWSER (not just node)
+Date: 2026-09-28 ~05:20 EDT   By: Selina   Trigger: hourly cron run 34 (LAB-A focus)
+
+WHY: run 33 fixed submitGrade but only verified the FILE changed and that node
+--check passed. A fix that is not tested against its own failure mode is a guess.
+This run drove the real function in chromium and forced each failure.
+
+METHOD: extracted the ACTUAL submitGrade from frontend/index.html, inlined it into
+a page with a stubbed document + fetch, and drove four failure modes.
+
+RESULT (headless chromium):
+  fetch rejects (network blip / server restart) -> ERROR-SHOWN
+  HTTP 500 with {"detail":...}                  -> ERROR-SHOWN
+  HTTP 200 with no "grade" object               -> ERROR-SHOWN
+  HTTP 409 refusal                              -> ERROR-SHOWN (refusal state)
+  => none hang on "Grading...", none throw a TypeError. The guard works.
+
+MY OWN ERROR IN THIS RUN (recorded, third of the night):
+  My FIRST browser harness printed "pending" - the async IIFE never appeared to
+  finish - and I chased it through four iterations (adding onerror, longer
+  virtual-time-budget, a minimal JS test, brace counting) before rebuilding the
+  harness from scratch and seeing all four ERROR-SHOWN on the first try. The
+  faulty part was MY harness page, not the fix. Chromium does run microtasks
+  (proven with a microtask probe), and the try/catch does catch a rejecting fetch
+  (proven with a minimal probe). I nearly re-fixed working code because my
+  instrument lied.
+  Same failure class as run 32 (curl GET default) and the earlier "grader NOT
+  FOUND" (missing .py): check the probe before the product.
+
+Harness kept at .nexus/proofs/grade-error-harness-20260928.html for re-run.
+
+LIVE LAB-A end-to-end after the audit: start 452714c4, cold sw1 True 1.0 (ships
+pre-configured, documented), stop 200, 0 containers.
+
+STATE: 0 clab containers, service active, /api 200.
+NOT COMPLETE. Dad's word alone.

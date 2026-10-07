@@ -1,0 +1,46 @@
+FIX — the page's ENTRY POINT could leave a student on a blank page
+Date: 2026-09-28 ~06:20 EDT   By: Selina   Trigger: hourly cron run 35 (LAB-B focus)
+
+PART 1 — GUIDE-vs-GRADER AUDIT (both labs): CLEAN.
+  Compared the student-facing guide markdown against each grader's expected IPs
+  and checks.
+   LAB-B: guide IPs == grader IPs, exact set match, nothing missing either way.
+   LAB-A: guide IPs match too. My first pass flagged "10.0.1.1 in grader but not
+   in guide" - that was MY tokenizer clipping the "/24" off "10.0.1.1/24"; the
+   guide has it. Read the guide in full: it states the objective, the topology,
+   the exact ip commands per PC, the verification pings, a per-node grading table,
+   the anti-cheat note (sr_cli, so a Linux bridge cannot fake the switch), and the
+   difference from the shipped PRE-SOLVED twin. Accurate and honest. No defect.
+
+PART 2 — THE THREE HANDLERS RUN 33 LEFT UNGUARDED: read each.
+  loadLabs        - FIRST call on page load, no try/catch, no ok-guard. DEFECT.
+  stopSession     - no guard; a failed stop is silent.
+  stopSessionById - same.
+  (run 33 named these but deliberately did not change them.)
+
+  DEFECT FIXED (loadLabs) - highest harm of the three:
+   loadLabs hides the student-name setup screen FIRST, then fetches /api/labs.
+   With no guard, a failed /api/labs (server restarting - RestartSec=10, proven
+   live run 25) threw at resp.json() AFTER the setup screen was hidden, leaving the
+   student on a BLANK PAGE with no error and no retry. The entry point failing
+   silently is worse than the grading bug fixed in run 33.
+   FIX: wrap fetch in try/catch + !resp.ok; on failure re-show the setup screen and
+   render "Could not load the lab list. The server may be starting up." with a
+   "Try again" button.
+   Backup: frontend/index.html.bak-2026-09-28-loadlabs
+
+  NOT FIXED BY CHOICE: stopSession / stopSessionById. A failed Stop is silent, but
+  the correct behaviour (block the UI? retry? warn? leave containers?) is a UX
+  decision that changes what the student can do, not the same harm class as a
+  hung grader or a blank start page. Named again, still not changed.
+
+VERIFIED:
+  inline JS -> node --check SYNTAX OK
+  chromium harness (.nexus/proofs/loadlabs-guard-harness-20260928.html):
+    fetch rejects  -> ERROR-SHOWN ; HTTP 503 -> ERROR-SHOWN  (no throw, no blank)
+  served page contains the guard (grep hit = 1) after systemctl restart
+  LIVE LAB-B end-to-end: start 54a5717d, cold sw2 True 1.0 (ships pre-configured),
+    stop 200, 0 containers
+
+STATE: 0 clab containers, service active, /api 200.
+NOT COMPLETE. Dad's word alone.

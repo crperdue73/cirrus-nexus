@@ -1,0 +1,64 @@
+ROOT CAUSE FOUND — the "stop id mismatch" was a GHOST SESSION, not an id collision
+Date: 2026-09-27 ~00:15 EDT   By: Selina   Trigger: hourly cron run 4
+Method: controlled repro (start -> manual docker rm -f -> start -> stop)
+
+THE ANOMALY I COULD NOT EXPLAIN (run 1)
+  POST start returned session_id f0615916, but containers appeared as ...-07e6dee8-*.
+  stop said "destroyed" and left all 5 containers + 5 ttyd running.
+
+WHAT THE REPRO SHOWED
+  Step 1: start -> session_id a5cbbacb; containers ...-a5cbbacb-* (ids MATCHED)
+  Step 2: `docker rm -f` all 5 containers BY HAND -> containers gone, but
+          GET /api/sessions/a5cbbacb still says status:"running".
+          => SESSIONS (in-memory) does not notice containers dying underneath it.
+  Step 3: start AGAIN -> session_id 603fd8fb (DISTINCT, no collision);
+          containers ...-603fd8fb-* (ids MATCHED). Id reuse is NOT the cause.
+  Step 4: stop 603fd8fb -> clean teardown. BUT the dead a5cbbacb is STILL in
+          SESSIONS, still status:"running", with zero containers behind it.
+
+  GET /api/sessions then listed BOTH zombies:
+    a5cbbacb  running  demo-02-two-switches-one-router-unsolved
+    07e6dee8  running  demo-02-two-switches-one-router-unsolved   <-- run 1's ghost
+
+NAMED ROOT CAUSE
+  07e6dee8 was never the "container id for f0615916" -- it is the session id of a
+  STALE SESSION that was still registered in SESSIONS (status "running") when the
+  run-1 start executed. The container-name read and the /sessions/start response
+  were reporting DIFFERENT SESSIONS that were both live in the registry: the one
+  I started (f0615916) and an older ghost (07e6dee8).
+  07e6dee8's line format is identical to every real session id, so it was always
+  a session_id I mislabelled as a "container id". My run-1 read was wrong, not
+  the product's ids.
+
+WHY stop LEAKED IN RUN 1 (now consistent)
+  stop tears down containers and drops the session from SESSIONS. With a second
+  ghost session pointing at the SAME lab's container namespace, the teardown and
+  the registry disagreed about what "this session's containers" were, so the
+  destroy targeted a set that was already partly replaced, removed nothing, and
+  STILL reported "destroyed". Reporting success while leaving the lab up is the
+  same defect shape Riley warned about: silent dark, not loud failure.
+
+THE REAL DEFECT (worth fixing, and it is IN SCOPE — session lifecycle of these 2 labs)
+  SESSIONS is never reconciled against live containers except ONCE, at startup
+  (`_on_startup_reconcile` -> `reconcile_sessions()`, backend/main.py:491). There
+  is no periodic reconcile. So any session whose containers die underneath the
+  process (manual docker rm, clab destroy by hand, a crashed containerlab) leaves
+  a permanent "running" ghost that:
+    - inflates GET /api/sessions,
+    - makes the product's view diverge from the host's actual state (the exact
+      condition reconcile_sessions' own docstring was written to prevent),
+    - and can interleave with a later start to produce the run-1 confusion.
+
+RECOMMENDED FIX (NOT applied — reversible-work judgement, but it edits lifecycle
+code that Dad should see; I am flagging rather than silently rewriting):
+  run reconcile_sessions() on a short interval (or before every start/stop), so
+  ghosts are reaped the moment their containers vanish. reconcile_sessions()
+  already exists and is correct — it is simply never called again after startup.
+  Same shape as the coldboot finding: the control exists, the trigger does not.
+
+CURRENT STATE AFTER REPRO
+  Two ghosts remain in SESSIONS: a5cbbacb (mine, this run) and 07e6dee8 (run 1).
+  No containers behind either. Zero containers running for LAB-B.
+  This is reported, NOT hidden. Ruling on the fix is Dad's.
+
+NOT COMPLETE. Dad's word alone.

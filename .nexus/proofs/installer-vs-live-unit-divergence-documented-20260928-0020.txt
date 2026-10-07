@@ -1,0 +1,45 @@
+AUDIT — the installer tells a different story than the deployment
+Date: 2026-09-28 ~00:20 EDT   By: Selina   Trigger: hourly cron run 28
+
+WHY: run 27 fixed the README's deploy command. This run asked the next question
+of Dad's 2nd ask ("get it deployed"): does the INSTALLER actually work / match
+reality? Read install.sh before trusting its "one-shot setup for a clean host".
+
+WHAT'S GOOD: install.sh is bash -n SYNTAX OK; it references the files that really
+do ship (assets/aegis-frr-image.tar.gz 20M + frr-image.pin + Dockerfile.frr +
+lab-definitions + start_server.py), has Docker/FRR/registry fallbacks, and pins
+the FRR image by Dockerfile fingerprint + layer-chain sha.
+
+THREE DIVERGENCES found (installer vs the deployment running on this host):
+
+1. SERVICE NAME. install.sh creates /etc/systemd/system/aegis.service; the unit
+   actually running here is nexus.service. An operator who runs install.sh and an
+   operator who looks at this box see two different services under two names -
+   `systemctl restart aegis` and `... nexus` hit different things.
+2. SERVICE IDENTITY. install.sh: User=aegis, Group=aegis, WorkingDirectory=/opt/aegis,
+   logs /var/log/aegis.log. Live: User=student, Group=student,
+   WorkingDirectory=.../workspace-selina/projects/aegis, logs .../logs/nexus-server.log.
+3. LAB COUNT. install.sh's closing summary enumerates every lab-definitions/*.yml
+   (9 at top level) under "Default labs auto-discovered" - but the ship order is
+   EXACTLY TWO. It also mislabels them "default labs".
+
+DID NOT CHANGE install.sh. Rewriting the unit name/identity it creates has real
+blast radius I cannot see from here (a fresh install may already exist somewhere,
+and Dad's deployment intent is not visible in this repo) - that is not reversible
+in four lines. Escalated as a named finding instead.
+
+FIXED (docs only, reversible): README "## Running the Server" now states the true
+post-install service name (`aegis`), gives the real systemctl/journalctl commands,
+documents the User/WorkingDir/ExecStart the installer sets, explains that
+start_server.py is a troubleshooting wrapper (it pkill's old ttyd+main.py), and
+notes plainly that a full host reboot loses a running lab.
+Backup: README.md.bak-2026-09-27-svcname
+
+VERIFIED: every command named in the README exists (systemctl/journalctl/
+start_server.py); start_server.py exists; install.sh really does create
+aegis.service with User=aegis. REGRESSION after the doc edit: nexus.service
+active, /api 200, LIVE LAB-A green (start ok id e0a74137, sw1 True 1.0, stop 200,
+0 containers).
+
+STATE: 0 clab containers, service active, /api 200.
+NOT COMPLETE. Dad's word alone.

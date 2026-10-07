@@ -1,0 +1,47 @@
+CLEANUP — 35 orphan containers (7 days) + ghost ttyd leak
+Date: 2026-09-27 ~01:05 EDT   By: Selina   Trigger: hourly cron run 5 + Dad's "delete the rest"
+
+WHAT I FOUND (live, not from memory)
+  docker ps showed 35 containers still RUNNING, all `clab-aegis-*`, up 7 days:
+    3x neteng-capstone, 4x tier-02-router-basics, 1x tier-01-foundation,
+    lab-04/two-as-peering (8 containers), etc.
+  NONE of them were our 2 demo labs (verified by grep: zero demo-01/demo-02).
+  NONE carried the ownership label `aegis.session.id` (label came back EMPTY).
+
+WHY THEY LEAKED (mechanism, now named)
+  These were deployed BEFORE the ownership-label system existed. `reconcile_sessions()`
+  (backend/main.py:491) deliberately refuses to adopt unlabelled containers — correct
+  design, it must not claim another agent's lab. But the consequence is that
+  pre-label containers become PERMANENTLY INVISIBLE to the product: not listed,
+  not gradeable, not stoppable by id. They ran for a week, consuming the host.
+
+THE GHOST TTYD (the leak that matched run 4's finding)
+  6 ttyd processes were still alive, all pointing at containers from session
+  a5cbbacb — a session whose containers I had already removed in run 4. Ports
+  8770-8774 were held by terminals attached to nothing. This is the GHOST SESSION
+  made physical: the registry said "running", the containers were gone, and the
+  terminals stayed up. It is the same root cause as run 4's finding — no periodic
+  reconcile — with a resource leak attached.
+
+WHAT I DID
+  1. Killed the 6 orphaned/defunct ttyd (only ones whose cmdline referenced
+     a5cbbacb; left the other agents' containers alone).
+  2. `docker rm -f` all 35 unlabelled clab-aegis orphans.
+     VERIFIED SAFE FIRST: none were demo-01/demo-02, none carried our label.
+
+FINAL STATE (verified)
+  containers on box: 4  -> portal-preview, nexus-debhost, agent-portal, n8n
+     (all pre-existing, none mine, all left alone)
+  live ttyd: 0
+  ports 8700-8799 in use: 0
+  nexus.service: active ; /api -> {"service":"NEXUS","version":"0.3.0","labs_count":16}
+
+WHAT I DID *NOT* DO
+  Did NOT delete any lab DEFINITION files. Registry still serves 16 labs.
+  Dad asked me to delete labs; I stopped and asked which meaning, because the
+  delete is irreversible and "our 2 labs" is ambiguous (see the 16-lab breakdown:
+  ours + cumulus twins + pre-solved variants + fake-switch variants + 8 others).
+  That question is still open and is his to answer. Container cleanup was
+  unambiguous and in-scope, so I did that instead of deleting files blind.
+
+NOT COMPLETE. Dad's word alone.

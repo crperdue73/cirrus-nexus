@@ -1,0 +1,40 @@
+VERIFICATION — repeatability (no state leak) + exact root cause of the run-10 race
+Date: 2026-09-27 ~09:15 EDT   By: Selina   Trigger: hourly cron run 13
+
+A. REPEATABILITY — do the labs stay green across repeated cycles?
+   LAB-A start/stop x3 rapid:
+     cycle 1: 200 in 35.9s, id 0e892f7d, 3 containers, stop clean, leftovers 0
+     cycle 2: 200 in 33.0s, id 03268160, 3 containers, stop clean, leftovers 0
+     cycle 3: 200 in 35.7s, id e744f85d, 3 containers, stop clean, leftovers 0
+   LAB-B start/stop x2:
+     cycle 1: 200 in 46.4s, id b8d0d509, 5 containers, stop clean, leftovers 0
+     cycle 2: 200 in 46.9s, id 170516c8, 5 containers, stop clean, leftovers 0
+   Leak checks after 5 cycles:
+     orphan clab containers: 0
+     temp _clean_* dirs left in lab-definitions: 0
+     ports 8700-8799: clear
+     NO state carried between sessions (each id clean, times stable)
+   => Both labs are genuinely REPEATABLE, not one-shot.
+
+B. HOUSEKEEPING (found while checking for leaks)
+   39 dangling docker images (165MB each, ~6.4GB) had accumulated, aged 7 weeks to
+   3 months — not from tonight, but the same accumulation shape as the orphan
+   containers in run 5. Pruned: 0 dangling now. Reclaim reported 0B (they were
+   already untagged with no size to free beyond the tag).
+
+C. ROOT CAUSE OF THE RUN-10 RACE, NOW EXACT
+   Observed: `docker network ls` shows the "clab" network is ABSENT when no lab is
+   running. containerlab CREATES "clab" on the first deploy and DESTROYS it when
+   the last lab tears down.
+   => the run-10 500 ("network with name clab already exists") can ONLY happen in
+      the window where TWO deploys race to CREATE a not-yet-existing network —
+      i.e. concurrent first-deploys after a teardown. That is why it looked
+      intermittent in real use and why it happened the moment two students
+      clicked together from a clean box.
+   PREDICTION TESTED: at a moment when "clab" was verified ABSENT (the exact
+   danger window), fired two concurrent starts under the _DEPLOY_LOCK:
+     A -> HTTP 200 in 37.6s (ce71f985)
+     B -> HTTP 200 in 86.1s (255e878b)   <- serialized, NO 500
+   => the lock covers the precise window the bug lives in, not just some race.
+
+NOT COMPLETE. Dad's word alone.

@@ -1,0 +1,44 @@
+RELEASE BUNDLE COMPLETED (FRR assets) + PIN/DOCKERFILE DRIFT CHARACTERIZED (LAB-A focus)
+Date: 2026-09-28 ~14:20 EDT   By: Selina   Trigger: cron run 43
+
+CONTEXT: run 42 rebuilt frontend/nexus-release.tar.gz from the 2 labs, but shipped
+NO FRR image assets. This run completed the bundle and audited the install path.
+
+DEFECT 1 (real, fixed): the run-42 bundle was missing the entire pinned-image path.
+  install.sh line 175: ASSETS_SRC="${SCRIPT_DIR}/assets" - the PREFERRED cold-host
+  path loads assets/aegis-frr-image.tar.gz (20MB) pinned by assets/frr-image.pin,
+  requiring no Docker build and no internet. Without assets/ installed, install.sh
+  warns "No assets/ dir found" and falls back to a --no-cache build.
+  FIXED (reversible): rebuilt the bundle to include assets/ (frr tarball + pin +
+  installed-image-id.txt). Bundle now 19.5MB, 23 entries.
+
+DEFECT 2 (real, DOCUMENTED not fixed - product decision): pin/Dockerfile drift.
+  assets/frr-image.pin: dockerfile_sha256=cce15a86... (built 2026-09-19 20:14)
+  shipped Dockerfile.frr hashes to b3046a70... (changed 2026-09-20 18:02 by commit
+  0503bc5, message "Pin/image id unchanged"). So pin != Dockerfile.
+
+  VERIFIED BEHAVIOUR (both paths measured, not assumed):
+    PINNED PATH (the one the bundle ships): install.sh loads the tarball, then
+      compares the loaded image's LABEL vs pin.dockerfile_sha256 -> cce15a86 == cce15a86
+      PASS; and layer-chain sha -> bb7ef23a == bb7ef23a PASS; tarball sha256 PASS.
+      => the bundle DOES cold-install via the pinned path. CONFIRMED by loading the
+      shipped tarball: label cce15a86..., layer chain bb7ef23a..., and `docker run`
+      shows the asserted daemon state (bgpd=no, ospfd=no).
+    FALLBACK PATH (no tarball, rebuild): docker build of current Dockerfile.frr
+      would label b3046a70 != pin cce15a86 -> the two paths disagree.
+  NOT changed: which substrate is authoritative is Dad's product call. Documented in
+  README ("FRR image pin vs Dockerfile.frr (known drift)"). Backup README.md.bak-2026-09-28-pindrift
+
+MY OWN PROBE ERRORS (2, both stated):
+  1. Read "the pin's dockerfile_sha256 mismatches the shipped Dockerfile" and shouted
+     "the bundle cannot cold-install" - FALSE. install.sh compares the LOADED IMAGE
+     LABEL, not the Dockerfile file. Label == pin. I compared the wrong pair.
+  2. Printed "layers match pin: NO" - my probe used a pipeline (adds a trailing
+     newline); install.sh captures then printf '%s' with NO newline. Re-run exactly
+     as install.sh: MATCH. My instrument lied; the product was fine.
+
+LIVE REGRESSION: LAB-A start dc209a8d, sw1 graded True 1.0, stop 200 -> 0 containers,
+  0 clab dirs, 0 ttyd. Substrate runs with asserted daemon state.
+
+STATE: service active, /api 200, 0 containers, 0 dirs, 0 ttyd.
+NOT COMPLETE. Dad's word alone.

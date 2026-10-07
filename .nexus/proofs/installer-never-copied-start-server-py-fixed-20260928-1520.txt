@@ -1,0 +1,43 @@
+install.sh NEVER INSTALLED start_server.py — THE README'S MANUAL START PATH WAS BROKEN (LAB-B focus)
+Date: 2026-09-28 ~15:20 EDT   By: Selina   Trigger: cron run 44
+
+HOW FOUND (by simulating, not reading): ran install.sh's Step 6 copy block
+(install.sh lines 164-169) into a temp AEGIS_DIR and listed the result.
+
+DEFECT (real, student/operator-facing):
+  Step 6 copies exactly five things:
+    backend/  frontend/  lab-definitions/  Dockerfile.frr  README.md  (+ assets/)
+  It NEVER copies start_server.py -- despite start_server.py being in the source
+  tree AND shipped in the release bundle.
+  Line 185-187 then does:
+    sed -i 's|/home/student/.openclaw/workspace-selina/projects/aegis|/opt/aegis|g' \
+        "${AEGIS_DIR}/start_server.py" 2>/dev/null || true
+  -- a sed on a file that was never installed, silently swallowed by `|| true`.
+  So a FRESH INSTALL has no /opt/aegis/start_server.py, while README.md line 170
+  tells the operator: `python3 start_server.py   # serves on :8000`.
+  PROVEN by simulation: temp AEGIS_DIR after the copy block = assets backend
+  Dockerfile.frr frontend lab-definitions README.md -- start_server.py ABSENT.
+
+SEVERITY (stated honestly): the systemd unit runs backend/main.py directly
+  (ExecStart=/usr/bin/python3 /opt/aegis/backend/main.py), so the SERVICE is
+  unaffected. The broken path is the documented MANUAL / TROUBLESHOOTING start
+  ("Running a Lab" in README). An operator on a cold host who follows the README
+  gets "No such file or directory". A missing copy, not a logic error.
+
+FIXED (reversible, one copy + a warn): added an explicit guarded copy of
+  start_server.py to Step 6, with a warn if it is absent from the source.
+  Backup install.sh.bak-2026-09-28-startserver
+
+VERIFIED:
+  install.sh bash -n OK (source and shipped copy)
+  full simulated Step 6 with the patched logic -> installed tree =
+    assets backend Dockerfile.frr frontend lab-definitions README.md start_server.py
+    start_server.py YES; assets/frr-image.pin YES; assets/aegis-frr-image.tar.gz YES;
+    both shipping labs present (2)
+  bundle rebuilt (19.5MB) so the SHIPPED install.sh carries the fix;
+    `grep -c 'Installed start_server.py'` in the shipped copy = 1
+  LIVE regression: LAB-B 216edefd, sw2 True 1.0, pc-a cold False 0.0 (honest),
+    stop 200 -> 0 containers, 0 clab dirs, 0 ttyd
+
+STATE: service active, /api 200, 0 containers, 0 dirs, 0 ttyd.
+NOT COMPLETE. Dad's word alone.

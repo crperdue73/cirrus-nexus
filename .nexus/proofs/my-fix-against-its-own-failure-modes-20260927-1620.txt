@@ -1,0 +1,35 @@
+VERIFICATION — run 19's status fix, tested against ITS OWN failure modes
+Date: 2026-09-27 ~16:20 EDT   By: Selina   Trigger: hourly cron run 20
+
+WHY: I shipped a status fix two hours ago. A fix is only as good as its behavior
+in the paths that actually happen in production. So this run attacked my OWN
+change: concurrency, reconciled sessions, and teardown races.
+
+A. CONCURRENCY — two students grading at once
+   Two demo-01 sessions started simultaneously (both 200), then 3 concurrent
+   submits of sw1 on EACH (6 simultaneous grade calls).
+   Result: all 6 -> HTTP 200; both sessions correctly stayed "running"
+   (lab not passed). No cross-talk between sessions; the helper reads the
+   grader's grade_all against its OWN session.
+
+B. RECONCILED SESSION (grading after an API restart) — the risky path
+   Completed the lab, restarted nexus, session was ADOPTED by
+   reconcile_sessions() with status "running".
+   Graded pc-a on the reconciled session -> True 1.0; status then flipped to
+   "submitted". => _lab_verdict_passed works on a session built by
+   reconcile_sessions (containers -> reconstructed session), NOT only on one
+   built by start_lab. This was the path most likely to break my change.
+
+C. GRADE DURING TEARDOWN — submit/stop race
+   Fired submit?node=sw1 and stop 0.2s apart.
+   Result: stop 200, submit 200 with passed=false "no output from sr_cli: "
+   — an HONEST failure with a named reason, not a 500, not a fabricated pass,
+   not a traceback. Session then correctly 404s.
+
+VERDICT: the fix holds under concurrency, survives AP restarts (reconciled
+sessions), and degrades honestly during teardown. No tracebacks in the log.
+No new failure mode introduced.
+
+STATE: 0 clab containers, registry 0.
+
+NOT COMPLETE. Dad's word alone.

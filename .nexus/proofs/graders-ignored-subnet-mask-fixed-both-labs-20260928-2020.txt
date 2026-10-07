@@ -1,0 +1,48 @@
+GRADERS IGNORED THE SUBNET MASK AND SCORED BROKEN CONFIGS FULL CREDIT (BOTH LABS)
+Date: 2026-09-28 ~20:20 EDT   By: Selina   Trigger: cron run 49 (LAB-A focus)
+
+WHY THIS RUN: every run 41-48 verified the HAPPY path (clean start, solve, grade,
+teardown). Nobody had exercised the path a real student hits constantly: a WRONG
+answer. Run 37 fixed LAB-A's pc-b SCORE bug; this run tested FEEDBACK HONESTY.
+
+THE DEFECT (found live, both graders):
+  _node_ip_ok() compared only the ADDRESS and threw the prefix length away
+  (`parts[1].split("/")[0] == ip`), and the docstring said so: "configured
+  (any prefixlen)". Worse, the SUCCESS message hard-coded "/24":
+      feedback.append(f"OK {node}: {spec['ip']}/24 present on {spec['dev']}")
+
+  Reproduced LIVE on LAB-A (session fa161d89): pc-b configured 10.0.1.2/32
+  (a WRONG mask that breaks reachability).
+    BEFORE:  passed=True   score=1.0   "OK pc-b: 10.0.1.2/24 present on eth1"
+  The grader printed a mask the student never entered and gave a broken config
+  full credit. Device ground truth: `ip addr show eth1` -> inet 10.0.1.2/32.
+
+THE FIX (reversible, inside the 2 labs):
+  _node_ip_ok(container, ip, dev, prefixlen=24) now matches "ip/prefixlen"
+  exactly, in BOTH the JSON path and the BusyBox text fallback, and returns an
+  honest detail ("eth1 has 10.0.1.2/32, expected 10.0.1.2/24"). Success feedback
+  now prints the VERIFIED detail string instead of a hard-coded /24.
+  Applied to BOTH graders (same helper in both): grader_demo_01_srl.py (LAB-A)
+  and grader_demo_02.py (LAB-B).
+  Backups: grader_demo_01_srl.py.bak-2026-09-28-prefixlen,
+           grader_demo_02.py.bak-2026-09-28-prefixlen
+
+PROOF - LAB-A (session fa161d89, SAME session, SAME /32 config):
+  AFTER:   passed=False  score=0.0
+           "FAIL pc-b: expected 10.0.1.2/24 on eth1 - eth1 has 10.0.1.2/32,
+            expected 10.0.1.2/24"
+  HAPPY PATH UNBROKEN: pc-a/pc-b/sw1 re-graded after setting the correct /24s ->
+    pc-a 1.0 (address + ping switch + ping PC-B), pc-b 1.0, sw1 1.0.
+  Partial credit still honest: pc-a with 2 of 3 checks = 0.75, with the exact
+  failing check named ("cannot ping PC-B").
+
+PROOF - LAB-B (session bcd2803e, live after the same fix):
+  pc-a at 10.0.1.1/32 -> passed=False score=0.0
+    "FAIL pc-a: expected 10.0.1.1/24 on eth1 - eth1 has 10.0.1.1/32, ..."
+
+GRADER CACHE: both graders reloaded live via POST /api/labs/reload -> 200
+  (the in-process _GRADER_CACHE trap from run 38). Verified by re-grading the
+  SAME still-running session and observing the new behaviour.
+
+TEARDOWN: both sessions stop=200 -> 0 containers, 0 clab dirs, 0 ttyd.
+STATE: nexus.service active, /api 200. NOT COMPLETE. Dad's word alone.

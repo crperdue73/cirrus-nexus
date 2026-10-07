@@ -75,12 +75,12 @@ topology:
     sw1:
       kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux:latest
-      type: ixrd2l
+      type: ixr-d2l
       startup-config: assets/sw1.cfg
     sw2:
       kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux:latest
-      type: ixrd2l
+      type: ixr-d2l
       startup-config: assets/sw2.cfg
     r1:
       kind: linux

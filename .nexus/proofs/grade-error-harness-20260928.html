@@ -1,0 +1,116 @@
+<!doctype html><div id="grade-result"></div><div id="session-indicator"></div><div id="out">pending</div>
+<script>
+function escapeHtml(s){var d=document.createElement('div');d.appendChild(document.createTextNode(String(s)));return d.innerHTML;}
+var currentSession='zzzzzzzz';
+</script>
+<script>
+async function submitGrade(node) {
+    var resultDiv = document.getElementById('grade-result');
+    resultDiv.innerHTML = '<p style="color:var(--text-muted);">\u23f3 Grading...</p>';
+
+    // FIX 2026-09-28 (Selina, cron run 33): this handler had no try/catch and no
+    // !resp.ok guard, but it DOES read data.grade below. A network blip or a
+    // server restart (nexus.service has RestartSec=10 - proven live) rejected the
+    // fetch, left "Grading..." on screen forever, and a non-OK JSON body made
+    // `grade.passed` throw a TypeError. Every other handler that guards does so;
+    // this one - the only one that indexes into the response - did not.
+    var resp, data;
+    try {
+        resp = await fetch('/api/sessions/' + currentSession + '/submit?node=' + encodeURIComponent(node), { method: 'POST' });
+        data = await resp.json();
+    } catch (e) {
+        resultDiv.innerHTML = '<div class="grade-result error">' +
+            '<div class="grade-score">\u26a0\ufe0f Cannot grade</div>' +
+            '<ul class="grade-feedback"><li>' +
+            'Could not reach the grading service (the connection dropped or the server restarted). ' +
+            'Your lab is still running - press Grade again.' +
+            '</li></ul></div>';
+        return;
+    }
+
+    // Refusal path: no attributable substrate => 409, no `grade` object. Render
+    // it as its own state. Falling through to `data.grade` here would throw.
+    if (resp.status === 409) {
+        resultDiv.innerHTML = '<div class="grade-result refused">' +
+            '<div class="grade-score">\u26a0\ufe0f Cannot grade</div>' +
+            '<ul class="grade-feedback"><li>' +
+            escapeHtml(data.detail || 'Session has no runtime digest; state is unattributable.') +
+            '</li></ul></div>';
+        return;
+    }
+
+    // Any other non-OK response carries a `detail`, not a `grade`. Report it
+    // instead of crashing on `grade.passed`.
+    if (!resp.ok || !data || !data.grade) {
+        resultDiv.innerHTML = '<div class="grade-result error">' +
+            '<div class="grade-score">\u26a0\ufe0f Cannot grade</div>' +
+            '<ul class="grade-feedback"><li>' +
+            escapeHtml((data && data.detail) || ('Grading failed (HTTP ' + resp.status + ').')) +
+            '</li></ul></div>';
+        return;
+    }
+
+    var grade = data.grade;
+    var passed = grade.passed;
+    var status = grade.status || 'graded';
+    var feedback = grade.feedback || [];
+    var competencies = grade.competencies || [];
+
+    // Grader crash is NOT a verdict. Show it as an error, never as "Not yet".
+    var headHtml;
+    if (status === 'error') {
+        headHtml = '\u26a0\ufe0f Grader error';
+    } else if (passed) {
+        headHtml = '\u2705 Passed!';
+    } else {
+        headHtml = '\u274c Not yet';
+    }
+    var resultHTML = '<div class="grade-result ' +
+        (status === 'error' ? 'error' : (passed ? 'passed' : 'failed')) + '">' +
+        '<div class="grade-score">' + headHtml;
+    if (status !== 'error') {
+        resultHTML += '<span style="font-size:16px;font-weight:normal;color:var(--text-muted);margin-left:12px;">' +
+            Math.round(grade.score * 100) + '%</span>';
+    }
+    resultHTML += '</div><ul class="grade-feedback">';
+    for (var j = 0; j < feedback.length; j++) {
+        resultHTML += '<li>' + feedback[j] + '</li>';
+    }
+    resultHTML += '</ul>';
+    if (competencies.length > 0) {
+        resultHTML += '<div style="margin-top:12px;"><strong style="font-size:13px;">Competencies Earned:</strong>';
+        for (var k = 0; k < competencies.length; k++) {
+            resultHTML += '<span class="competency-badge">' + escapeHtml(competencies[k]) + '</span>';
+        }
+        resultHTML += '</div>';
+    }
+    resultHTML += '</div>';
+    resultDiv.innerHTML = resultHTML;
+
+    if (passed) {
+        document.getElementById('session-indicator').innerHTML = 
+            '<span style="display:inline-flex;align-items:center;gap:8px;font-size:13px;">' +
+            '<span style="color:var(--success);">Lab Complete!</span>' +
+            '<button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="stopSession()">Close</button></span>';
+    }
+}
+</script>
+<script>
+var results=[];
+function show(){document.getElementById('out').textContent=results.join(' || ');}
+async function t(name, impl){
+  window.fetch=impl;
+  document.getElementById('grade-result').innerHTML='';
+  try{ await submitGrade('pc-a');
+    var h=document.getElementById('grade-result').innerHTML;
+    results.push(name+'='+(h.indexOf('Cannot grade')>=0?'ERROR-SHOWN':(h.indexOf('Lab Complete')>=0?'PASS-SHOWN':'RAW:'+h.replace(/<[^>]+>/g,'').slice(0,40))));
+  }catch(e){ results.push(name+'=THREW('+e.message+')'); }
+  show();
+}
+(async function(){
+  await t('blip',function(){throw new Error('net');});
+  await t('http500',function(){return Promise.resolve({ok:false,status:500,json:function(){return Promise.resolve({detail:'boom'});}});});
+  await t('nograde',function(){return Promise.resolve({ok:true,status:200,json:function(){return Promise.resolve({});}});});
+  await t('refusal409',function(){return Promise.resolve({ok:false,status:409,json:function(){return Promise.resolve({detail:'no digest'});}});});
+})();
+</script>

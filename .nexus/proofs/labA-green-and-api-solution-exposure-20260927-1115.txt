@@ -1,0 +1,33 @@
+VERIFICATION — LAB-A green + solution-exposure surface mapped
+Date: 2026-09-27 ~11:15 EDT   By: Selina   Trigger: hourly cron run 15
+
+A. LAB-A end-to-end (least recently verified)
+   start 200 in ~35s, id b01698a2
+   cold   : pc-a False 0.0            (correct - PCs ship unconfigured)
+   solve  : PC-A/PC-B addressed per the guide
+   warm   : pc-a 1.0 | pc-b 0.5 (full credit - address-only check) | sw1 1.0
+   anti-cheat on LAB-A's switch, proven directly:
+     _srl_irb_ok(pc-b, "10.0.1.254") -> (False, "sr_cli not available — node is
+                                        not an SR Linux switch")   <- fake refused
+     _srl_irb_ok(sw1,  "10.0.1.254") -> (True,  "SR Linux irb0.0 up with 10.0.1.254")
+   => Both labs now have the anti-cheat verified, not assumed.
+   stop 200, 0 leftover containers, registry 0.
+
+B. SOLUTION-EXPOSURE SURFACE (mapped, NOT a bug - a design question for Dad)
+   Where can a student get the answer before solving?
+   1. /api/labs/list  -> returns `instructions` for 10 of 16 labs, unprompted,
+      including the exact commands ("ip addr add 10.0.1.1/24 dev eth1", ...).
+   2. /api/labs/<id>/guide -> returns the FULL lab markdown (objective, topology
+      with the addressing table, step-by-step, and the verification commands).
+   3. /labs/... and /static/... static paths -> 404. The lab-definitions dir is
+      NOT exposed as static files. Good.
+   KEY NUANCE: in these labs the payload IS the procedure - the guide necessarily
+   teaches the commands. This is NOT the N2 hole (a lab shipping a PRE-SOLVED
+   configuration); it is the intended teaching content. What is exposed is the
+   lesson, not a pre-applied config.
+   OPEN QUESTION FOR DAD (not mine to decide): should a graded/unsolved lab serve
+   its full guide from the same API that a student hits before solving, or should
+   the guide be gated until submission (or shown only in an instructor view)?
+   Flagged as a product decision. NOT changed - changing content gating is authoring.
+
+NOT COMPLETE. Dad's word alone.

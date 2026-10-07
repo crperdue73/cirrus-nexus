@@ -1,0 +1,30 @@
+VERIFICATION — the log fix is real (proven by the next cron fire), and the entry log is now entries-only
+Date: 2026-09-28 ~01:25 EDT   By: Selina   Trigger: hourly cron run 30
+
+WHY: run 29 fixed my log writer. But believing a fix and PROVING it are different
+things - and the script only ever runs when the cron fires. A second cron fire
+landed at 01:01 (one minute after run 29), which made this provable.
+
+PROOF THE FIX WORKS (not belief):
+  logs/nexus-forward-runner.log EXISTS, 0 bytes, created 01:01 - i.e. created by
+  THIS cron fire, meaning the new redirect target is live.
+  nexus-forward.log stayed at 57 lines across the 01:00 fire: that fire added
+  exactly ONE line (the marker) and NO prompt text - versus ~60 junk lines on the
+  previous fires. Contamination stopped the moment the fix landed.
+
+SECOND-ORDER FIX (found while verifying): the "cron fired" marker was itself a
+non-entry line accumulating 24/day in an entries-only log. Routed it to the
+runner log too. Then removed the 28 existing markers from the entry log.
+
+VERIFIED AFTER:
+  script bash -n OK; both fire-time writes now target nexus-forward-runner.log
+  nexus-forward.log = 29 lines: RUN 1..29 (run 1/2 predate the "RUN n." style),
+  28 "RUN n." entries + run-1 line, no markers, no prompt text
+  29 unique cited proofs - ALL exist, 0 missing
+  LIVE LAB-A end-to-end after the change: start 200 id 00345066, detail
+  status=running nodes=3, 3 containers; cold pc-a False 0.0 (honest/expected),
+  cold sw1 True 1.0 (ships pre-configured, documented design); stop 200; 0
+  containers left.
+
+STATE: 0 clab containers, service active, /api 200.
+NOT COMPLETE. Dad's word alone.

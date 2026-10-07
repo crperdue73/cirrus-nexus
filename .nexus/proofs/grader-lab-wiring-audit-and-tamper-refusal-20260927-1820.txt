@@ -1,0 +1,40 @@
+VERIFICATION — grader<->lab wiring audit + tamper-refusal test
+Date: 2026-09-27 ~18:20 EDT   By: Selina   Trigger: hourly cron run 22
+
+A. GRADER <-> LAB WIRING AUDIT (could a lab run the wrong grader?)
+   demo-01-...-unsolved : grader=grader_demo_01_srl, gradeable=[pc-a,pc-b,sw1];
+                          the grader's OWN node list = [pc-a,pc-b,sw1]. MATCH.
+   demo-02-...-unsolved : grader=grader_demo_02, gradeable=[pc-a,pc-b,sw1,sw2,r1];
+                          the grader's OWN node list = [pc-a,pc-b,r1,sw1,sw2]. MATCH.
+   No cross-wiring. Each lab's grader grades exactly the nodes its lab declares.
+
+B. EXPECTED-IP CONTRACT vs THE STUDENT-FACING GUIDE
+   demo-01 grader expects 10.0.1.1, 10.0.1.2, 10.0.1.254.
+     guide shows 10.0.1.1/24, 10.0.1.2/24, 10.0.1.254/24. MATCH.
+   demo-02 grader expects 10.0.1.1/.253/.254, 10.0.2.1/.253/.254 (+ the two
+     subnets 10.0.1.0/24, 10.0.2.0/24 used in routes).
+     guide shows exactly those. MATCH.
+   What the grader checks is what the student is taught. No hidden target.
+
+C. TAMPER REFUSAL — a REAL but BROKEN switch must be refused
+   (First attempt was invalid: my `delete` syntax was a parse error, so the IRB
+   was never removed and the grader correctly reported it intact. I did NOT
+   record that as a result. Redone correctly with a fed CLI file.)
+   Removed the pre-configured IRB 10.0.1.254/24 from sw1 mid-lab, verified it
+   was gone, then graded:
+     sw1 -> False 0.0  "expected real switch IRB 10.0.1.254/24 - 10.0.1.254 not
+                         found on irb0.0"
+     grade_all -> passed: False ; nodes {pc-a:False, pc-b:False, sw1:False}
+     session status -> "running"   (lab did NOT pass)
+   => The switch check is not a one-time "is this SR Linux" identity test; it
+      verifies the switch is CORRECTLY CONFIGURED. A real switch with a missing
+      IRB is refused. And run 19's new status logic held: total node failure
+      still leaves "running", never a false "submitted".
+
+D. RECOVERY — fix the switch, re-pass, no reset required
+   Restored the IRB, re-graded: sw1 -> True 1.0, pc-a -> True 1.0, status ->
+   "submitted". A student can recover from a broken config in-session.
+
+Housekeeping: stopped the session (200), 0 clab containers remain.
+
+NOT COMPLETE. Dad's word alone.

@@ -1,0 +1,50 @@
+start_server.py IS A FOOTGUN ON AN INSTALLED HOST - DOCUMENTED (LAB-A focus)
+Date: 2026-09-28 ~16:20 EDT   By: Selina   Trigger: cron run 45
+
+WHY I LOOKED: run 44 fixed install.sh so start_server.py is actually installed.
+This run asked the obvious follow-up the previous run skipped: what does the file
+I just shipped DO? Read it in full rather than trusting the patch.
+
+FINDING (real, operator-facing):
+  start_server.py runs, before starting the backend:
+    subprocess.run(["pkill", "-f", "ttyd.*docker exec"], ...)
+    subprocess.run(["pkill", "-f", "aegis.*main.py"], ...)
+  MEASURED LIVE: `pgrep -af "aegis.*main.py"` returns the RUNNING SERVICE:
+    2135652 /usr/bin/python3 /home/student/.openclaw/workspace-selina/projects/aegis/backend/main.py
+  The service path contains "aegis ... main.py", so the pattern matches it. On a
+  host where the service is already up, running the README's "Running without the
+  service" command KILLS THE RUNNING PRODUCT. And the unit is Restart=on-failure,
+  so systemd then starts a second server and :8000 is contested.
+
+  Severity stated honestly: on a COLD host (the install case) the script is fine -
+  nothing is running to kill. The harm is on an ALREADY-INSTALLED host, which is
+  exactly when an operator reaches for the troubleshooting wrapper after the
+  service misbehaves. "Troubleshooting doc takes down the thing you're debugging."
+
+  PROVEN SAFELY: I did NOT execute the script (it would take down :8000). I ran the
+  pgrep dry-run only, which shows exactly what pkill would target.
+
+SECOND FINDING - CORRECTING MY OWN RUN-44 ASSUMPTION:
+  install.sh line 185-187 seds the workspace path out of start_server.py "if it
+  references the old workspace". It never did: start_server.py is PORTABLE
+  (BASE_DIR = Path(__file__).parent.resolve(); backend resolved relative). grep for
+  /home/ | /opt/ | workspace-selina returns NOTHING. So the sed has always been a
+  no-op, AND run 44's copied file needed no rewriting. The copy fix was right; the
+  sed is dead code that implies a rewrite that never happens.
+
+FIXED (docs only, reversible - the kill-before-start behavior is a legitimate
+  design for a wrapper, so I did not change the code):
+  README "Running without the service" now states the second pkill pattern also
+  matches the running service, cites the live pgrep evidence, and tells the
+  operator to `systemctl stop aegis` (or nexus) first. Also documents that
+  start_server.py is portable and needs no path rewriting.
+  Backup README.md.bak-2026-09-28-startserver-warn
+
+VERIFIED:
+  every claim in the new warning checked against the host (pgrep match, Restart=)
+  bundle rebuilt; shipped README contains the warning (grep = 1)
+  LIVE regression: LAB-A 92b7b378, sw1 True 1.0, stop 200 -> 0 containers,
+    0 clab dirs, 0 ttyd
+
+STATE: service active, /api 200, 0 containers, 0 dirs, 0 ttyd.
+NOT COMPLETE. Dad's word alone.

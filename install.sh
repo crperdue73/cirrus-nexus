@@ -168,6 +168,18 @@ cp    "${SCRIPT_DIR}/Dockerfile.frr"  "${AEGIS_DIR}/Dockerfile.frr"
 # (Dockerfile.frr-bgp removed 2026-09-20 — that substrate is not part of this product.)
 cp    "${SCRIPT_DIR}/README.md"       "${AEGIS_DIR}/README.md"
 
+# start_server.py is the documented manual/troubleshooting entry point (README
+# "Running a Lab": `python3 start_server.py`). It was NEVER copied into
+# ${AEGIS_DIR} -- the sed below silently no-op'd through `|| true`, so a fresh
+# install left the README's start command pointing at a file that did not exist.
+# (Found 2026-09-28 by simulating the Step 6 copy block, not by reading it.)
+if [[ -f "${SCRIPT_DIR}/start_server.py" ]]; then
+    cp    "${SCRIPT_DIR}/start_server.py" "${AEGIS_DIR}/start_server.py"
+    log "Installed start_server.py (manual start / troubleshooting wrapper)"
+else
+    warn "start_server.py not found in source — manual start path will be unavailable"
+fi
+
 # Ship the pinned FRR image tarball + its pin file (step-4 transport).
 # The image is local-only (RepoDigests: []), so a cold host cannot pull it;
 # the installer loads the tarball instead and verifies the resulting IMAGE ID
@@ -379,14 +391,53 @@ fi
 # Step 7b removed 2026-09-20 — it built a substrate the product does not ship.
 
 # --- Step 8: Systemd Service (optional) --------------------------------------
+# --- Step 7c: Pre-pull the node images the two labs need --------------------
+# The bundle ships the FRR substrate, but NOT the SR Linux switch image or the
+# alpine host image: those are fetched from a registry at deploy time. Measured
+# 2026-10-01: ghcr.io/nokia/srlinux:latest is ~2.35 GB. Pulling them HERE means a
+# blocked registry or a slow link fails EARLY and says so, instead of surfacing as
+# a cryptic containerlab error part-way through a deploy.
+log "Step 7c: Pre-pulling lab node images (the switch image is large)..."
+FAILED_IMAGES=""
+for IMG in ghcr.io/nokia/srlinux:latest alpine:latest; do
+    if docker image inspect "${IMG}" &>/dev/null; then
+        log "  ${IMG} — already present"
+    else
+        # Say the size of THIS image. The first version of this line claimed "SR Linux is
+        # ~2.35 GB" for EVERY image in the loop -- so an operator pulling alpine (~8 MB)
+        # was told it was 2.35 GB. Found 2026-10-04 (run 184) by executing this very block
+        # against a substituted image list in a throwaway harness.
+        case "${IMG}" in
+            *srlinux*) IMG_NOTE="~2.35 GB — this can take several minutes" ;;
+            *)         IMG_NOTE="a small image" ;;
+        esac
+        log "  pulling ${IMG} (${IMG_NOTE})"
+        if ! docker pull "${IMG}"; then
+            warn "  could not pull ${IMG}"
+            FAILED_IMAGES="${FAILED_IMAGES} ${IMG}"
+        fi
+    fi
+done
+if [ -n "${FAILED_IMAGES}" ]; then
+    warn "Missing node images:${FAILED_IMAGES}"
+    warn "AEGIS is installed, but the labs will NOT start until those images exist."
+    warn "Re-run this installer once the registry is reachable, or load them by hand:"
+    warn "  docker pull ghcr.io/nokia/srlinux:latest alpine:latest"
+fi
+
 log "Step 8: Creating systemd service..."
 
 cat > /etc/systemd/system/aegis.service << 'SERVICE'
 [Unit]
 Description=AEGIS — Academic Educational Grading & Infrastructure System
 After=docker.service network-online.target
-Requires=docker.service
-Wants=network-online.target
+Wants=docker.service network-online.target
+# NOTE: NOT Requires=docker.service. Requires= means "if docker is stopped this
+# unit is stopped too" (systemd.unit(5)); docker.service is Restart=always and
+# does restart on real hosts, which would tear down AEGIS and every running lab
+# on a docker restart. We only need docker ordered before us (After=) plus a soft
+# want, not a hard coupling. (Divergence found 2026-09-28: the running unit used
+# Wants=, the installer used Requires=; aligned to the safer form.)
 
 [Service]
 Type=simple
@@ -429,16 +480,32 @@ log ""
 log "  Start AEGIS:    systemctl start aegis"
 log "  Enable at boot: systemctl enable aegis"
 log "  View logs:      journalctl -u aegis -f"
-log "  Open browser:   http://$(hostname -I 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i!~/^(172\.|10\.|192\.168\.|127\.)/){print $i;exit}}'):${LISTEN_PORT}"
+  # Prefer the first non-loopback IPv4 (a real LAN address); fall back to localhost
+  # with a note. The old line EXCLUDED 10./172./192.168. - exactly the private
+  # addresses a real host has - so it printed an empty host: "http://:8000".
+  _HOSTIP=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | grep -v '^127\.' | head -1)
+  if [[ -n "${_HOSTIP}" ]]; then
+      log "  Open browser:   http://${_HOSTIP}:${LISTEN_PORT}   (or http://localhost:${LISTEN_PORT} on this host)"
+  else
+      log "  Open browser:   http://localhost:${LISTEN_PORT}   (no LAN IPv4 found; use the host address if remote)"
+  fi
 log ""
 log "  OR run manually: python3 ${AEGIS_DIR}/backend/main.py"
 log ""
-log "  Default labs auto-discovered:"
-for f in "${AEGIS_DIR}"/lab-definitions/*.yml; do
-    if [[ -f "$f" ]]; then
-        name=$(grep -m1 'name:' "$f" 2>/dev/null | head -1 | sed 's/name: *//')
-        id=$(grep -m1 'id:' "$f" 2>/dev/null | head -1 | sed 's/id: *//')
-        [[ -n "$id" ]] && echo "    - ${id}: ${name}"
-    fi
-done
+  # Lab topologies are YAML under lab-definitions/ (top level and one dir down).
+  # The old glob (lab-definitions/*.yml with an "id:" grep) matched none of the
+  # shipped labs and printed an empty promise. Enumerate the real files honestly.
+  log "  Labs discovered:"
+  _LABCOUNT=0
+  while IFS= read -r f; do
+      [[ -f "$f" ]] || continue
+      _LABNAME=$(basename "$f" .yml)
+      echo "    - ${_LABNAME}"
+      _LABCOUNT=$(( _LABCOUNT + 1 ))
+  done < <(find "${AEGIS_DIR}/lab-definitions" -maxdepth 2 -type f -name '*.yml' 2>/dev/null | sort)
+  if [[ "${_LABCOUNT}" -eq 0 ]]; then
+      log "    (none under ${AEGIS_DIR}/lab-definitions)"
+  else
+      log "    (${_LABCOUNT} lab file(s))"
+  fi
 log "═══════════════════════════════════════════════════════════"

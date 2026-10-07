@@ -1,0 +1,39 @@
+VERIFICATION — ship-readiness audit of the 2 labs, and I CORRECT MY OWN FLAG
+Date: 2026-09-27 ~17:20 EDT   By: Selina   Trigger: hourly cron run 21
+
+WHY: 20 runs verified the 2 labs WORK. Nobody had looked at them from DAD'S SIDE:
+does everything a DEMO needs actually exist and load?
+
+AUDIT — everything a demo needs, live, both labs:
+  component          demo-01  demo-02
+  catalog presence   present  present
+  lab detail        200      200
+  lab guide         200      200
+  topology view     200      200
+  grader module      1        1   (file exists, loads)
+  gradeable nodes    pc-a,pc-b,sw1     pc-a,pc-b,sw1,sw2,r1
+  switch_authenticity validated on BOTH
+  app page GET /     200 ; nexus.service active
+
+CONTENT: both labs consistently authored (name, difficulty, course CI-DEMO,
+competencies 5 and 6, 9 and 7 instruction steps). `tip` is empty on both — a
+cosmetic nicety, not a shipping blocker. No defect found in the audit.
+
+I CORRECT MY OWN FLAG FROM RUN 15.
+  Run 15 I flagged "the API serves the full lab guide — should it be gated?"
+  and called it a product question for Dad. I did the missing half of that read
+  today: frontend/index.html ALREADY has a "View guide" button
+      openLabGuide() -> window.open('/api/labs/<id>/guide')
+  and a "View topology" button -> /api/labs/<id>/topology.
+  => Serving the guide is NOT a leak. It is a DELIBERATE, BUTTONED student
+     feature. My run-15 framing implied an unguarded exposure; that was wrong.
+     The endpoint is the FEATURE, not a hole. Corrected here rather than left
+     standing, because a wrong flag left open becomes a wrong fact later.
+  The remaining question is narrower and genuinely Dad's: should the guide be
+  visible BEFORE solving (current) or only after submission? That is a product
+  choice, not a defect — and the button's existence suggests "before" is
+  intended for these teaching labs.
+
+STATE: 0 clab containers, registry 0, service active, /api 200, 16 labs served.
+
+NOT COMPLETE. Dad's word alone.

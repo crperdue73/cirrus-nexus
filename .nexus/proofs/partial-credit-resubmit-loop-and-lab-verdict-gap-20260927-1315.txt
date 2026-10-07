@@ -1,0 +1,45 @@
+VERIFICATION — the wrong-then-fixed student loop, and a genuine gap found
+Date: 2026-09-27 ~13:15 EDT   By: Selina   Trigger: hourly cron run 17
+
+A. PARTIAL CREDIT IS PRECISE AND HONEST (good)
+   Student addressed PC-A only, forgot PC-B:
+     pc-a: False 0.75  -> + 10.0.1.1/24 on eth1
+                          + can ping the switch 10.0.1.254
+                          - cannot ping PC-B 10.0.1.2
+     pc-b: False 0.0   -> "expected 10.0.1.2/24 on eth1 - 10.0.1.2 not found"
+   Exactly one failed check named, with the reason. Not a coarse pass/fail.
+   This is what a student needs to learn from.
+
+B. THE RE-SUBMIT LOOP WORKS (a student can fix and get credit)
+   Student then configured PC-B and re-submitted:
+     pc-a 0.75 -> 1.0 ; pc-b 0.0 -> 0.5 ; sw1 1.0 ; session status -> "submitted"
+   Re-grading after a fix gives full credit. No sticky failure, no reset needed.
+
+C. GENUINE GAP FOUND — the lab-level verdict is UNREACHABLE
+   Both graders define `grade_all(session)`, which returns the LAB verdict
+   ("passed" + per-node + a human summary), with the correct pass rule:
+     demo-01: lab_passed = pc-a.passed AND sw1.passed
+     demo-02: lab_passed = end_to_end AND real_switches AND router_ok
+   `grade_all` is CALLED BY NOTHING except its own __main__ self-test:
+     grep -rn "grade_all" backend/  -> (no hits)
+   The API's only grading route is POST /api/sessions/{id}/submit, which
+   REQUIRES a `node` param and calls only `grader.grade(session, node)`.
+   There is NO lab-level grade route. (Verified: bare submit -> 422
+   "Field required: node"; openapi shows only the per-node submit.)
+   The UI shows only per-node cards; it never requests a lab verdict.
+   => A student can grade every node 100% and NEVER receive a single
+      "this lab passed" verdict as a whole. The product's own definition of
+      success is implemented but has no door to the student.
+
+   WHY THIS IS EXACTLY SOMETHING A DEMO WOULD HIT: a demo ends with "did it
+   pass?" The verdict exists in code and cannot be asked for.
+
+   NOT FIXED THIS RUN, deliberately: adding a route / changing what the API
+   exposes is a product-surface decision (new endpoint = new contract), and
+   Dad has a pending ruling on ship-shape (delete 14 vs 12) that could change
+   the surface anyway. Flagging with the exact ask rather than inventing an
+   endpoint on his behalf. RECOMMENDED: GET /api/sessions/{id}/result ->
+   grade_all(session). Reversible, ~6 lines, no change to existing routes.
+   Awaiting Dad.
+
+NOT COMPLETE. Dad's word alone.

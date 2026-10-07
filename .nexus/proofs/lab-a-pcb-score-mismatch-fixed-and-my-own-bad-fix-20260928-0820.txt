@@ -1,0 +1,45 @@
+FIX x2 — LAB-A scored a correct pc-b at 50%, and my first fix made failing pc-b score 100%
+Date: 2026-09-28 ~08:20 EDT   By: Selina   Trigger: hourly cron run 37 (LAB-B focus)
+
+WHAT I WAS DOING: the one thing nobody had tested - can a student actually COMPLETE
+both labs as a student? Started both labs live, typed the EXACT guide commands into
+the REAL containers via docker exec, and watched the grader.
+
+LAB-B: PERFECT. Cold pc-a/pc-b 0.0, r1 0.2, sw1/sw2 1.0. After the guide's exact
+  commands (pc-a IP+route, pc-b IP+route, r1 sysctl+two addresses) the guide's own
+  pings all pass and all 5 nodes grade passed=True score=1.0. Student journey works.
+
+LAB-A: DEFECT FOUND (score/verdict mismatch).
+  Guide table says pc-b = "10.0.1.2/24 on eth1 | address present" -> full credit.
+  Grader credited 0.5 for the address (shared with pc-a, which has a second graded
+  part: the pings). So a student who configured pc-b EXACTLY right saw
+  "✅ Passed! 50%" - a correct node reading as half-finished. Verdict right, score lied.
+  Grader header confirms pc-b's requirement is address-only ("pc-b: must have
+  10.0.1.2/24 up"), so full credit is the contract.
+
+MY OWN BAD FIX (caught live, second attempt correct):
+  First fix moved the credit out of the `if ok:` block: `if node=="pc-a": score+=0.5
+  else: score+=1.0` at function scope. Tested the negative case immediately and
+  pc-b with NO IP scored passed=False score=1.0 - a failing node reading as perfect.
+  Worse than the bug it replaced. Fixed properly: the credit stays INSIDE `if ok:`.
+  This is why the negative case gets tested, not just the happy path.
+
+SECOND FINDING (real, not fixed - escalated):
+  _GRADER_CACHE caches imported grader modules in-process with NO file-mtime check.
+  Editing a grader file changes NOTHING until nexus.service restarts. I hit this:
+  after the edit, pc-b still scored 0.5 until systemctl restart. An operator could
+  edit a grader, re-grade, see no change, and conclude the fix was wrong - or ship
+  a grader edit that never takes effect. Found by proving the fix instead of
+  believing it. NOT changed: cache invalidation semantics are a product decision.
+
+VERIFIED (after restart, cache cleared):
+  py_compile OK; service active
+  cold            pc-a False 0.0 | pc-b False 0.0
+  pc-b only       pc-a False 0.0 | pc-b True  1.0
+  both configured pc-a True  1.0 | pc-b True  1.0 | sw1 True 1.0
+  LAB-B unchanged (already correct): 5/5 on the student path
+  stop 200 -> 0 containers, 0 ttyd
+  Backup: lab-definitions/grader_demo_01_srl.py.bak-2026-09-28-pcbscore
+
+STATE: 0 clab containers, 0 ttyd, service active, /api 200.
+NOT COMPLETE. Dad's word alone.

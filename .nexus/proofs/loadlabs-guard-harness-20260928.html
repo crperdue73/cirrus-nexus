@@ -1,0 +1,113 @@
+<!doctype html>
+<div id="student-name"></div><div id="student-setup"></div><div id="lab-catalog"></div><div id="out">pending</div>
+<script>
+document.getElementById('student-name').value='';
+</script>
+<script>
+function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+}
+</script>
+<script>
+async function loadLabs() {
+    const name = document.getElementById('student-name').value.trim() || 'Student';
+    document.getElementById('student-setup').classList.add('hidden');
+
+    // FIX 2026-09-28 (Selina, cron run 35): this is the FIRST call on page load
+    // and it had no try/catch and no !resp.ok guard. If /api/labs failed - the
+    // server restarting, which nexus.service does with RestartSec=10, proven live -
+    // resp.json() threw, the name-entry screen had already been hidden, and the
+    // student was left on a BLANK PAGE with no error and no retry. The entry point
+    // failing silently is worse than the grading bug fixed in run 33.
+    let resp, data;
+    try {
+        resp = await fetch('/api/labs');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        data = await resp.json();
+    } catch (e) {
+        document.getElementById('student-setup').classList.remove('hidden');
+        var errBox = document.getElementById('lab-catalog');
+        errBox.classList.remove('hidden');
+        errBox.innerHTML = '<div style="text-align:center;color:var(--error);padding:24px;">' +
+            '\u26a0\ufe0f Could not load the lab list. The server may be starting up.' +
+            '<div style="margin-top:16px;"><button class="btn" onclick="loadLabs()">\u21bb Try again</button></div>' +
+            '</div>';
+        return;
+    }
+    const catalog = document.getElementById('lab-catalog');
+    catalog.classList.remove('hidden');
+
+    var labs = data.labs;
+
+    // Build course filter buttons
+    var courses = {};
+    for (var i = 0; i < labs.length; i++) {
+        var c = labs[i].course || 'Uncategorized';
+        courses[c] = (courses[c] || 0) + 1;
+    }
+    var courseKeys = Object.keys(courses).sort();
+
+    var filterHtml = '<button class="btn btn-secondary filter-btn" data-course="all" onclick="filterLabs(\'all\')" style="font-size:13px;">\ud83d\udcca All</button>';
+    for (var i = 0; i < courseKeys.length; i++) {
+        var c = courseKeys[i];
+        var label = c === 'Uncategorized' ? '\ud83d\udfe2 Other' : c;
+        filterHtml += '<button class="btn btn-secondary filter-btn" data-course="' + escapeHtml(c) + '" onclick="filterLabs(\'' + escapeHtml(c).replace(/'/g, "\\'") + '\')" style="font-size:13px;">' + label + ' (' + courses[c] + ')</button>';
+    }
+    document.getElementById('course-filter').innerHTML = filterHtml;
+    // Highlight All as active
+    document.querySelectorAll('.filter-btn').forEach(function(b) {
+        if (b.getAttribute('data-course') === 'all') {
+            b.style.borderColor = 'var(--accent)';
+            b.style.color = 'var(--accent)';
+        }
+    });
+
+    // Render all lab cards with course badge
+    var activeFilter = window._activeFilter || 'all';
+    var cardHtml = labs.map(function(lab, index) {
+        var escapedId = lab.id.replace(/'/g, "\\'");
+        var escapedName = name.replace(/'/g, "\\'");
+        var courseBadge = (lab.course) ? '<span class="lab-tag" style="border-color:var(--accent-dim);color:var(--accent);">' + escapeHtml(lab.course) + '</span>' : '';
+        var show = (activeFilter === 'all' || (lab.course || 'Uncategorized') === activeFilter) ? '' : ' style="display:none;"';
+        return '<div class="lab-card" style="margin-bottom: 16px;" data-course="' + escapeHtml(lab.course || 'Uncategorized') + '"' + show + '>' +
+            '<h2>' + lab.name + '</h2>' +
+            '<p class="lab-desc">' + lab.description + '</p>' +
+            '<div class="lab-meta">' +
+            '<span class="lab-tag">\u23f1\ufe0f ' + lab.duration_min + ' min</span>' +
+            '<span class="lab-tag accent">' + lab.difficulty + '</span>' +
+            courseBadge +
+            (lab.competencies || []).map(function(c) {
+                return '<span class="lab-tag">\u{1f3af} ' + escapeHtml(c) + '</span>';
+            }).join('') +
+            '</div>' +
+            '<div class="actions">' +
+            '<button class="btn btn-primary" onclick="startLab(\'' + escapedId + '\', \'' + escapedName + '\')">' +
+            '\u25b6 Start Lab</button>' +
+            '<button class="btn btn-secondary" onclick="window.open(\'/api/labs/' + escapedId + '/topology\', \'_blank\')">' +
+            '\u{1f5fa} Topology</button>' +
+            '<button class="btn btn-secondary" onclick="openLabGuide(\'' + escapedId + '\')">' +
+            '\u{1f4d6} Lab Guide</button>' +
+            '</div>' +
+            '</div>';
+    }).join('');
+    document.getElementById('lab-cards').innerHTML = cardHtml;
+}
+</script>
+<script>
+async function t(name, impl){
+  window.fetch=impl;
+  document.getElementById('lab-catalog').innerHTML='';
+  document.getElementById('lab-catalog').classList.remove('hidden');
+  try{ await loadLabs();
+    var h=document.getElementById('lab-catalog').innerHTML;
+    document.getElementById('out').textContent += '['+name+'='+(h.indexOf('Could not load')>=0?'ERROR-SHOWN':(h.indexOf('Try again')>=0?'RETRY-SHOWN':'OK/OTHER'))+'] ';
+  }catch(e){ document.getElementById('out').textContent += '['+name+'=THREW('+e.message+')] '; }
+}
+document.getElementById('out').textContent='';
+(async function(){
+  await t('blip', function(){throw new Error('net');});
+  await t('http503', function(){return Promise.resolve({ok:false,status:503,json:function(){return Promise.resolve({});}});});
+})();
+</script>

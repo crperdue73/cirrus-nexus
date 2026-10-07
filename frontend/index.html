@@ -4,8 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NEXUS — Network Education & User Simulation</title>
-    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-    <script src="https://unpkg.com/htmx.org@2.0.4/dist/ext/sse.js"></script>
+    <!-- Removed 2026-09-27 (Selina): two unpkg.com CDN script tags for htmx 2.0.4
+         were loaded but NEVER USED - no hx-* attributes exist anywhere in this
+         document and every action is a plain fetch(). They were the app's ONLY
+         external dependency, and they made the demo depend on internet access
+         for no functional gain. Removal verified: page and lab flow fully intact
+         offline (chromium --host-resolver-rules="MAP unpkg.com 0.0.0.0").
+         Backup: frontend/index.html.bak-2026-09-27-htmx -->
     <style>
         :root {
             --bg: #0f1117;
@@ -430,6 +435,8 @@
         <div id="lab-catalog" class="hidden">
             <!-- Course Filter Bar -->
             <div id="course-filter" style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;justify-content:center;"></div>
+              <!-- Notice area: messages live HERE so the filter/cards are never destroyed -->
+              <div id="catalog-notice"></div>
             <!-- Lab Cards Container -->
             <div id="lab-cards"></div>
         </div>
@@ -457,12 +464,30 @@ async function loadLiveSessions() {
         return;
     }
     if (!resp.ok) { panel.classList.add('hidden'); return; }
-    var data = await resp.json();
+    var data;
+    try {
+        data = await resp.json();
+    } catch (e) {
+        // RUN 208: this parse sat OUTSIDE the try above. A non-JSON answer -- a proxy, an HTML error
+        // page, a truncated body -- threw inside an async function that no caller awaits, so it
+        // became an unhandled rejection and the panel silently never updated. Same class as runs
+        // 206/207: an async failure with no handler is invisible to the student.
+        panel.classList.add('hidden');
+        return;
+    }
     var sessions = data.sessions || [];
     if (sessions.length === 0) { panel.classList.add('hidden'); panel.innerHTML = ''; return; }
 
     var rows = sessions.map(function(s) {
         var digest = (s.runtime_digest || '').slice(0, 24);
+        // Reconnect: if this session already served terminals, offer them back. A
+        // page refresh used to leave a student with only a Stop button on their own
+        // running lab (2026-09-28).
+        var canReconnect = s.ttyd && Object.keys(s.ttyd).length > 0;
+        var reconnectBtn = canReconnect
+            ? '<button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;white-space:nowrap;" ' +
+              'onclick="reconnectSession(\'' + escapeHtml(s.session_id) + '\')">\u21bb Reconnect</button>'
+            : '';
         return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;' +
             'padding:10px 14px;border:1px solid var(--border,#333);border-radius:8px;margin-bottom:8px;">' +
             '<div style="text-align:left;min-width:0;">' +
@@ -471,9 +496,14 @@ async function loadLiveSessions() {
             ' \u00b7 ' + (s.nodes ? s.nodes.length : 0) + ' nodes \u00b7 id ' +
             escapeHtml(s.session_id) + '</div>' +
             '<div style="font-size:11px;opacity:0.55;font-family:monospace;">' +
-            escapeHtml(digest || '(no digest)') + '</div></div>' +
+            escapeHtml(digest || '(no digest)') + '</div>' +
+            (s.runtime_digest_matches === false
+                ? '<div style="font-size:11px;color:var(--error);">\u26a0\ufe0f substrate changed since this lab started \u2014 grades will refuse; end and restart the lab</div>'
+                : '') +
+            '</div>' +
+            '<div style="display:flex;gap:8px;white-space:nowrap;">' + reconnectBtn +
             '<button class="btn btn-danger" style="padding:4px 12px;font-size:12px;white-space:nowrap;" ' +
-            'onclick="stopSessionById(\'' + escapeHtml(s.session_id) + '\')">\u2715 Stop</button>' +
+            'onclick="stopSessionById(\'' + escapeHtml(s.session_id) + '\')">\u2715 Stop</button></div>' +
             '</div>';
     }).join('');
 
@@ -482,8 +512,19 @@ async function loadLiveSessions() {
     panel.classList.remove('hidden');
 }
 
+// RUN 207: neither stop path had a handler. A failed stop became an UNHANDLED REJECTION -- the button
+// appeared to do nothing, the lab kept running, and nothing on screen said so. Say it out loud.
+function _stopFailed(e) {
+    var ind = document.getElementById('session-indicator');
+    var msg = '\u26a0\ufe0f Could not end the lab (' + String((e && e.message) || e) + '). It is still running \u2014 press End Lab again.';
+    if (ind) { ind.innerHTML = '<span style="color:var(--error);font-size:13px;">' + msg + '</span>'; }
+    else { alert(msg); }
+}
 async function stopSessionById(sid) {
-    await fetch('/api/sessions/' + encodeURIComponent(sid) + '/stop', { method: 'POST' });
+    try {
+        var _r = await fetch('/api/sessions/' + encodeURIComponent(sid) + '/stop', { method: 'POST' });
+        if (!_r.ok && _r.status !== 404) { throw new Error('HTTP ' + _r.status); }
+    } catch (e) { _stopFailed(e); return; }
     if (currentSession === sid) {
         currentSession = null;
         currentLab = null;
@@ -495,14 +536,119 @@ async function stopSessionById(sid) {
     loadLabs();
 }
 
+// Re-attach to a lab the student already has running - the recovery path after a
+// page refresh. Added 2026-09-28: previously a refresh left a student with only a
+// Stop button on their own running lab, and pressing Start again quietly created a
+// SECOND full session (two sets of containers). This rebuilds the terminal view
+// against the EXISTING session; it never starts a new one.
+async function reconnectSession(sid) {
+    var catalog = document.getElementById('lab-catalog');
+    var sessionDiv = document.getElementById('active-session');
+    try {
+        var listResp = await fetch('/api/sessions');
+        var list = await listResp.json();
+        var entry = (list.sessions || []).filter(function(s) { return s.session_id === sid; })[0];
+        if (!entry) throw new Error('That session is no longer running.');
+
+        // getSessionHTML() needs the lab definition (instructions, gradeable nodes).
+        var labsResp = await fetch('/api/labs');
+        var labs = (await labsResp.json()).labs || [];
+        var lab = labs.filter(function(l) { return l.id === entry.lab_id; })[0] || { id: entry.lab_id, name: entry.lab_id };
+
+        var data = {
+            session_id: entry.session_id,
+            lab: lab,
+            nodes: entry.nodes,
+            ttyd: entry.ttyd || {},
+            status: entry.status
+        };
+        currentSession = entry.session_id;
+        currentLab = entry.lab_id;
+
+        catalog.classList.add('hidden');
+        sessionDiv.classList.remove('hidden');
+        sessionDiv.innerHTML = getSessionHTML(data);
+
+        var grid = document.getElementById('terminal-grid');
+        if (grid) {
+            var ttyd = data.ttyd;
+            (data.nodes || []).forEach(function(name) {
+                var url = (ttyd[name] && ttyd[name].url) ? ttyd[name].url : 'about:blank';
+                var frame = document.createElement('div');
+                frame.innerHTML = '<div class="terminal-frame"><div class="terminal-label">' +
+                    '<span class="term-name">' + escapeHtml(name) + '</span>' +
+                    '<button type="button" class="term-btn" title="Expand this terminal">\u26f6 Expand</button>' +
+                    '</div><iframe src="' + url + '"></iframe></div>';
+                grid.appendChild(frame.firstElementChild);
+            });
+        }
+        loadLiveSessions();
+    } catch (e) {
+        catalogNotice('<div style="text-align:center;color:var(--error);padding:24px;">' +
+            '\u26a0\ufe0f Could not reconnect: ' + escapeHtml(e.message) +
+            '<div style="margin-top:16px;"><button class="btn btn-secondary" onclick="loadLabs()">\u2190 Back</button></div>' +
+            '</div>');
+        catalog.classList.remove('hidden');
+    }
+}
+
+// Show a message in the catalog WITHOUT destroying it. Clobbering #lab-catalog's innerHTML used to
+// delete #course-filter and #lab-cards; loadLabs() then threw on a null element -- inside an async
+// function, so it surfaced as a silent unhandled rejection. A student who pressed End Lab saw the
+// deploying notice stay on screen forever with no lab list and no error. Found live 2026-10-05 (run 206).
+function catalogNotice(html) {
+    var n = document.getElementById('catalog-notice');
+    var f = document.getElementById('course-filter');
+    var c = document.getElementById('lab-cards');
+    if (!n) { return; }
+    n.innerHTML = html || '';
+    var show = html ? 'none' : '';
+    if (f) { f.style.display = show; }
+    if (c) { c.style.display = show; }
+}
+
 async function loadLabs() {
     const name = document.getElementById('student-name').value.trim() || 'Student';
     document.getElementById('student-setup').classList.add('hidden');
 
-    const resp = await fetch('/api/labs');
-    const data = await resp.json();
+    // FIX 2026-09-28 (Selina, cron run 35): this is the FIRST call on page load
+    // and it had no try/catch and no !resp.ok guard. If /api/labs failed - the
+    // server restarting, which nexus.service does with RestartSec=10, proven live -
+    // resp.json() threw, the name-entry screen had already been hidden, and the
+    // student was left on a BLANK PAGE with no error and no retry. The entry point
+    // failing silently is worse than the grading bug fixed in run 33.
+    let resp, data;
+    try {
+        resp = await fetch('/api/labs');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        data = await resp.json();
+    } catch (e) {
+        document.getElementById('student-setup').classList.remove('hidden');
+        var errBox = document.getElementById('lab-catalog');
+        errBox.classList.remove('hidden');
+        catalogNotice('<div style="text-align:center;color:var(--error);padding:24px;">' +
+            '\u26a0\ufe0f Could not load the lab list. The server may be starting up.' +
+            '<div style="margin-top:16px;"><button class="btn" onclick="loadLabs()">\u21bb Try again</button></div>' +
+            '</div>');
+        return;
+    }
     const catalog = document.getElementById('lab-catalog');
     catalog.classList.remove('hidden');
+    catalogNotice('');   // clear any message and bring the filter/cards back
+
+    // If this browser started a lab recently and it has not appeared yet, SAY SO (run 205).
+    try {
+        var _dep = JSON.parse(localStorage.getItem('aegis_deploying') || 'null');
+        if (_dep && _dep.t && (Date.now() - _dep.t) < 300000) {
+            var _mins = Math.round((Date.now() - _dep.t) / 60000);
+            var _el = document.createElement('div');
+            _el.id = 'deploying-notice';
+            _el.style.cssText = 'text-align:center;color:var(--accent);padding:10px 14px;margin-bottom:14px;border:1px solid var(--accent-dim);border-radius:8px;font-size:13px;';
+            _el.innerHTML = '\u23f3 A lab was started here ' + (_mins < 1 ? 'less than a minute' : _mins + ' minute(s)') +
+                ' ago and is not listed yet. It can take a few minutes on a first run \u2014 it will appear under \u201cRunning sessions\u201d when ready. Waiting (or reloading) beats starting a second one.';
+            if (catalog.firstChild) { catalog.insertBefore(_el, catalog.firstChild); } else { catalog.appendChild(_el); }
+        }
+    } catch (e) {}
 
     var labs = data.labs;
 
@@ -596,7 +742,12 @@ function openLabGuide(labId) {
 
 async function startLab(labId, studentName) {
     const catalog = document.getElementById('lab-catalog');
-    catalog.innerHTML = '<p style="text-align:center;color:var(--text-muted);">\u23f3 Deploying your lab environment...</p>';
+    catalogNotice('<p style="text-align:center;color:var(--text-muted);">\u23f3 Deploying your lab environment&hellip;</p>'+'<p style="text-align:center;color:var(--text-muted);font-size:13px;">This usually takes under a minute. On a first run it can take several minutes while the container images download &mdash; the page will continue on its own.</p>');
+    // Remember that a deploy was issued in THIS browser, because /api/sessions does not list it yet.
+    // Measured 2026-10-05 (run 205): containers exist ~3s in, but the session appears in the list only
+    // at ~46s -- a 43s blind window. A student who reloads inside it sees an empty list, and the
+    // natural next move (press Start again) doubles the deployment (run 203: duplicates are allowed).
+    try { localStorage.setItem('aegis_deploying', JSON.stringify({lab: labId, t: Date.now()})); } catch (e) {}
 
     var resp, data;
     try {
@@ -604,23 +755,24 @@ async function startLab(labId, studentName) {
             '&student_name=' + encodeURIComponent(studentName), { method: 'POST' });
         data = await resp.json();
     } catch (e) {
-        catalog.innerHTML = '<div style="text-align:center;color:var(--error);">' +
+        catalogNotice('<div style="text-align:center;color:var(--error);">' +
             '\u274c Failed to start lab. Is the server running?</div>' +
             '<div style="text-align:center;margin-top:16px;">' +
-            '<button class="btn btn-secondary" onclick="loadLabs()">\u2190 Back</button></div>';
+            '<button class="btn btn-secondary" onclick="loadLabs()">\u2190 Back</button></div>');
         return;
     }
 
     if (!resp.ok) {
         var detail = data.detail || 'Unknown error';
-        catalog.innerHTML = '<div style="text-align:center;color:var(--error);">' +
-            '\u274c ' + escapeHtml(detail) + '</div>' +
+        catalogNotice('<div style="text-align:center;color:var(--error);">' +
+            '\u274c This lab could not be started: ' + escapeHtml(detail) + '</div>' +
             '<div style="text-align:center;margin-top:16px;">' +
-            '<button class="btn btn-secondary" onclick="loadLabs()">\u2190 Back</button></div>';
+            '<button class="btn btn-secondary" onclick="loadLabs()">\u2190 Back</button></div>');
         return;
     }
 
     currentSession = data.session_id;
+    try { localStorage.removeItem('aegis_deploying'); } catch (e) {}
     currentLab = data.lab;
 
     catalog.classList.add('hidden');
@@ -703,8 +855,26 @@ function getSessionHTML(data) {
 async function submitGrade(node) {
     var resultDiv = document.getElementById('grade-result');
     resultDiv.innerHTML = '<p style="color:var(--text-muted);">\u23f3 Grading...</p>';
-    var resp = await fetch('/api/sessions/' + currentSession + '/submit?node=' + encodeURIComponent(node), { method: 'POST' });
-    var data = await resp.json();
+
+    // FIX 2026-09-28 (Selina, cron run 33): this handler had no try/catch and no
+    // !resp.ok guard, but it DOES read data.grade below. A network blip or a
+    // server restart (nexus.service has RestartSec=10 - proven live) rejected the
+    // fetch, left "Grading..." on screen forever, and a non-OK JSON body made
+    // `grade.passed` throw a TypeError. Every other handler that guards does so;
+    // this one - the only one that indexes into the response - did not.
+    var resp, data;
+    try {
+        resp = await fetch('/api/sessions/' + currentSession + '/submit?node=' + encodeURIComponent(node), { method: 'POST' });
+        data = await resp.json();
+    } catch (e) {
+        resultDiv.innerHTML = '<div class="grade-result error">' +
+            '<div class="grade-score">\u26a0\ufe0f Cannot grade</div>' +
+            '<ul class="grade-feedback"><li>' +
+            'Could not reach the grading service (the connection dropped or the server restarted). ' +
+            'Your lab is still running - press Grade again.' +
+            '</li></ul></div>';
+        return;
+    }
 
     // Refusal path: no attributable substrate => 409, no `grade` object. Render
     // it as its own state. Falling through to `data.grade` here would throw.
@@ -713,6 +883,17 @@ async function submitGrade(node) {
             '<div class="grade-score">\u26a0\ufe0f Cannot grade</div>' +
             '<ul class="grade-feedback"><li>' +
             escapeHtml(data.detail || 'Session has no runtime digest; state is unattributable.') +
+            '</li></ul></div>';
+        return;
+    }
+
+    // Any other non-OK response carries a `detail`, not a `grade`. Report it
+    // instead of crashing on `grade.passed`.
+    if (!resp.ok || !data || !data.grade) {
+        resultDiv.innerHTML = '<div class="grade-result error">' +
+            '<div class="grade-score">\u26a0\ufe0f Cannot grade</div>' +
+            '<ul class="grade-feedback"><li>' +
+            escapeHtml((data && data.detail) || ('Grading failed (HTTP ' + resp.status + ').')) +
             '</li></ul></div>';
         return;
     }
@@ -755,16 +936,33 @@ async function submitGrade(node) {
     resultDiv.innerHTML = resultHTML;
 
     if (passed) {
-        document.getElementById('session-indicator').innerHTML = 
-            '<span style="display:inline-flex;align-items:center;gap:8px;font-size:13px;">' +
-            '<span style="color:var(--success);">Lab Complete!</span>' +
-            '<button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="stopSession()">Close</button></span>';
+        // FIX 2026-10-04 (run 177): one node passing is NOT the lab passing.
+        // This used to print "Lab Complete!" on any single node pass -- and because both
+        // labs ship their switches PRE-CONFIGURED, a student who did zero work, pressed
+        // Check on sw1 alone, and saw "Lab Complete!" while the server's verdict was still
+        // `running` and pc-a/pc-b were untouched. The server was fixed for exactly this on
+        // 2026-09-27 (_lab_verdict_passed: "submitted" must mean the LAB passed); the UI
+        // was still inferring it from one node. ASK THE SERVER instead of inferring.
+        var labDone = false;
+        try {
+            var sResp = await fetch('/api/sessions/' + encodeURIComponent(currentSession));
+            if (sResp.ok) { labDone = ((await sResp.json()).status === 'submitted'); }
+        } catch (e) { labDone = false; }
+        document.getElementById('session-indicator').innerHTML = labDone
+            ? '<span style="display:inline-flex;align-items:center;gap:8px;font-size:13px;">' +
+              '<span style="color:var(--success);">Lab Complete!</span>' +
+              '<button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="stopSession()">Close</button></span>'
+            : '<span style="display:inline-flex;align-items:center;gap:8px;font-size:13px;">' +
+              '<span style="color:var(--text-muted);">\u2705 ' + escapeHtml(node) + ' passed \u2014 the lab is not finished yet</span></span>';
     }
 }
 
 async function stopSession() {
     if (!currentSession) return;
-    await fetch('/api/sessions/' + currentSession + '/stop', { method: 'POST' });
+    try {
+        var _r2 = await fetch('/api/sessions/' + currentSession + '/stop', { method: 'POST' });
+        if (!_r2.ok && _r2.status !== 404) { throw new Error('HTTP ' + _r2.status); }
+    } catch (e) { _stopFailed(e); return; }
     currentSession = null;
     currentLab = null;
     document.getElementById('active-session').classList.add('hidden');

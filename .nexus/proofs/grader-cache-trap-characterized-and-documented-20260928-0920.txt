@@ -1,0 +1,46 @@
+FINDING CHARACTERIZED + DOC FIXED — grader edits are invisible until reload/restart
+Date: 2026-09-28 ~09:20 EDT   By: Selina   Trigger: hourly cron run 38 (LAB-B focus)
+
+CONTEXT: run 37 said "editing a grader changes NOTHING until nexus.service
+restarts." That was IMPRECISE. This run tested it properly and corrected it.
+
+WHAT IS ACTUALLY TRUE (measured, reproducible):
+  - A grader module is imported ONCE per server process and then held in
+    _GRADER_CACHE. Grading a node returns the CACHED module.
+  - So: edit lab-definitions/grader_*.py on disk + grade WITH the cache warm and
+    NO reload -> the OLD score comes back, silently. Measured: injected score
+    0.555, grade without reload returned 1.0 (stale); POST /api/labs/reload, grade
+    again -> 0.555 (fresh); restore file + reload -> 1.0. Reproduced twice.
+  - BUT a grader the process has NOT yet loaded is compiled fresh from disk on its
+    first grade (measured: injected 0.123 before the lab had ever been graded in
+    that process -> the very next grade returned 0.123 with no reload).
+  - AND POST /api/labs/reload DOES clear the cache (backend/main.py:1304
+    _GRADER_CACHE.clear()), and it works live -> {"status":"reloaded","count":16}.
+  So the trap is: "an edit is invisible to a WARMED cache until reload or
+  restart", NOT "an edit is never picked up".
+
+MY RUN-37 WORDING WAS WRONG: I said "no file-mtime check ... changes NOTHING until
+restart" and did not mention that /api/labs/reload already exists (it is even used
+in CONFERENCE.md). I found the endpoint this run while trying to prove my own
+finding. Correcting my own finding rather than letting a wrong version stand.
+
+THE REAL, FIXABLE DEFECT: the operator doc (README.md) never mentioned
+/api/labs/reload - 0 hits. So an operator editing a grader, re-grading, and seeing
+no change has no in-doc path to the one command that fixes it.
+
+FIXED (docs only, reversible): added an "### Editing a grader or topology
+(important)" section to README.md naming the cache behaviour, giving the exact
+reload command, showing its real response, and noting a restart also works but
+drops running labs. Backup: README.md.bak-2026-09-28-reload
+NOT FIXED BY CHOICE: adding an mtime-based auto-invalidation to _load_grader.
+That changes caching/lifecycle semantics (a product decision), and the documented
+reload already resolves the operator-facing harm.
+
+VERIFIED: reload command in README matches live response (count:16); service name
+restart note matches README's own Running-the-Server section; trap test left the
+grader file byte-identical to its backup; LIVE regression LAB-A (7a95ea86: sw1 1.0,
+pc-b cold 0.0 - run-37 fix still live) and LAB-B (13ffc630: sw2 1.0); stop 200 ->
+0 containers, 0 ttyd.
+
+STATE: 0 clab containers, 0 ttyd, service active, /api 200.
+NOT COMPLETE. Dad's word alone.

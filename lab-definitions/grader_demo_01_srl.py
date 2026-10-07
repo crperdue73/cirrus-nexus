@@ -56,8 +56,57 @@ def _exec(container, cmd, timeout=20):
         return 127, "", "docker not available"
 
 
-def _node_ip_ok(container, ip, dev):
-    """True if `ip` is configured (any prefixlen) on `dev` (linux node)."""
+ADVICE = (" Re-checking will NOT rebuild the link: restart the lab (End Lab, then Start Lab) "
+          "and reconfigure.")
+
+
+def _iface_missing(container, dev):
+    """True if `dev` does not exist on the node at ALL (so nothing can be read from it).
+
+    Found live 2026-10-04 (run 179). containerlab wires the hosts to the switch with veth
+    pairs, so stopping a switch destroys its netns and takes the hosts' `eth1` with it. The
+    address check then fell through to "<ip> not found on eth1" -- asserting a fact about a
+    device that does not exist, which reads to a student as "you configured it wrong". A
+    missing device cannot be caused by misconfiguring it (you cannot delete eth1 with `ip`),
+    so it is never a verdict about their work. (The plain-output branch also swallows
+    `ip addr show`'s error because of the `|| true`, so the error text had to be read.)
+    """
+    rc, out, err = _exec(container, f"ip link show {dev} 2>&1 || true")
+    blob = f"{out} {err}".lower()
+    if "does not exist" in blob or "can't find device" in blob or "cannot find device" in blob:
+        return True
+    return rc != 0 or not out
+
+
+def _refuse_missing_link(node, detail):
+    """A refused grade whose reason is a MISSING LINK, not a wrong configuration."""
+    return {
+        "passed": False,
+        "score": 0,
+        "status": "refused",
+        "feedback": [f"\u26a0\ufe0f {node}: {detail}"],
+        "competencies": [],
+    }
+
+
+def _node_ip_ok(container, ip, dev, prefixlen=24):
+    """True if `ip/prefixlen` is configured on `dev` (linux node).
+
+    Prefix length MATTERS. Before 2026-09-28 this compared only the address and
+    threw the mask away (`split("/")[0]`), so a student who typed
+    10.0.1.2/32 - a wrong mask that breaks reachability - was told
+    "10.0.1.2/24 present on eth1" and scored a full 1.0. The grader printed a
+    mask the student never entered and credited a broken config. Live-caught
+    2026-09-28 (run 49). A grader may not claim a mask it did not verify.
+    """
+    # RUN 179: a MISSING interface is not a configuration verdict. Report it as a refusal
+    # (the route renders refusals as 409 "Cannot grade") instead of "not found on <dev>".
+    if _iface_missing(container, dev):
+        return None, (f"{dev} does not exist on this node \u2014 its link is gone (a switch or "
+                      f"peer was stopped, or the lab was torn down). Nothing can be read from "
+                      f"it, so this is not a verdict about your configuration."
+                      + ADVICE)
+    want = f"{ip}/{prefixlen}"
     rc, out, err = _exec(container, f"ip -j addr show {dev} 2>/dev/null || true")
     if rc == 0 and out and out.lstrip().startswith(("[", "{")):
         try:
@@ -68,7 +117,10 @@ def _node_ip_ok(container, ip, dev):
             for iface in data:
                 for addr in iface.get("addr_info", []):
                     if addr.get("local") == ip:
-                        return True, f"{dev} has {ip}"
+                        got = addr.get("prefixlen")
+                        if got == prefixlen:
+                            return True, f"{dev} has {want}"
+                        return False, f"{dev} has {ip}/{got}, expected {want}"
             return False, f"{ip} not found on {dev}"
 
     rc, out, err = _exec(container, f"ip addr show {dev} 2>&1 || true")
@@ -77,8 +129,11 @@ def _node_ip_ok(container, ip, dev):
     for line in out.splitlines():
         parts = line.split()
         if len(parts) >= 2 and parts[0] in ("inet", "inet6"):
-            if parts[1].split("/")[0] == ip:
-                return True, f"{dev} has {ip}"
+            spec = parts[1]
+            if spec == want:
+                return True, f"{dev} has {want}"
+            if spec.split("/")[0] == ip:
+                return False, f"{dev} has {spec}, expected {want}"
     return False, f"{ip} not found on {dev}"
 
 
@@ -87,8 +142,30 @@ def _ping_from(container, target):
     return rc == 0, (out or err)
 
 
+def _container_kind(container):
+    """The containerlab node KIND label for `container` (host-side docker inspect).
+
+    Identity, not output. A node's kind is stamped by containerlab at creation and cannot be
+    changed from inside the container, so it distinguishes a real SR Linux switch from a plain
+    container that merely *prints* switch-like text. (Added 2026-10-02: the switch check was
+    output-only and could be satisfied by faking sr_cli output.)
+    """
+    try:
+        r = subprocess.run(
+            ["docker", "inspect", "-f", '{{ index .Config.Labels "clab-node-kind" }}', container],
+            capture_output=True, text=True, timeout=15,
+        )
+        return (r.stdout or "").strip()
+    except Exception:
+        return ""
+
+
 def _srl_irb_ok(container, ip):
     """True if `container` is a REAL SR Linux switch with `ip` on irb0.0."""
+    kind = _container_kind(container)
+    if kind != "nokia_srlinux":
+        return False, ("not a real SR Linux switch "
+                       f"(clab-node-kind={kind or 'absent'})")
     rc, out, err = _exec(container, "sr_cli 'show interface irb0' 2>&1")
     if rc == 127:
         return False, "sr_cli not available — node is not an SR Linux switch"
@@ -140,9 +217,23 @@ def grade(session, node):
     feedback = []
     score = 0.0
     ok, detail = _node_ip_ok(container, spec["ip"], spec["dev"])
+    if ok is None:
+        return _refuse_missing_link(node, detail)
     if ok:
-        feedback.append(f"✅ {node}: {spec['ip']}/24 present on {spec['dev']}")
-        score += 0.5
+        feedback.append(f"✅ {node}: {detail}")
+        # pc-a has TWO graded parts (address + reachability), so its address check
+        # is worth 0.5 and the pings make up the other 0.5. pc-b has only ONE
+        # graded part, so a correct pc-b is worth its FULL 1.0, not 0.5. Before
+        # 2026-09-28 both nodes credited 0.5 for the address, which meant a
+        # student who configured pc-b exactly as the guide says saw
+        # "✅ Passed! 50%" - a correct node reading as a half-finished one.
+        # The credit MUST stay inside this `if ok:` branch: awarding it
+        # unconditionally gives a failing pc-b a score of 1.0 (caught live
+        # 2026-09-28 on the first attempt at this fix).
+        if node == "pc-a":
+            score += 0.5
+        else:
+            score += 1.0
     else:
         feedback.append(
             f"❌ {node}: expected {spec['ip']}/24 on {spec['dev']} — {detail}"
@@ -197,3 +288,19 @@ if __name__ == "__main__":
     import sys
     s = json.loads(sys.argv[1]) if len(sys.argv) > 1 else {}
     print(json.dumps(grade_all(s), indent=2))
+
+
+# RUN 227 (2026-10-06): stamp every per-node result with the node that was ACTUALLY GRADED -- here, at
+# the point of grading, not at the call site. Stamping at the call site would let a mislabelled caller
+# stamp itself consistent; stamping the graded node means the caller (backend/main.py) can compare the
+# name a result claims against the key it was filed under and refuse a mismatch.
+def _self_identifying(fn):
+    def _wrapped(session, node):
+        res = fn(session, node)
+        if isinstance(res, dict):
+            res.setdefault("node", node)
+        return res
+    return _wrapped
+
+
+grade = _self_identifying(grade)

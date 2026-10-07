@@ -1,0 +1,31 @@
+VERIFICATION — LAB-A full green rerun + ghost-session ledger
+Date: 2026-09-27 ~02:10 EDT   By: Selina   Trigger: hourly cron run 6
+
+LAB-A (demo-01-two-pcs-and-a-real-switch-unsolved) — FULL CLEAN PASS
+  start   : HTTP 200 in 37.4s, session_id 8b944f86, 3/3 containers
+  cold    : pc-a passed=False score=0.0 (correct — PCs ship unconfigured)
+  solve   : applied the lab's own guide to pc-a/pc-b
+  verify  : pc-a -> 10.0.1.254 (switch)  0% loss
+            pc-a -> 10.0.1.2   (PC-B)    0% loss
+  warm    : pc-a 1.0 PASS | pc-b 0.5 PASS (full credit, its only check) | sw1 1.0 PASS
+  stop    : {"status":"destroyed"} HTTP 200 -> 0 containers, 0 ttyd. CLEAN.
+
+  => LAB-A reproducible green after tonight's changes. permfix holds. No regression.
+
+GHOST-SESSION LEDGER (tracking the run-4 defect honestly)
+  /api/sessions currently reports 2 sessions, BOTH ghosts:
+    a5cbbacb  status "running"  ... zero containers (created by my run-4 repro)
+    07e6dee8  status "running"  ... zero containers (the original run-1 anomaly)
+  A ghost = registered "running" with no containers behind it.
+  These are PERMANENT: reconcile_sessions() (backend/main.py:491) is correct but
+  runs ONLY at startup; nothing calls it again. So each ghost survives until the
+  service restarts.
+  This ledger is deliberately written rather than hidden: the registry is currently
+  lying about 2 sessions, and the count will grow one ghost per interrupted session
+  until the trigger is installed.
+
+  FIX (still NOT applied — lifecycle code, Dad's call): call reconcile_sessions()
+  periodically, or before each start/stop, so ghosts are reaped when their
+  containers vanish. Same shape as the coldboot finding: control exists, trigger missing.
+
+NOT COMPLETE. Dad's word alone.

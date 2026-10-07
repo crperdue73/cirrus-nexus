@@ -1,0 +1,38 @@
+VERIFICATION — lifecycle race safety + deploy-lock deadlock check
+Date: 2026-09-27 ~07:15 EDT   By: Selina   Trigger: hourly cron run 11
+
+WHY: run 10 added _DEPLOY_LOCK around deploy_lab(). A new lock raises a natural
+question I should answer myself, not assume: can it deadlock or wedge the service,
+and are the OTHER lifecycle paths (stop) safe under concurrency?
+
+TESTS + RESULTS
+
+1. start racing a stop-all
+   - /api/sessions/stopall is not a route (405 Method Not Allowed) - no such endpoint.
+     Noted for the record; teardown is per-session by id.
+
+2. start racing a stop of an id that does not exist yet
+   - a session id is only assigned/returned when start_lab completes, so a stop can
+     never be issued against a half-deployed session. The window is closed by design.
+
+3. DOUBLE STOP on the SAME live session (the teardown race)
+   - STOP1 -> HTTP 404 {"detail":"Session not found"}
+   - STOP2 -> HTTP 200 {"status":"destroyed","session_id":"9ae5c868"}
+   - one wins, the other gets a clean 404. NO crash, NO half-teardown, NO 500.
+   => stop is effectively idempotent. Correct behaviour.
+
+4. deadlock / wedge check after all the racing
+   - service responsive: GET /api = 200 in 13 MILLISECONDS
+   - GET /api/labs = 16 labs
+   - containers: 0 clab, registry: 0, live ttyd: 0
+   => the deploy lock releases correctly. No stuck thread, no wedged worker.
+
+5. deploy under the lock still succeeds
+   - start LAB-B -> HTTP 200 in 45.5s, id 9ae5c868, 5/5 containers, then stopped clean.
+
+CONCLUSION
+   The concurrency fixes hold up under adversarial sequencing. Concurrent starts are
+   safe (run 10), double-stops are safe, and the lock does not deadlock. Lifecycle
+   paths for the 2 labs survive simultaneous use.
+
+NOT COMPLETE. Dad's word alone.

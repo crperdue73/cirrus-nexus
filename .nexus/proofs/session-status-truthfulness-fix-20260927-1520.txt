@@ -1,0 +1,47 @@
+FIX SHIPPED — session status now means what it says (lab-level, not per-node)
+Date: 2026-09-27 ~15:20 EDT   By: Selina   Trigger: hourly cron run 19
+Backup: backend/main.py.bak-2026-09-27-labverdict
+
+A. AUDIT OF MY OWN PROOF TRAIL (asked before trusting it)
+   - 31 forward-log lines, RUN 2..18, ZERO numbering gaps.
+   - 94 proof files; every proof cited in the log exists on disk (0 missing).
+   - RE-VERIFIED A CITED NUMBER LIVE: run 14's proof claims demo-01 grades
+     sw1=1.0 cold and pc-a=0.0 cold. Re-ran it just now -> sw1 True/1.0,
+     pc-a False/0.0. The recorded numbers reproduce. The trail is honest.
+
+B. DEFECT FOUND AND FIXED — status lied at the node level
+   `session["status"] = "submitted"` was set the moment ANY ONE node passed
+   (backend/main.py, submit handler). Grading ONLY sw1 — which ships
+   pre-configured — marked the session "submitted" while pc-a was still 0.0
+   and the lab had NOT passed.
+   The UI does not render this field, so no student saw a wrong badge; but
+   GET /api/sessions/<id> DOES expose it, so any client reading "submitted"
+   would be told a lab was submitted that had not passed. A reported state
+   must be true.
+
+   FIX: status is now driven by the grader's OWN lab-level verdict:
+     session["status"] = "submitted" if _lab_verdict_passed(grader, session) else "running"
+   New helper `_lab_verdict_passed(grader, session)` calls the grader's
+   grade_all(session) (both demo graders define it; demo-01 =
+   pc-a.passed AND sw1.passed; demo-02 = e2e AND real switches AND router).
+   NEVER RAISES: no grade_all / error -> returns False -> status stays
+   "running". A verdict-check failure cannot become a new grading failure;
+   the per-node grade is returned untouched. Reversible in one line; no route
+   added; wire contract unchanged.
+
+C. PROVEN — BOTH DIRECTIONS
+   NEGATIVE: cold demo-01, grade ONLY sw1 -> sw1 True/1.0, session status
+             "running"   (old code: "submitted"). Correct.
+   POSITIVE: complete the lab (pc-a + pc-b + sw1) -> pc-a 1.0, pc-b 0.5,
+             sw1 1.0, session status "submitted", and the grader's own
+             grade_all agrees: passed=True "Demo lab 1 PASSES — pc-a reaches
+             both the real switch and PC-B."  Correct.
+   REGRESSION: cold demo-02 grades unchanged and honest (pc-a 0.0, pc-b 0.0,
+             r1 0.2, sw1 1.0, sw2 1.0), status "running"; the nonexistent-node
+             edge case still refuses cleanly ("Node 'bogus' not found").
+
+D. HOUSEKEEPING: 3 containers from run-18's session (749eb108) were still
+   running — my own leftover, not orphans. Stopped properly via the API
+   (200) and verified 0 clab containers / registry 0.
+
+NOT COMPLETE. Dad's word alone.

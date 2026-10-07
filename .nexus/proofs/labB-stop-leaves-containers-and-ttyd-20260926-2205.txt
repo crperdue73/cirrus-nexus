@@ -1,0 +1,28 @@
+DEFECT #2 (found live 2026-09-26 ~22:05 EDT, same forward-move run, LAB-B)
+
+POST /api/sessions/{id}/stop on session f0615916 returned:
+  {"status":"destroyed","session_id":"f0615916"}
+
+But the teardown did NOT happen:
+  - all 5 containers still running afterwards:
+      clab-aegis-demo-02-srl-two-switch-router-07e6dee8-{pc-a,pc-b,r1,sw1,sw2}
+  - 5 ttyd processes leaked, still bound to ports 8765-8769
+  - had to `docker rm -f` the 5 containers by hand and kill the 5 ttyd PIDs by hand
+
+Note the session-id mismatch, which is probably the causal clue:
+  started session id : f0615916
+  container name id  : 07e6dee8
+The stop path resolves containers from the session id, but the containers were
+deployed under a DIFFERENT id (07e6dee8). So destroy targets names that don't
+exist -> silently removes nothing -> API still reports "destroyed".
+
+WHY THIS MATTERS (Riley's line, again): a teardown that reports success while
+leaving the lab running is worse than a loud failure. It leaks containers AND
+ports, and the next session on that lab can collide with the stranded ttyd.
+
+SCOPE: did NOT change the stop path. That is a code fix in backend/main.py
+(_stop / destroy path, and whatever generates the two ids) and I am not
+rewriting session lifecycle under a scope lock without Dad seeing it first.
+Flagged with full evidence instead.
+
+NOT COMPLETE.

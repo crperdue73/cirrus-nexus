@@ -1,0 +1,47 @@
+VERIFICATION — LAB-B router r1 (the only node never directly probed) + a real finding
+Date: 2026-09-27 ~19:20 EDT   By: Selina   Trigger: hourly cron run 23
+
+WHY: 22 runs covered pc-a/pc-b/sw1/sw2. r1 (the router that makes "two switches
+ONE ROUTER" mean anything) had never been probed directly on LAB-B.
+
+A. COLD r1 — honest failure, correctly reported
+   Fresh session (id 6734efc5). r1 as shipped = Alpine Linux, image aegis/frr:latest,
+   eth1/eth2 UNNUMBERED (link-local IPv6 only).
+   Grade cold r1 -> False 0.2:
+     ❌ expected 10.0.1.253/24 on eth1 - not found
+     ❌ expected 10.0.2.253/24 on eth2 - not found
+     ✅ IP forwarding ON (ip_forward=1)      <-- see finding below
+   Correct: an unconfigured router does not pass.
+
+B. FINDING — a check that measures the IMAGE, not the student
+   ip_forward=1 is BAKED INTO aegis/frr:latest. Proven: a PRISTINE container
+   (`docker run --rm aegis/frr:latest`) reports ip_forward=1 before any lab step.
+   The UNSOLVED topology's r1 def sets only `ip link set ethX up` - no sysctl.
+   The SOLVED twin explicitly runs `sysctl -w net.ipv4.ip_forward=1`.
+   The guide TELLS the student to do it (line 36: `sysctl -w net.ipv4.ip_forward=1`;
+   line 62: "r1 | both addresses + IP forwarding ON | student config").
+   => The grader awards a ✅ for forwarding on a node where the student has not
+      done it and (given the image) cannot make it fail by omission. It is a free
+      point that credits the base image.
+
+   SEVERITY: NOT a cheating hole. The two addressing checks still require real
+   work (cold r1 = 0.2, and the router check is pass/fail for the whole lab:
+   grade_all = e2e AND real_switches AND router_ok). No wrong answer passes.
+   What it damages is HONESTY OF FEEDBACK: a student who never touches r1 is told
+   "IP forwarding ON" as if they achieved it.
+
+   FIX: I did NOT change it. The honest fix is in the LAB IMAGE (don't ship
+   ip_forward pre-set) or in the TOPOLOGY/grading contract - both sit outside the
+   "2 labs" code I can reverse safely, and one of them is a product decision.
+   Escalated as a scoped, named finding instead.
+
+C. CONFIRMED THE CHECK IS REAL (not dead): set ip_forward=0 -> grader correctly
+   reports "❌ r1: IP forwarding OFF (ip_forward=0)". So it can fail; it just
+   starts true.
+
+D. FULL LAB-B END-TO-END GREEN with a real student answer:
+   r1 1.0, pc-a 1.0, pc-b 1.0, sw1 1.0, sw2 1.0 -> session status "submitted".
+   Every graded node in LAB-B now verified directly at least once.
+
+Housekeeping: stopped session, 0 clab containers.
+NOT COMPLETE. Dad's word alone.

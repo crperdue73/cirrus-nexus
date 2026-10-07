@@ -33,7 +33,7 @@ From **PC-A**, prove BOTH:
 ping 10.0.1.254     # the switch (its management IRB)
 ping 10.0.1.2       # PC-B
 ```
-Both must reply with 0% loss. PC-to-PC alone does **not** count — the switch
+Both must reply. PC-to-PC alone does **not** count — the switch
 itself must answer.
 
 ## How this lab is graded
@@ -43,6 +43,10 @@ itself must answer.
 | pc-a | `10.0.1.1/24` on `eth1` AND pings the switch (`.254`) AND PC-B (`.2`) | all reply |
 | pc-b | `10.0.1.2/24` on `eth1` | address present |
 | sw1  | real SR Linux switch, `10.0.1.254/24` up on `irb0.0` | shipped pre-configured |
+
+**The lab counts as passed when `pc-a` and `sw1` both pass.** PC-B is implied — PC-A cannot
+earn credit without reaching it. *(Added 2026-10-04, run 196: LAB-B's guide states its lab-level
+rule and this one did not, though the grader has always enforced `pc-a` AND `sw1`.)*
 
 > Difference from the *shipped* demo-01 (SR Linux): there, the PCs arrive
 > configured and the lab grades with no work. Here they do not, so a cold

@@ -1,0 +1,31 @@
+VERIFICATION — LAB-B green + reaper NEGATIVE test
+Date: 2026-09-27 ~04:20 EDT   By: Selina   Trigger: hourly cron run 8
+
+LAB-B (demo-02-two-switches-one-router-unsolved) — FULL GREEN
+  start : HTTP 200 in 54.1s, id 84a651a3, 5/5 containers
+  cold  : pc-a passed=False score=0.0 (correct)
+  solve : applied the lab guide (PC addressing + router interfaces + forwarding)
+  verify: pc-a -> 10.0.2.1 (PC-B across router) 0% loss
+  warm  : pc-a 1.0 | pc-b 1.0 | r1 1.0 | sw1 1.0 | sw2 1.0   (5/5)
+  stop  : {"status":"destroyed"} HTTP 200 -> 0 containers, 0 ttyd, 0 registry entries.
+  => LAB-B reproducible green. Both labs green tonight.
+
+GHOST REAPER — NEGATIVE TEST (the important one)
+  A reaper that kills live sessions is worse than the ghost it fixes. So I tested
+  that it SPARES work:
+    - session 84a651a3 live with 5 containers
+    - waited 130s = longer than one full 120s reap cycle
+    - registry still showed exactly 1 session: ['84a651a3']
+    - containers still 5; NO new "[ghost-reap] dropped" line for it
+  => the classifier (drop only sessions with ZERO matching containers) is correct.
+     It reaps the dead and leaves the living alone.
+
+FINAL STATE
+  containers on box: 4 (portal-preview, nexus-debhost, agent-portal, n8n - not mine)
+  clab containers: NONE
+  registry: 0 sessions  (matches host - the registry no longer lies)
+  nexus.service: active
+  ports 8700-8799: clear
+
+BOTH LABS GREEN. Registry honest. Ghosts self-healing. Stop clean.
+NOT COMPLETE. Dad's word alone.

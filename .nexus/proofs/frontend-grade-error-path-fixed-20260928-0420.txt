@@ -1,0 +1,43 @@
+FIX — the student's grading path could hang forever / throw on any server blip
+Date: 2026-09-28 ~04:20 EDT   By: Selina   Trigger: hourly cron run 33 (LAB-B focus)
+
+WHY: 32 runs tested the API server-side. Nobody had tested what a STUDENT SEES
+when something fails - the frontend's error paths. Read every async fetch handler.
+
+WHAT'S ALREADY GOOD: startLab guards !resp.ok and surfaces the SERVER's detail
+('Lab not found'), escaped via escapeHtml. submitGrade handles 409 refusal as its
+own state, and grader status 'error' is never rendered as "Not yet". Honest design.
+
+DEFECT FOUND (student-facing, in-scope):
+  submitGrade is the ONLY handler that indexes into the response (data.grade),
+  and it had NO try/catch and NO general !resp.ok guard. Consequences:
+   - a rejected fetch (network drop, or the server restarting - nexus.service has
+     RestartSec=10, proven live in run 25) left "Grading..." spinning FOREVER;
+   - any non-OK JSON body (400/404/500 with a `detail`) fell through to
+     `data.grade`, then `grade.passed` -> TypeError, no verdict shown.
+  The other handlers that read a response all guard against this. This one did not.
+
+SURVEY of every fetch handler after the read:
+  loadLiveSessions  ok-guard Y  try Y
+  startLab          ok-guard Y  try Y
+  submitGrade       ok-guard partial(409 only)  try N   <-- defect
+  stopSession       ok-guard N  try N
+  stopSessionById   ok-guard N  try N
+  loadLabs          ok-guard N  try N
+
+FIXED (frontend only, reversible): submitGrade now wraps fetch+json in try/catch
+(renders "Cannot grade - your lab is still running, press Grade again") and adds a
+general `!resp.ok || !data || !data.grade` guard that renders the server's `detail`
+(escaped) or "Grading failed (HTTP <status>)". grade.passed is now reachable only
+after all guards. Backup: frontend/index.html.bak-2026-09-28-submitguard
+NOT FIXED BY CHOICE: the three stop/load handlers' missing guards - a failed Stop
+is silent, but changing stop UX and adding guards across three handlers is a UX
+decision, not the same harm class as a hung grader. Named, not changed.
+
+VERIFIED: inline JS extracted (18330 chars) -> node --check SYNTAX OK; headless
+chromium renders after the edit (Welcome to NEXUS, loadLabs, Start Lab, submitGrade
+all present; 0 external refs); LIVE LAB-A end-to-end green post-fix (start
+1eb80894, pc-a False 0.0 status graded, stop 200, 0 containers).
+
+STATE: 0 clab containers, service active, /api 200.
+NOT COMPLETE. Dad's word alone.

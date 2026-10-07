@@ -1,0 +1,42 @@
+VERIFICATION — concurrent "demo day" load test: 4 sessions at once
+Date: 2026-09-27 ~20:20 EDT   By: Selina   Trigger: hourly cron run 24
+
+WHY: run 13 fixed the concurrent-start race with _DEPLOY_LOCK and proved safety
+with 2-3 sessions. Nobody had tested what a real demo day looks like: several
+students starting DIFFERENT labs at the same instant.
+
+TEST: fired 2x LAB-A + 2x LAB-B starts simultaneously (backgrounded, same wall clock).
+
+RESULT — correctness: PERFECT
+  all four -> HTTP 200
+  ids: 3492e4c9, 19ccd260 (LAB-A) ; 4521d51b, 2c593a9c (LAB-B)
+  16 containers = 2*3 + 2*5, exactly as expected
+  four DISTINCT session prefixes -> zero container-name collision
+  every session independently healthy: status "running", nodes 3/3/5/5
+  each session grades its own nodes without cross-talk (pc-a 0.0 cold, honest)
+
+RESULT — timing: THE LOCK SERIALIZES
+  A1 start  =  38.3 s
+  A2 start  =  71.0 s
+  B2 start  = 120.1 s
+  B1 start  = 171.4 s
+  These are cumulative, near-linear: each start waits for the previous to finish
+  deploying. _DEPLOY_LOCK is a coarse mutex around the whole deploy, so the Nth
+  simultaneous student waits ~N * (deploy time).
+
+NOT A BUG — a characteristic with a demo-day consequence:
+  - It is CORRECT and SAFE. No race, no collision, no false success. This is
+    exactly what run 13 chose: correctness over throughput.
+  - It is worth stating plainly for the demo: if Dad demos with several people
+    starting labs within the same few seconds, the last one waits ~3 minutes.
+    Cold containers are the slow part (~38 s each); nothing is wrong.
+  - Concurrent TEARDOWN is NOT serialized: 4 stops in ~1.2-1.9 s each, 0 left.
+
+DID I CHANGE ANYTHING? No. Replacing a coarse lock with per-lab locks or a
+deploy queue is a real refactor of start_lab's concurrency model - not reversible
+in four lines, and throughput is a product judgement (how many simultaneous
+demos, on what host). Escalated as a measured characteristic + a named option,
+not changed unilaterally.
+
+STATE: 0 clab containers, service active, /api 200.
+NOT COMPLETE. Dad's word alone.

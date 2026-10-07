@@ -1,0 +1,43 @@
+PROOF — LAB-A (demo-01-two-pcs-and-a-real-switch-unsolved) verified end to end
+Date: 2026-09-26 ~22:25 EDT   By: Selina   Trigger: Dad "yes, go, move forward"
+
+PURPOSE: confirm the LAB-B permission fix holds from a CLEAN SLATE on the other
+of the 2 labs, and functionally verify LAB-A through the live product API.
+
+SESSION START (live API, clean slab): HTTP 200 in 38.5s
+  Lab 'Demo (UNSOLVED) — Two PCs and a Real Switch (SR Linux)' is ready!
+  3/3 nodes: pc-a pc-b sw1 (1 real SR Linux switch, 2 PCs); ttyd 8775-8777
+  -> permfix HOLDS. No EACCES. No opaque 500.
+
+COLD GRADE (PCs ship unconfigured) — correctly FAILS:
+  pc-a passed=False score=0.0
+    ❌ expected 10.0.1.1/24 on eth1 — not found
+    ❌ cannot ping the switch (10.0.1.254)
+    ❌ cannot ping PC-B (10.0.1.2)
+  pc-b passed=False score=0.0   ❌ 10.0.1.2/24 not found on eth1
+  sw1  passed=True  score=1.0   ✅ real SR Linux switch, irb0.0 up 10.0.1.254 (ships pre-configured)
+
+STUDENT SOLUTION APPLIED (verbatim from the lab's own guide), then verified
+INDEPENDENTLY outside the grader:
+  pc-a -> 10.0.1.254 (the switch): 2/2 packets, 0% loss
+  pc-a -> 10.0.1.2   (PC-B)      : 2/2 packets, 0% loss
+
+WARM GRADE — Dad's pass condition met:
+  pc-a passed=True  score=1.0  (ip on eth1 + ping switch + ping PC-B)
+  pc-b passed=True  score=0.5  (ip on eth1)  <- CORRECT, by design, not a bug
+  sw1  passed=True  score=1.0  (real SR Linux switch, irb0.0 up)
+  lab_passed = pc-a AND sw1 = TRUE
+
+VERIFIED THE 0.5 BEFORE CALLING IT ANYTHING (lesson from today):
+  read lab-definitions/grader_demo_01_srl.py. pc-b's checks are ip(0.5) and
+  nothing else -> max possible = 0.5. pc-a alone carries the ping checks
+  (+0.5 split over 2 targets). So 0.5 is a full-credit score for pc-b, not a
+  partial failure. I did NOT file it as a defect, because I read the source
+  first instead of reporting the number I saw.
+
+ALSO CONFIRMED STILL TRUE (no regression):
+  - grader refuses rather than falling back; switch check reads sr_cli, so a
+    Linux-PC fake cannot pass (Dad's 2026-09-21 correction holds).
+  - api grader asserts validates_switch_authenticity = true for this lab.
+
+NOT COMPLETE. Nexus completion is Dad's word alone.

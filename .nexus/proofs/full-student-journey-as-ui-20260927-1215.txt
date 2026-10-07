@@ -1,0 +1,46 @@
+VERIFICATION — the full student session, driven exactly as the web UI drives it
+Date: 2026-09-27 ~12:15 EDT   By: Selina   Trigger: hourly cron run 16
+
+WHY: 15 runs tested the API and the graders directly. Never tested: the actual
+student experience — the exact 5 calls frontend/index.html makes, in order, and
+whether the terminals a student clicks actually open.
+
+THE UI'S REAL CALLS (read from frontend/index.html, not assumed)
+  fetch('/api/labs')                                     (catalog)
+  fetch('/api/sessions/start?lab_id=' + id)              (deploy)
+  fetch('/api/sessions/' + id)                           (detail/poll)
+  fetch('/api/sessions/' + id + '/submit?node=' + node)  (grade)
+  fetch('/api/sessions/' + id + '/stop', {POST})         (teardown)
+
+RAN ALL 5 IN ORDER — LAB-B
+  1. /api/labs                      -> 200
+  2. start                          -> 200 in 50.8s, id 28759ede
+  3. /api/sessions/28759ede         -> nodes ['pc-a','pc-b','r1','sw1','sw2'],
+                                       digest sha256:bb7ef23a...
+  4. submit x5 (pc-a,pc-b,r1,sw1,sw2) -> all 200
+  5. stop                           -> 200
+  GET / (the app page)              -> 200, 28663 bytes
+  NO asset 404s for the page itself.
+
+NEAR-MISS (my error, caught): I read GET /api/sessions/<id> and saw
+  "ttyd_ports: None", and started to file "the UI has no terminal ports".
+  READ THE SOURCE FIRST. The UI reads `data.ttyd` (line 636: `var ttyd = data.ttyd||{}`),
+  not `ttyd_ports`. And `start` DOES return the full map:
+     ttyd: {pc-a:{port,container,url,pid}, ...}
+  => ttyd_ports:None is an unused field name I invented, not a product defect.
+     My bad, not the build's.
+
+TERMINALS ACTUALLY OPEN (the demo-critical bit)
+  started LAB-A, curled every terminal URL the API returned:
+     pc-a http://127.0.0.1:8827 -> 200
+     pc-b http://127.0.0.1:8828 -> 200
+     sw1  http://127.0.0.1:8829 -> 200
+  API advertises the host's real IP (192.168.1.110, confirmed on this box via
+  `ip addr`), so the URLs a student's browser gets are reachable.
+  CORRECTNESS: for every node, ttyd[name].container == nodes[name] => a student
+  lands on THEIR OWN node's terminal, not someone else's. Verified, not assumed.
+
+RESULT: the whole student journey — catalog -> deploy -> poll -> terminals ->
+grade -> stop — works end to end as the UI drives it. Clean teardown.
+
+NOT COMPLETE. Dad's word alone.

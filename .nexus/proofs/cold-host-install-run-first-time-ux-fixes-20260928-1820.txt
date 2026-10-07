@@ -1,0 +1,51 @@
+FIRST REAL COLD-HOST INSTALL OF install.sh + TWO REPORT DEFECTS FIXED (LAB-A focus)
+Date: 2026-09-28 ~18:20 EDT   By: Selina   Trigger: cron run 47
+
+WHY THIS RUN: Dad's ask #2 is that the software be INSTALLABLE. Runs 42-46 audited
+the bundle by extraction and simulation - nobody had ever RUN install.sh end to end.
+The standing blocker was "never test-install on Dad's live host" (root; blast radius
+= the machine). This run removed the blocker without violating it: run install.sh
+in a THROWAWAY debian:12 container (--rm --privileged, bundle mounted read-only).
+Zero blast radius. This is the correct way to test the installer.
+
+RESULT: install.sh completed end to end on a clean host, first attempt.
+  Steps 1-9 all reached: apt packages -> docker (dockerd direct, systemd absent) ->
+  containerlab 0.60.0 -> ttyd -> python deps -> files to /opt/aegis -> FRR image
+  LOADED FROM THE PINNED TARBALL and verified on Dockerfile fingerprint cce15a86 +
+  layer chain bb7ef23a -> unit written -> firewall check -> "Installation complete".
+  The pinned-image path (run 43's concern) works on a genuinely cold host.
+
+DEFECT 1 (real, fixed): final summary printed  "Open browser: http://:8000"
+  Cause (read the source, not the symptom): line 449 built the URL with
+    hostname -I | awk 'if($i !~ /^(172\.|10\.|192\.168\.|127\.)/){print; exit}'
+  which EXCLUDES exactly the private ranges a real host has, then prints whatever
+  remains -> empty. An operator on a real LAN would be told to open a URL with no
+  host in it.
+  FIXED: prefer the first non-loopback IPv4; on failure fall back to
+  http://localhost:$PORT with a note. Verified in-container: http://172.18.0.1:8000.
+
+DEFECT 2 (real, fixed): "Default labs auto-discovered:" was followed by NOTHING.
+  Cause: the loop globbed lab-definitions/*.yml and grepped for an "id:" key. The
+  shipped labs are YAML under lab-definitions/<dir>/ with no top-level id: line, so
+  the glob matched nothing and the code still printed the heading -> an empty
+  promise. (This also corrects run 28's note that the block "enumerates all 9 labs":
+  in the shipped layout it enumerated ZERO.)
+  FIXED: find -maxdepth 2 -name '*.yml', print each basename, and report the count.
+  Verified in-container: both ship labs listed, "(2 lab file(s))".
+
+MY OWN ERRORS (stated): two patch attempts failed their assertions because I
+mis-counted line offsets after a prior partial edit; the assertions caught both
+instead of silently patching the wrong line. Re-derived the indices from the file.
+
+ALSO CONFIRMED (not fixed - it is Dad's call, ask #1):
+  The LIVE registry still serves 16 labs (`GET /api/labs` count=16), including the
+  old 7-lab set and the Cumulus/SRL demos. Only the BUNDLE was narrowed to 2. So
+  ask #1 (ship only 2) is NOT done in the running product - and removing lab
+  definition files is irreversible, so it stays with Dad. Now measured, not assumed.
+
+VERIFIED:
+  install.sh bash -n OK (source and shipped); old awk filter gone
+  bundle rebuilt 20,498,868 bytes; cold-host install green; summary truthful
+  Live service untouched: nexus.service active, /api 200, 0 containers/dirs/ttyd
+
+NOT COMPLETE. Dad's word alone.

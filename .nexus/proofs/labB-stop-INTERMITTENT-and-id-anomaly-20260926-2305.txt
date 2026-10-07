@@ -1,0 +1,40 @@
+FINDING — LAB-B stop-path: INTERMITTENT, not structural. Plus an unexplained id.
+Date: 2026-09-26 ~23:05 EDT   By: Selina   Trigger: hourly cron run 3
+
+WHAT I DID
+  LAB-B clean-slate start -> session_id 2e687917 (HTTP 200, 52.9s)
+  containers created: clab-aegis-demo-02-srl-two-switch-router-2e687917-{pc-a,pc-b,r1,sw1,sw2}
+  -> ids MATCHED (yml name field is static: "aegis-demo-02-srl-two-switch-router";
+     container = f"clab-{name}-{session_id}-{node}", so no mismatch is derivable)
+
+  POST /api/sessions/2e687917/stop -> {"status":"destroyed"}  HTTP 200
+  AFTER: containers 0, ttyd 0, no leftover clean copies.
+  -> TEARDOWN WAS CLEAN.
+
+THEREFORE
+  Defect #2 ("stop returns destroyed but leaves 5 containers + 5 ttyd") is
+  NOT REPRODUCIBLE on a fresh session. It is INTERMITTENT, not structural.
+  My earlier working theory -- "destroy_lab rebuilds from the yml and targets
+  names that don't exist" -- is WRONG AS STATED. The name field is static and
+  the ids matched on this run. I am withdrawing that theory, not dressing it up.
+
+WHAT STILL DOES NOT ADD UP (kept open, unexplained)
+  Run 1: POST sessions/start returned session_id f0615916, but the containers
+  that appeared were ...-07e6dee8-*. f0615916 != 07e6dee8. That is a real
+  anomaly in the record and I did not create it by misreading -- both strings
+  are in my captured output.
+  stop then leaked all 5 containers + 5 ttyd.
+  On run 3, ids matched and stop was clean.
+
+  Leading candidate (UNCONFIRMED): a session-id collision or a race in
+  SESSIONS when a prior session was force-removed by hand (I had `docker rm -f`
+  the leaked containers and killed stranded ttyd manually right before). A
+  manual teardown that leaves SESSIONS holding a dead session could plausibly
+  make a later start reuse/misreport an id. NOT PROVEN. Needs a controlled
+  repro: start -> manual docker rm -f -> start again -> compare ids -> stop.
+
+NEXT (cron run 4): run exactly that controlled repro. One lab, three steps,
+both ids captured at each step. That is the only way to turn "intermittent and
+spooky" into a named cause or a clean bill.
+
+NOT COMPLETE. Dad's word alone.

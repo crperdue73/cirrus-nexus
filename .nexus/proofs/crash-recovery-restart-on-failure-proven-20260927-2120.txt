@@ -1,0 +1,35 @@
+VERIFICATION — does the service heal itself after it dies? (N1's claim, now tested)
+Date: 2026-09-27 ~21:20 EDT   By: Selina   Trigger: hourly cron run 25
+
+WHY: 24 runs tested what happens when labs RUN. Nothing had tested what happens
+when the SERVICE DIES mid-demo. N1 installed /etc/systemd/system/nexus.service
+with Restart=on-failure; that claim was never exercised.
+
+UNIT (systemctl cat): User=student, WorkingDir=.../aegis,
+  ExecStart=/usr/bin/python3 .../backend/main.py, Restart=on-failure, RestartSec=10.
+
+TEST: student starts LAB-B (session 418836b2, 5 containers up), then
+`kill -9` the MainPID (1691869) - the harshest failure, no clean shutdown.
+
+RESULT — SELF-HEALING WORKS:
+  journal: "Main process exited, code=killed, status=9/KILL" ->
+           "Failed with result 'signal'" ->
+           "Scheduled restart job, restart counter is at 1" ->
+           "Started nexus.service"
+  NRestarts 0 -> 1 ; new MainPID 1793642 ; /api 200 within ~20 s of the kill
+  (the brief api=000 at +8 s was simply RestartSec=10 elapsing - correct, not a fault)
+
+RESULT — NO STUDENT-VISIBLE LOSS (the part that matters):
+  the pre-kill session SURVIVED the restart:
+    its 5 containers still running
+    session re-adopted by reconcile_sessions() on startup -> status "running", nodes 5
+    grading still works afterward -> pc-a False 0.0 (honest cold grade)
+  => A student's in-progress lab is not destroyed by the service dying. After a
+     host-level crash of the app, the lab is adopted back and gradeable.
+
+SCOPE NOTE (unchanged from run 18): this covers the SERVICE dying while the
+CONTAINERS live. A full HOST reboot still loses a running lab (Restart=no on the
+labs; no restore-on-boot unit) - that remains Dad's lifecycle call, still open.
+
+Housekeeping: stopped the session, 0 clab containers.
+NOT COMPLETE. Dad's word alone.

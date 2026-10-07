@@ -1,0 +1,39 @@
+PROOF — LAB-B (demo-02-two-switches-one-router-unsolved) fixed + fully green
+Date: 2026-09-26 ~21:55 EDT   By: Selina (hourly forward-move cron, first run)
+Session: f0615916   Service: http://127.0.0.1:8000 (systemd nexus.service, installed today)
+
+DEFECT FOUND (live, from the API): POST /api/sessions/start -> 500
+  [Errno 13] Permission denied: lab-definitions/srl-demo2-unsolved/._clean_<topo>_<sid>.yml
+ROOT CAUSE: backend/main.py _prepare_topology() writes the session temp copy INTO
+  lab-definitions/<labdir>/, but that directory was root-owned (0755) while the
+  service runs as user 'student'. Non-root service user cannot write -> every
+  session start for that lab 500s. 9 other lab dirs carried the same root ownership.
+FIX 1 (permissions): chown -R student:student lab-definitions; dirs 755, files 644.
+FIX 2 (error surfacing): main.py now mkdir -p the parent and raises HTTPException
+  with the exact path + uid + fix hint instead of an opaque 500. Backup:
+  backend/main.py.bak-2026-09-26-permfix
+
+AFTER FIX — session start: HTTP 200, 5/5 nodes deployed
+  'Demo 2 (UNSOLVED) — Two Switches and a Router' is ready!
+  nodes: pc-a pc-b r1 sw1 sw2 (2x real SR Linux, FRR router, 2 PCs); ttyd 8770-8774
+
+COLD GRADE (no student work) — correctly FAILS:
+  pc-a passed=False score=0.0  '10.0.1.1 not found on eth1' + 3 unreachable pings
+  pc-b passed=False score=0.0  '10.0.2.1 not found on eth1' + unreachable
+
+STUDENT CONFIG APPLIED (the lab's own instructions), then verified independently:
+  pc-a -> 10.0.1.254 (sw1)   : 2/2 packets, 0% loss
+  pc-a -> 10.0.2.1  (pc-b)   : 2/2 packets, 0% loss
+  traceroute 10.0.2.1        : hop1 = 10.0.1.253 (r1), hop2 = 10.0.2.1 (pc-b)
+
+WARM GRADE — 5/5 PASS, all score 1.0:
+  pc-a passed=True 1.0  (ip on eth1 + ping sw1 + ping r1 + ping pc-b)
+  pc-b passed=True 1.0  (ip on eth1 + ping pc-a across router)
+  r1   passed=True 1.0  (both ifaces + IP forwarding ON)
+  sw1  passed=True 1.0  (real SR Linux switch, irb0.0 up 10.0.1.254)
+  sw2  passed=True 1.0  (real SR Linux switch, irb0.0 up 10.0.2.254)
+
+Grader discriminates: fails cold, passes solved. Lab is genuinely real-switch
+(validates_switch_authenticity) and the API grader asserts it.
+
+NOT COMPLETE. Nexus completion is Dad's word alone.

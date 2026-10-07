@@ -1,0 +1,66 @@
+MOVE FORWARD — refresh recovery built; duplicate-session hazard escalated
+Date: 2026-09-28 ~10:20 EDT   By: Selina   Trigger: hourly cron run 39 (LAB-A focus)
+
+WHAT I WAS DOING: the last untested surface in the student experience was the
+terminal UX and, behind it, what happens when a student REFRESHES the page.
+
+READ FIRST (all clean, no defect):
+  - Terminal expand/collapse: delegated document click listener (survives
+    dynamically-created frames), Escape collapses, one-terminal-at-a-time
+    enforced, iframes never recreated so scrollback survives, preventDefault,
+    closest() guard. Good work.
+  - loadLiveSessions(): lists running sessions with a Stop button. My first
+    hypothesis - that GET /api/sessions/{id} omitting ttyd broke a reattach path -
+    was WRONG: the frontend never asked for ttyd there. No defect.
+
+REAL DEFECT (student-facing, in-scope):
+  A student who starts a lab and REFRESHES the page cannot get their terminals
+  back. loadLabs() returns them to the catalog; loadLiveSessions() shows their
+  running lab with ONLY a Stop button. There is no reattach path:
+    `currentSession` is only ever set from a start response.
+  Worse: pressing Start again on the same lab creates a SECOND full session -
+  measured live: 6 containers + 6 ttyd from one student's two starts
+  (53060ea6 and 2c08507b, same lab_id, both "running"). Nothing reclaims the
+  orphaned set. On demo day this doubles the host's container load per refresher
+  and can exhaust the ttyd port pool.
+
+FIXED (frontend + a small additive backend field; reversible):
+  1. main.py: the session dict now retains the node->ttyd map (it previously kept
+     only a flat ttyd_ports list and threw the map away after the start response),
+     and GET /api/sessions now includes it per session.
+  2. index.html: the running-sessions list shows a "Reconnect" button for any
+     session that has terminals; new reconnectSession(sid) rebuilds the terminal
+     view against the EXISTING session (fetch sessions -> find entry -> fetch labs
+     -> getSessionHTML + iframes). It never starts a new session. Errors render an
+     honest "Could not reconnect" panel.
+  Backups: backend/main.py.bak-2026-09-28-reattach
+
+VERIFIED:
+  py_compile OK; inline JS node --check OK; service active; /api 200
+  GET /api/sessions now returns ttyd per session (8ffb7d88: pc-a/sw1/sw2 urls
+    8765/8766/8767)
+  Browser (same-origin driver served from frontend/, then removed):
+    reconnectSession('8ffb7d88') -> frames=3, urls=192.168.1.110:8765,8766,8767,
+    activeShown=true, catalogHidden=true
+  Post-reconnect journey through the SAME session's containers: pc-a 1.0,
+    pc-b 1.0, sw1 1.0; stop 200 -> 0 containers, 0 ttyd
+  No stray test files left in frontend/
+
+NOT FIXED - ESCALATED (product decision, not a reversible tweak):
+  start_lab() has no duplicate guard: same student + same lab started twice yields
+  two independent sessions. It may be intentional (two students may legitimately
+  run one lab - the UI supports several). But with "Reconnect" now available, a
+  reasonable policy is to return the existing session when the same student_name
+  starts the same lab_id. That changes start semantics, so it is Dad's call.
+  EXACT ASK: when a student starts a lab they already have running, should the
+  API (a) return the existing session, (b) rename/replace it, or (c) keep
+  creating a new one?
+
+MY OWN ERROR IN THIS RUN (5th of the night): my first browser test of reconnect
+  reported "iframes=0" and I almost treated it as a product failure. It was my
+  harness: a file:// page has no origin, so relative /api/... fetches failed
+  ("Failed to fetch"). Serving the driver from the app's own origin returned
+  frames=3 immediately. Check the probe before the product.
+
+STATE: 0 clab containers, 0 ttyd, service active, /api 200 (16 labs).
+NOT COMPLETE. Dad's word alone.

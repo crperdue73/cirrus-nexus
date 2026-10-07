@@ -1,0 +1,50 @@
+LIVE PRODUCT IS CURRENT + THE SERVED STUDENT GUIDE IS SUFFICIENT (LAB-B focus)
+Date: 2026-09-28 ~19:20 EDT   By: Selina   Trigger: cron run 48
+
+WHY THIS RUN: 40+ runs have audited the installer, the bundle, the units, and the
+docs. None had checked the two things an operator/student actually touches at
+runtime: (1) is the RUNNING process the same code as the files on disk after all
+these edits? (2) is the STUDENT-FACING guide the API serves actually sufficient to
+solve the lab?
+
+CHECK 1 - STALE-CODE TRAP (the "fixed the source, forgot to reload" failure):
+  service MainPID 2135652, ActiveEnterTimestamp 2026-09-28 12:01:00 EDT
+  backend/main.py   mtime 11:05:22  -> OLDER than service start  => service is newer
+  frontend/index.html mtime 10:02:23 -> OLDER                       => service is newer
+  grader_demo_01_srl.py mtime 09:04  -> OLDER                       => service is newer
+  => no stale-code trap; the running service postdates every source edit.
+  Feature probes (not file reads) confirm it: GET /api/sessions returns
+  {sessions,count}; POST /api/labs/reload -> 200. Both post-fix routes are live.
+
+CHECK 2 - SERVED FRONTEND MATCHES DISK (browser cache trap):
+  GET / -> 35022 bytes; frontend/index.html -> 35022 bytes; cmp IDENTICAL.
+  Served page carries the fixes: reconnectSession(2), Reconnect(4), submitGrade(2),
+  catch(7), loadLabs(8).
+
+PROBE READING (stated): my grep counted "unpkg refs: 2" and "hx-: 1" - which look
+like run 26's dead CDN returning. I READ the lines instead of reacting: both hits
+are inside my OWN run-26 explanatory HTML comment. Zero ACTIVE <script>/<link>
+tags point at unpkg. The dead dependency is still gone. Count lied; the text told.
+
+CHECK 3 - BE THE STUDENT, against the SERVED instructions (not a remembered copy):
+  Fetched the exact instructions the API serves for LAB-B, then executed them
+  verbatim in a live session (852a5d30), container prefix
+  clab-aegis-demo-02-srl-two-switch-router-852a5d30-*:
+    PC-A ip addr/route, PC-B ip addr/route, r1 ip_forward + two /24s
+    PC-A ping sw1 10.0.1.254 OK, ping r1 10.0.1.253 OK, ping PC-B 10.0.2.1 OK
+    PC-B ping PC-A 10.0.1.1 OK
+    traceroute -n 10.0.2.1 -> hop1 10.0.1.253 (r1), hop2 10.0.2.1 (PC-B)  <= EXACTLY
+      what instruction #6 says it must show.
+  GRADES: cold pc-a 0.0 pc-b 0.0 r1 0.2 sw1 1.0 sw2 1.0 (honest unsolved);
+         warm after following the guide: ALL FIVE 1.0.
+  => the served guide is SUFFICIENT and CORRECT; the guide/grader/lab chain holds.
+  Teardown: stop 200 -> 0 containers, 0 clab dirs, 0 ttyd.
+
+MY OWN PROBE ERROR (stated): my first exec used container name
+  clab-aegis-demo-02-two-switches-one-router-unsolved-<sid>-pc-a and got
+  "No such container" x6. The real prefix is ...-srl-two-switch-router- (the yml's
+  name field differs from the lab id). I asked docker for the names instead of
+  guessing again. Check the probe before the product.
+
+STATE: nexus.service active, /api 200, 0 containers/dirs/ttyd.
+NOT COMPLETE. Dad's word alone.
