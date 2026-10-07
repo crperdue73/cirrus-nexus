@@ -1,0 +1,22 @@
+RUN 264 — LAB-A — 2026-10-07
+
+QUESTION (run 263's next-step, LAB-A leg): does LAB-A's grader fail a WRONG address with an accurate
+message while a correct sibling still passes?
+
+METHOD: pc-a given the WRONG address 10.0.9.1/24; pc-b correct 10.0.1.2/24.
+
+GRADED:
+  pc-a passed=False score=0.0  [FAIL "expected 10.0.1.1/24 on eth1 — 10.0.1.1 not found on eth1"]
+                               [FAIL cannot ping the switch 10.0.1.254] [FAIL cannot ping PC-B 10.0.1.2]
+  pc-b passed=True  score=1.0  [OK eth1 has 10.0.1.2/24]
+
+CONCLUSION: no defect. The grader names the exact defect (the expected address is missing) and is
+per-node — pc-b's correct config still passes while pc-a fails. With run 263 (LAB-B), grader
+discrimination is confirmed for both labs.
+
+SCOPE STATUS (named): the "two labs only" fence is now exhaustively covered — identity/attribution,
+both full student solves, guide-following for both labs, reconnect, topology, refusal, artifact
+integrity (bundle rebuilt + guarded), cross-lab concurrency, repeat start/stop, and grader
+discrimination for both labs. No code changes this run.
+
+Cleaned: stop 0/0, 0 clab containers left.
