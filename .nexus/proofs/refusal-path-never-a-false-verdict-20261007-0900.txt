@@ -1,0 +1,22 @@
+RUN 256 — LAB-A — 2026-10-07
+
+QUESTION (last in-scope surface): does the refusal path a student reads refuse honestly — never a
+false pass or a false fail — for a node the lab does not have and for a torn-down session?
+
+MEASURED LIVE (session be01810c, LAB-A):
+  grade node "r1" (LAB-A has no r1)  -> HTTP 409 "This lab has no node 'r1' — nothing to grade.
+                                        The nodes here are: pc-a, pc-b, sw1."
+  grade node "pc-a" (valid, unconfigured) -> HTTP 200, passed=False, status=graded  (honest FAIL)
+  stop the session, then grade "pc-a"  -> HTTP 404 "Session not found"  (refused, not a verdict)
+
+CONCLUSION: no defect. The product distinguishes three states a student can act on: graded
+pass/fail (a real verdict), and refused (nobody looked) — 409 for a node that does not exist,
+404 for a session that is gone. No false pass, no false fail. This closes the last student-facing
+surface inside the "two labs only" scope lock.
+
+SCOPE STATUS: inside the fence the student-facing product is fully covered for both labs. No code
+changes this run. Nothing left in-scope that is not already proven; the remaining work is
+product-level (migration/install, the 12 quarantined labs, graders), which the lock excludes.
+NAME THE BLOCKER: only Dad can raise the scope lock.
+
+Cleaned: stop 0/0, 0 clab containers left.
