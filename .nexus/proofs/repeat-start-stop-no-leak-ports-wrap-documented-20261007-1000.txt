@@ -1,0 +1,23 @@
+RUN 257 — LAB-A — 2026-10-07
+
+QUESTION: across repeated start/stop cycles, do containers or ttyd ports leak?
+
+MEASURED LIVE — three start/stop cycles of LAB-A on the current build:
+  cycle 1: start 200, ports 8787-8789, stop 200, containers left 0
+  cycle 2: start 200, ports 8790-8792, stop 200, containers left 0
+  cycle 3: start 200, ports 8793-8795, stop 200, containers left 0
+
+FINDING: no container leak — every stop returned to 0 clab containers. Ports do NOT recycle between
+cycles (they march forward); CODE READ shows _allocate_port is a rotating counter over
+8765..9765 that SKIPS in-use ports and WRAPS at the top, so freed ports are reused once the counter
+comes round. This is the behaviour run 212's docstring already documents ("nothing released back"),
+and it REFUSES loudly on true exhaustion (every port in range live at once). Not a defect: the
+march is cosmetic and bounded; only simultaneous use can exhaust the range.
+
+HONEST NOTE: this run re-confirms a property run 212 already fixed and documented. It is the kind
+of verification that stops adding information. Inside the "two labs only" fence there is no longer
+an unproven surface — runs 248-256 covered identity, both full student solves, reconnect, guide,
+topology and refusal; 257 adds only a resources-matter confirmation. Continuing to run in-scope
+would be manufacturing. The blocker stands: only Dad can raise the scope lock.
+
+Cleaned: stop 0/0, 0 clab containers left. No code changes.
