@@ -36,3 +36,8 @@ __pycache__/
 # _prepare_topology() writes ._clean_<lab>_<session>.yml beside the lab as a
 # transient copy for containerlab. It must never be committed.
 ._clean_*
+
+# --- internal bundle snapshots (never ship; 20 MB each) --------------------
+.nexus/bundle-archive/
+*.tar.gz.*
+*.tgz.*
