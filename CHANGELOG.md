@@ -5,6 +5,12 @@ All notable changes to AEGIS are recorded here. This project ships two labs
 
 ## [Unreleased]
 
+### Fixed
+- **Cold install could not deploy a lab.** `install.sh` pinned containerlab 0.60.0, which rejects the
+  labs' `type: ixr-d2l` node; a fresh host served the UI but `POST /api/sessions/start` returned 500.
+  Pinned to **0.75.0** (the version the labs are verified against). Found by an end-to-end cold-install
+  test in a blank container — see `.nexus/proofs/cold-install-verified-and-containerlab-pin-fixed-20261007.txt`.
+
 ### Changed
 - **Repo is now self-contained and small.** Removed 82 stale ~20 MB bundle snapshots from
   `.nexus/bundle-archive/` and purged them from history (`.git`: 730 MB → 1.6 MB; a cold

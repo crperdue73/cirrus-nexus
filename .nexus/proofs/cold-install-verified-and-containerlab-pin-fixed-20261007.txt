@@ -1,0 +1,39 @@
+COLD-INSTALL VERIFICATION + containerlab pin fix — 2026-10-07
+
+WHAT WAS TESTED
+  A throwaway privileged Debian 12 container (Docker-in-Docker, vfs storage driver,
+  legacy builder) with NOTHING preinstalled but git+curl:
+      git clone https://github.com/crperdue73/cirrus-nexus.git aegis
+      cd aegis && ./install.sh
+
+RESULT (after the fix below)
+  install.sh            -> INSTALL_EXIT=0
+  aegis/frr:latest      -> built from Dockerfile.frr (source), 52.8 MB, no blob needed
+  ghcr.io/nokia/srlinux -> pulled, 2.35 GB
+  GET /api              -> 200
+  GET /                 -> 200
+  GET /api/labs         -> [demo-01-..., demo-02-...]
+  POST /api/sessions/start (LAB-A)  -> 200, session c29537ae, 3 containers
+                                       (pc-a, pc-b, sw1)
+  POST /api/sessions/c29537ae/submit?node=pc-a -> 200, honest verdict
+                                       passed=false, "10.0.1.1 not found on eth1"
+  POST /api/sessions/c29537ae/stop  -> 200, 0 containers left
+
+BUG FOUND (the reason this test mattered)
+  install.sh pinned containerlab 0.60.0. The lab topologies use `type: ixr-d2l`,
+  which containerlab < 0.75 REJECTS:
+      "failed to initialize node "sw1": wrong node type. 'ixr-d2l' doesn't exist."
+  => a fresh install served the UI and the catalog but COULD NOT DEPLOY A LAB:
+      POST /api/sessions/start returned HTTP 500.
+  The development host runs containerlab 0.75.0 (accepts ixr-d2l), which is why the
+  bug was invisible there and only appeared on a clean host.
+
+FIX
+  install.sh now pins containerlab 0.75.0 — the version the labs are authored and
+  verified against. Re-tested in the same fresh container: session start returned
+  200 and the 3 containers came up.
+
+NOT EXERCISED
+  The FRR BGP-variant substrate and any lab beyond the two shipping labs were not
+  deployed. Lab-A was exercised end-to-end; Lab-B (the FRR router) builds and its
+  image is present but was not deployed in this run.

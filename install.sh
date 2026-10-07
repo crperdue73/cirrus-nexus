@@ -106,7 +106,13 @@ fi
 log "Step 3: Installing ContainerLab..."
 
 if ! command -v containerlab &>/dev/null; then
-    bash -c "$(curl -sL https://get.containerlab.dev)" -- -v 0.60.0
+    # Pinned to the version the two labs are authored and verified against.
+    # DO NOT downgrade: the switch nodes use `type: ixr-d2l`, which containerlab
+    # < 0.75 rejects ("wrong node type"). Pinning 0.60.0 here once shipped an
+    # installer whose labs could not deploy at all (found by an end-to-end
+    # cold-install test 2026-10-06: install succeeded, GET /api served, but
+    # POST /api/sessions/start returned 500 'wrong node type ixr-d2l').
+    bash -c "$(curl -sL https://get.containerlab.dev)" -- -v 0.75.0
     log "ContainerLab installed"
 else
     log "ContainerLab already installed ($(containerlab version 2>&1 | head -1))"
