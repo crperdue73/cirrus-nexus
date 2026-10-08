@@ -1,0 +1,18 @@
+RUN 271 — LAB-A — 2026-10-08
+
+QUESTION (run 270's next-step): can a student FINISH their work across an unexpected server restart
+— restart while the session is running (unconfigured), then configure AFTER adoption, then grade?
+
+MEASURED LIVE (session 47bd3c50, LAB-A):
+  started LAB-A, did NOT configure.
+  systemctl restart nexus.service -> adopted session visible as '(reconciled)' with
+                                     digest aegis-less:0d40ee2f53920...
+  configured pc-a 10.0.1.1/24 + pc-b 10.0.1.2/24 AFTER adoption (via the containers).
+  graded: pc-a passed=True 1.0, pc-b passed=True 1.0, sw1 passed=True 1.0.
+
+CONCLUSION: no defect. A student whose session is adopted after a server restart can continue
+working and still pass — the adopted containers are live and configurable, and grading works.
+Together with runs 269/270 (a configured lab survives a restart still passing), the resilience
+story is closed for both labs in both directions.
+
+Cleaned: stop 0/0, 0 clab containers left. No code changes.
