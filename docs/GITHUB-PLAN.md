@@ -24,7 +24,11 @@ unverifiable claims, no screenshots of a build that isn't here.
 - [x] `.github/ISSUE_TEMPLATE/` (`bug_report.md`, `lab_request.md`) + `PULL_REQUEST_TEMPLATE.md` (2026-10-07)
 - [x] `docs/architecture.md` + diagrams committed as source (mermaid component + lifecycle) (2026-10-07)
 - [x] CI: GitHub Actions (backend compile, `bash -n install.sh`, self-contained check, secret scan)
-- [ ] Screenshots: the student UI + a terminal mid-lab (real captures only)
+- [ ] Screenshots: the student UI + a terminal mid-lab (real captures only) — **BLOCKED: needs a
+      live served UI to capture; this box has no running AEGIS/docker right now, and a mock would
+      violate the "everything must be true" rule. Note it, don't fake it. Dad's call.**
+- [x] README hardening pass 2: link the orphaned `docs/SELF-CONTAINED.md` into the Documentation
+      table (it existed but was unreachable from the README) — 2026-10-08
 - [x] **Self-contained**: repo proven installable from a bare clone (`tools/check_self_contained.py`)
 - [x] `CHANGELOG.md` seeded from history
 
