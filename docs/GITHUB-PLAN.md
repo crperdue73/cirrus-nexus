@@ -22,7 +22,7 @@ unverifiable claims, no screenshots of a build that isn't here.
 - [x] `CONTRIBUTING.md`
 - [x] `CITATION.cff` (2026-10-07)
 - [x] `.github/ISSUE_TEMPLATE/` (`bug_report.md`, `lab_request.md`) + `PULL_REQUEST_TEMPLATE.md` (2026-10-07)
-- [ ] `architecture.md` + a diagram committed as source (mermaid or SVG)
+- [x] `docs/architecture.md` + diagrams committed as source (mermaid component + lifecycle) (2026-10-07)
 - [x] CI: GitHub Actions (backend compile, `bash -n install.sh`, self-contained check, secret scan)
 - [ ] Screenshots: the student UI + a terminal mid-lab (real captures only)
 - [x] **Self-contained**: repo proven installable from a bare clone (`tools/check_self_contained.py`)

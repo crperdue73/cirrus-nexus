@@ -42,6 +42,9 @@ release (see `lab-definitions-quarantine-2026-09-30/`).
 
 ## How it works
 
+The full component breakdown and the lab lifecycle are in
+[`docs/architecture.md`](docs/architecture.md); the sketch below is the essential shape.
+
 ```
         student browser
               │  HTTP  (:8000)
@@ -156,6 +159,7 @@ is a snapshot, not a symlink. The exact command, and the reasons behind each exc
 
 | doc | contents |
 |-----|----------|
+| [`docs/architecture.md`](docs/architecture.md) | components, diagrams, the lab lifecycle, the grading path, substrates, scope boundaries |
 | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) | bundle rebuild, runtime digests, concurrency, running without the service, substrate details, known drift |
 | [`docs/ADDING-A-LAB.md`](docs/ADDING-A-LAB.md) | what a lab is, the metadata schema, the load-time validation the loader refuses by name, the grader interface |
 | [`docs/GRADING-MODEL.md`](docs/GRADING-MODEL.md) | pass / fail / refused, per-node vs lab verdict, the digest gate, the refusal vocabulary |
