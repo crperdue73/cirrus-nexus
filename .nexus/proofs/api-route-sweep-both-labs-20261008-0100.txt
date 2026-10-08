@@ -1,0 +1,23 @@
+RUN 272 — LAB-A/B — 2026-10-08
+
+TWO THINGS:
+
+1. The STUDENT BROWSER UI could not be exercised: the browser tool refuses to navigate to the
+   served UI ("browser navigation blocked by policy"). Every prior run drove the API with curl, so
+   the rendered page/JS a student actually clicks has never been smoke-tested end to end. NAMED, not
+   worked around — this is a real limit on UI verification, not a product defect.
+
+2. Full API ROUTE SWEEP (fallback), both labs + bad input:
+     200 /api
+     200 /api/labs
+     200 /api/labs/{demo-01}           200 /api/labs/{demo-02}
+     200 /api/labs/{demo-01}/guide     200 /api/labs/{demo-02}/guide
+     200 /api/labs/{demo-01}/topology  200 /api/labs/{demo-02}/topology
+     200 /api/sessions
+     404 /api/labs/does-not-exist      404 /api/labs/does-not-exist/guide
+     POST /api/labs/reload -> {"status":"reloaded","count":2}; labs after = 2
+
+CONCLUSION: no defect in the API surface — every documented route answers correctly for both labs
+and bad ids 404. The UI leg remains unverified because the browser is policy-blocked.
+
+No code changes. Nothing started (no clab containers).
