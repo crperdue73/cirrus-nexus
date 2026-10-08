@@ -1,0 +1,20 @@
+RUN 269 — LAB-A — 2026-10-07
+
+QUESTION (new combination, not a re-run): a student CONFIGURES their lab; the server restarts
+mid-session; does the adopted session still grade a PASSING verdict with the config intact?
+
+MEASURED LIVE (session 35c6a474, LAB-A):
+  configured pc-a 10.0.1.1/24 + pc-b 10.0.1.2/24.
+  grade pc-a BEFORE restart -> passed=True 1.0
+  systemctl restart nexus.service (SESSIONS dropped; reconcile re-adopts the containers)
+  grade pc-a AFTER adoption -> passed=True 1.0, status=graded, cites aegis-less:0d40ee2f...
+  stop -> 200, 0 clab containers left.
+
+CONCLUSION: no defect. A configured lab survives a server restart: the adopted session is still
+gradeable and still PASSES, and its verdict cites the correct identity. This closes the
+resilience gap left by runs 249/250 (which showed the identity survives a restart but did not grade
+an adopted, configured session).
+
+No code changes.
+
+Cleaned: stop 0/0, 0 clab containers left.
