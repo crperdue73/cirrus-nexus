@@ -1,0 +1,19 @@
+RUN 270 — LAB-B — 2026-10-07
+
+QUESTION (run 269's next-step): does LAB-B's full 5-node configured path still PASS after a server
+restart mid-session (adoption)?
+
+MEASURED LIVE (session 7c3afe2e, LAB-B):
+  configured pc-a, pc-b, r1 (sw1/sw2 IRBs pre-set); all five graded before and after a restart.
+    node   before        after restart/adoption
+    pc-a   pass=True 1.0 pass=True 1.0
+    pc-b   pass=True 1.0 pass=True 1.0
+    sw1    pass=True 1.0 pass=True 1.0
+    sw2    pass=True 1.0 pass=True 1.0
+    r1     pass=True 1.0 pass=True 1.0
+
+CONCLUSION: no defect. The full configured 5-node path survives a server restart and still passes
+end to end after adoption. With run 269 (LAB-A), relocation/resilience is confirmed for both labs:
+a configured lab keeps grading a passing verdict across a server restart.
+
+Cleaned: stop 0/0, 0 clab containers left. No code changes.
