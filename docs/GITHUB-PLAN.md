@@ -34,6 +34,11 @@ unverifiable claims, no screenshots of a build that isn't here.
 
 ## Rules for the polish runs
 
+> **Push credentials (2026-10-08):** the token in `github.md` is **read-only** — pushes with it return
+> `403 Permission denied`. The working write token is in `github2.md`. `origin` in the shipping tree
+> is set to that one. If a push 403s, check which token `origin` carries.
+
+
 1. One item per run — don't sprawl.
 2. Commit with an honest, specific message; push `origin main`.
 3. Never claim "complete"/"finished" about Nexus — that's Dad's word alone.
