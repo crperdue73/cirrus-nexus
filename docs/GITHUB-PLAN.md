@@ -66,6 +66,28 @@ was appropriate today (everything else on this project is product-level and gate
 delete 14-vs-12 labs, the `/result` route, `aegis/frr` `ip_forward=1` default, per-lab locking,
 restore-on-boot unit). One item, honestly assessed, no manufactured work.
 
+## Run 2026-10-09 19:00 UTC — both open items re-verified blocked; no manufactured work
+
+Measured live this run: `git status` clean, `HEAD...origin/main = 0 0` (nothing to push). README
+headings checked against the task's hardening list — badges, what-this-is/is-not (features), the
+architecture sketch, **Quick start** + install, the honest lab table, the grading model, the
+documentation table, and License are all present. The loader glob (`lab-definitions/**/*.yml`) still
+resolves to **exactly the two** labs the README table names, so the "ships exactly two labs" claim
+remains true of this tree.
+
+The only backlog items left are the two already marked blocked:
+
+1. **CI hardening** (also byte-compile `lab-definitions/grader_*.py`) — re-tested the `origin` token
+   live this run: `x-oauth-scopes: delete:packages, repo, write:discussion, write:packages`. **No
+   `workflow` scope**, so any push touching `.github/workflows/ci.yml` is rejected. The edit already
+   verified clean (simulated STEP OK). **Dad's call:** mint a token with `workflow` scope.
+2. **Screenshots** — real captures require a session on the host where AEGIS actually runs (this box
+   is `192.168.111.40/16`; the lab host is on another subnet and unreachable here). **Dad's call:**
+   grant a route/session, or the item stays open.
+
+No in-scope code change was appropriate today (remaining product work is gated on Dad's rulings). One
+item honestly assessed, no phantom work.
+
 ## Rules for the polish runs
 
 > **Push credentials (2026-10-08):** the token in `github.md` is **read-only** — pushes with it return
