@@ -24,6 +24,16 @@ unverifiable claims, no screenshots of a build that isn't here.
 - [x] `.github/ISSUE_TEMPLATE/` (`bug_report.md`, `lab_request.md`) + `PULL_REQUEST_TEMPLATE.md` (2026-10-07)
 - [x] `docs/architecture.md` + diagrams committed as source (mermaid component + lifecycle) (2026-10-07)
 - [x] CI: GitHub Actions (backend compile, `bash -n install.sh`, self-contained check, secret scan)
+- [ ] CI hardening: extend the compile step to also byte-compile the shipped lab graders
+      (`lab-definitions/grader_*.py`) — `backend/main.py` is the only file CI compiles today, so a
+      syntax error in a grader would pass CI silently. **BLOCKED 2026-10-09:** the change is written
+      and verified (simulated the exact step → STEP OK), but it edits `.github/workflows/ci.yml`, and
+      **neither write token carries the `workflow` scope.** The `ghp_` token `origin` uses reports
+      scopes `delete:packages, repo, write:discussion, write:packages` (no `workflow`), and GitHub
+      rejects the push: *"refusing to allow a Personal Access Token to create or update workflow
+      `.github/workflows/ci.yml` without `workflow` scope"*. Do NOT force it. **Dad's call:** mint a
+      token with `workflow` scope (or grant `Workflows: write` on the fine-grained PAT), then push.
+      The edit was reverted so the tree stays in sync with `origin/main`. — 2026-10-09
 - [ ] Screenshots: the student UI + a terminal mid-lab (real captures only) — **BLOCKED, premise
       corrected 2026-10-09.** Original note blamed "no running AEGIS/docker on this box". Measured
       live today (2026-10-09 11:00 UTC on host `dept-dragon-tech`): the true reason is that the
