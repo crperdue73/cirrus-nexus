@@ -24,9 +24,16 @@ unverifiable claims, no screenshots of a build that isn't here.
 - [x] `.github/ISSUE_TEMPLATE/` (`bug_report.md`, `lab_request.md`) + `PULL_REQUEST_TEMPLATE.md` (2026-10-07)
 - [x] `docs/architecture.md` + diagrams committed as source (mermaid component + lifecycle) (2026-10-07)
 - [x] CI: GitHub Actions (backend compile, `bash -n install.sh`, self-contained check, secret scan)
-- [ ] Screenshots: the student UI + a terminal mid-lab (real captures only) — **BLOCKED: needs a
-      live served UI to capture; this box has no running AEGIS/docker right now, and a mock would
-      violate the "everything must be true" rule. Note it, don't fake it. Dad's call.**
+- [ ] Screenshots: the student UI + a terminal mid-lab (real captures only) — **BLOCKED, premise
+      corrected 2026-10-09.** Original note blamed "no running AEGIS/docker on this box". Measured
+      live today (2026-10-09 11:00 UTC on host `dept-dragon-tech`): the true reason is that the
+      AEGIS/Nexus platform runs on a DIFFERENT host on a DIFFERENT subnet — this box is
+      `192.168.111.40/16`, the recorded lab host is `192.168.1.110:8000` (log runs 16+), and NEITHER
+      `127.0.0.1:8000` NOR `192.168.1.110:8000` is reachable from here (both `000`); `nexus.service`
+      is not even a unit on this host. So "start it here and capture" was never possible on this
+      machine; screenshots need a session on the host where AEGIS actually runs. A mock still
+      violates the "everything must be true" rule — do NOT fake it. **Dad's call: either grant a
+      route/session to the live host, or accept the item stays open.**
 - [x] README hardening pass 2: link the orphaned `docs/SELF-CONTAINED.md` into the Documentation
       table (it existed but was unreachable from the README) — 2026-10-08
 - [x] **Self-contained**: repo proven installable from a bare clone (`tools/check_self_contained.py`)
@@ -34,6 +41,20 @@ unverifiable claims, no screenshots of a build that isn't here.
 - [x] README hardening pass 3: CI status badge (workflow exists → badge is truthful) + a Contributing
       & changelog section so `CONTRIBUTING.md` / `CHANGELOG.md` are no longer orphaned from the README
       — 2026-10-09
+
+## Run 2026-10-09 11:00 UTC — plan file is here (path correction) + screenshots blocker re-scoped
+
+The morning-plan cron referenced `docs/GITHUB-PLAN.md` relative to the workspace root, but the
+file (and `logs/nexus-forward.log`) live under `projects/aegis/`. Recorded here so future runs
+find it: **plan = `projects/aegis/docs/GITHUB-PLAN.md`; forward log = `projects/aegis/logs/nexus-forward.log`.**
+
+Tree state measured live this run: `git status` clean except 3 pre-existing `.nexus/` files,
+`HEAD..origin/main = 0 0` (nothing to push), CI workflow present, README already carries the CI
+badge + Contributing/changelog section (pass 3 committed `1e4b584`). So the polish backlog's only
+remaining item is Screenshots, and its blocker premise is corrected above. No in-scope code change
+was appropriate today (everything else on this project is product-level and gated on Dad's rulings:
+delete 14-vs-12 labs, the `/result` route, `aegis/frr` `ip_forward=1` default, per-lab locking,
+restore-on-boot unit). One item, honestly assessed, no manufactured work.
 
 ## Rules for the polish runs
 
