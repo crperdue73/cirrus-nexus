@@ -10,7 +10,7 @@ FINDING (real, operator-facing):
     subprocess.run(["pkill", "-f", "ttyd.*docker exec"], ...)
     subprocess.run(["pkill", "-f", "aegis.*main.py"], ...)
   MEASURED LIVE: `pgrep -af "aegis.*main.py"` returns the RUNNING SERVICE:
-    2135652 /usr/bin/python3 /home/student/.openclaw/workspace-selina/projects/aegis/backend/main.py
+    2135652 /usr/bin/python3 /home/selina/.openclaw/workspace-selina/projects/aegis/backend/main.py
   The service path contains "aegis ... main.py", so the pattern matches it. On a
   host where the service is already up, running the README's "Running without the
   service" command KILLS THE RUNNING PRODUCT. And the unit is Restart=on-failure,

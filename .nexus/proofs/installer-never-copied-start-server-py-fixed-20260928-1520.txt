@@ -10,7 +10,7 @@ DEFECT (real, student/operator-facing):
   It NEVER copies start_server.py -- despite start_server.py being in the source
   tree AND shipped in the release bundle.
   Line 185-187 then does:
-    sed -i 's|/home/student/.openclaw/workspace-selina/projects/aegis|/opt/aegis|g' \
+    sed -i 's|/home/selina/.openclaw/workspace-selina/projects/aegis|/opt/aegis|g' \
         "${AEGIS_DIR}/start_server.py" 2>/dev/null || true
   -- a sed on a file that was never installed, silently swallowed by `|| true`.
   So a FRESH INSTALL has no /opt/aegis/start_server.py, while README.md line 170

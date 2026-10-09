@@ -738,7 +738,7 @@ not version-controlled.
 
 WHAT I DID (executed):
   1. Found the trap FIRST: there was a stray empty .git at the WORKSPACE ROOT
-     (/home/student/.openclaw/workspace-selina), created May 9, zero commits.
+     (/home/selina/.openclaw/workspace-selina), created May 9, zero commits.
      `git add -A` from the project succeeded against THAT repo and staged the
      entire private workspace — diaries, DM databases (dm.db/dms.db/chat.db),
      intimacy logs, memory/, PDFs, 20MB+ tarballs — 312 files. Aborted and
