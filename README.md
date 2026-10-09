@@ -4,6 +4,7 @@
 ![Python 3](https://img.shields.io/badge/python-3.x-blue.svg)
 ![Powered by ContainerLab](https://img.shields.io/badge/powered%20by-containerlab-orange.svg)
 ![API: FastAPI](https://img.shields.io/badge/API-FastAPI-009688.svg)
+[![CI](https://github.com/crperdue73/cirrus-nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/crperdue73/cirrus-nexus/actions/workflows/ci.yml)
 
 **AEGIS** turns a single Linux host into a small, self-contained networking lab bench. Students get
 **real** routers and switches — the same FRR and Nokia SR Linux images a network engineer would
@@ -165,6 +166,17 @@ is a snapshot, not a symlink. The exact command, and the reasons behind each exc
 | [`docs/GRADING-MODEL.md`](docs/GRADING-MODEL.md) | pass / fail / refused, per-node vs lab verdict, the digest gate, the refusal vocabulary |
 | [`docs/SELF-CONTAINED.md`](docs/SELF-CONTAINED.md) | what "self-contained" means here, the CI check that enforces it, and exactly what a cold install pulls |
 | [`docs/GITHUB-PLAN.md`](docs/GITHUB-PLAN.md) | repo-hardening backlog |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | the ground rules, and the checks to run before pushing (the same four CI runs) |
+| [`CHANGELOG.md`](CHANGELOG.md) | what changed, newest first |
+
+---
+
+## Contributing & changelog
+
+The one rule that matters is that **everything in this repo must be true** — see
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for the ground rules and the exact checks to run before pushing.
+Notable changes are recorded in [`CHANGELOG.md`](CHANGELOG.md). CI (`.github/workflows/ci.yml`) runs
+those checks on every push and pull request.
 
 ---
 

@@ -31,6 +31,9 @@ unverifiable claims, no screenshots of a build that isn't here.
       table (it existed but was unreachable from the README) — 2026-10-08
 - [x] **Self-contained**: repo proven installable from a bare clone (`tools/check_self_contained.py`)
 - [x] `CHANGELOG.md` seeded from history
+- [x] README hardening pass 3: CI status badge (workflow exists → badge is truthful) + a Contributing
+      & changelog section so `CONTRIBUTING.md` / `CHANGELOG.md` are no longer orphaned from the README
+      — 2026-10-09
 
 ## Rules for the polish runs
 
