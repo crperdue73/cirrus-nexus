@@ -10,8 +10,10 @@ will fail — so this runs in CI on every push.
 """
 from __future__ import annotations
 
+import py_compile
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -66,6 +68,15 @@ def main() -> int:
                      ROOT / "backend" / "graders" / f"{name}.py"]
             if not any(c.exists() for c in cands):
                 problems.append(f"{yml.relative_to(ROOT)}: grader module missing -> {name}.py")
+
+    # Every shipped grader must byte-compile. backend/main.py is compiled by its own CI
+    # step, but a syntax error in a lab grader would otherwise pass CI silently.
+    for gr in sorted((ROOT / "lab-definitions").glob("grader_*.py")):
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".pyc", delete=True) as tmp:
+                py_compile.compile(str(gr), cfile=tmp.name, doraise=True)
+        except py_compile.PyCompileError as exc:
+            problems.append(f"{gr.relative_to(ROOT)}: does not compile -> {exc.msg.splitlines()[0]}")
 
     # No shipped source may reference a developer's absolute path.
     for path in ROOT.rglob("*"):
