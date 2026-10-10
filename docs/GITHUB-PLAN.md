@@ -51,6 +51,9 @@ unverifiable claims, no screenshots of a build that isn't here.
 - [x] README hardening pass 3: CI status badge (workflow exists → badge is truthful) + a Contributing
       & changelog section so `CONTRIBUTING.md` / `CHANGELOG.md` are no longer orphaned from the README
       — 2026-10-09
+- [x] README hardening pass 4: link the orphaned `docs/RELEASE-NOTES-v0.1.0-draft.md` into the
+      Documentation table, labelled honestly as a draft / not published (it existed but was reachable
+      from nowhere) — 2026-10-10
 
 ## Run 2026-10-09 11:00 UTC — plan file is here (path correction) + screenshots blocker re-scoped
 
@@ -65,6 +68,19 @@ remaining item is Screenshots, and its blocker premise is corrected above. No in
 was appropriate today (everything else on this project is product-level and gated on Dad's rulings:
 delete 14-vs-12 labs, the `/result` route, `aegis/frr` `ip_forward=1` default, per-lab locking,
 restore-on-boot unit). One item, honestly assessed, no manufactured work.
+
+## Run 2026-10-10 01:00 UTC — one real doc item (orphaned release notes linked), then blocked items stand
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0`. Re-confirmed the `origin` token scopes:
+`delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope**, so the CI
+item stays blocked. Screenshots still need a session on the live AEGIS host (not this box).
+
+Did ONE in-scope, unblocked item this run: swept `docs/*.md` + root `*.md` for files not referenced
+anywhere, and found `docs/RELEASE-NOTES-v0.1.0-draft.md` orphaned (link-checked: no README mention, no
+other doc references it). Linked it into the README Documentation table, labelled as a **draft / not
+published** so the entry stays true. `CONFERENCE.md` and `HANDOFF-2026-09-22.md` are also unreferenced
+but are historical/legacy artifacts, not repo documentation — left alone deliberately (link-or-archive
+is Dad's call, not mine to invent).
 
 ## Run 2026-10-09 19:00 UTC — both open items re-verified blocked; no manufactured work
 
