@@ -54,6 +54,10 @@ unverifiable claims, no screenshots of a build that isn't here.
 - [x] README hardening pass 4: link the orphaned `docs/RELEASE-NOTES-v0.1.0-draft.md` into the
       Documentation table, labelled honestly as a draft / not published (it existed but was reachable
       from nowhere) — 2026-10-10
+- [x] README hardening pass 5: link the two shipped labs' **student guides**
+      (`lab-definitions/srl-demo-unsolved/demo-01-...-unsolved.md`, `.../srl-demo2-unsolved/demo-02-...-unsolved.md`)
+      from the "shipping labs" table via a new Guide column. Both guides shipped in-tree and were
+      referenced from **nowhere** — a reader saw the lab named but could not reach its walkthrough — 2026-10-10
 
 ## Run 2026-10-09 11:00 UTC — plan file is here (path correction) + screenshots blocker re-scoped
 
@@ -144,6 +148,26 @@ The only backlog items left are the two already marked blocked:
 
 No in-scope code change was appropriate today (remaining product work is gated on Dad's rulings). One
 item honestly assessed, no phantom work.
+
+## Run 2026-10-10 19:00 UTC — the two shipped labs' own student guides were unlinked
+
+Measured live: tree clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
+`delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the cosmetic
+`ci.yml` step stays blocked), and Screenshots still needs a session on the live AEGIS host (this box is
+`192.168.111.40/16`).
+
+Swept every tracked `*.md`/`*.cff` for inbound links and found the highest-value unlinked pair: the
+**student guides for the two labs the README advertises**. `lab-definitions/srl-demo-unsolved/
+demo-01-two-pcs-and-a-real-switch-unsolved.md` and `lab-definitions/srl-demo2-unsolved/
+demo-02-two-switches-one-router-unsolved.md` each had **zero** references anywhere — the README named
+both labs by ID and linked their YAML nowhere and their walkthrough nowhere, so a reader could not
+reach the actual instructions for either shipped lab.
+
+Verified before linking: the loader glob (`lab-definitions/**/*.yml`) still resolves to **exactly two**
+files (the two shipped labs), and both `.md` targets exist at the exact relative paths used. Added a
+**Guide** column to the "shipping labs" table linking each lab's guide, plus one honest sentence
+(YAML topology + Markdown guide + Python grader per lab, same directory) — all true of this tree.
+Checks re-run: backend compile OK, `bash -n install.sh` OK, `check_self_contained.py` rc=0.
 
 ## Rules for the polish runs
 
