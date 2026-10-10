@@ -69,6 +69,27 @@ was appropriate today (everything else on this project is product-level and gate
 delete 14-vs-12 labs, the `/result` route, `aegis/frr` `ip_forward=1` default, per-lab locking,
 restore-on-boot unit). One item, honestly assessed, no manufactured work.
 
+## Run 2026-10-10 13:00 UTC — CONTRIBUTING pre-push list made truthful (it disagreed with CI)
+
+Measured live: tree clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
+`delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope**, so the
+cosmetic `ci.yml` step stays blocked and Screenshots still needs a session on the live host.
+
+One real, in-scope, unblocked item: `CONTRIBUTING.md` said "Run the same checks CI runs" and then
+listed **three** commands — but `.github/workflows/ci.yml` runs **four** (the secret-scan was
+omitted), and the README already claims "the same four CI runs". The two docs disagreed; a
+contributor following CONTRIBUTING would skip the secret-scan. Fixed:
+
+- Listed all four CI checks (backend compile, installer shell-syntax, self-contained, secret-scan) so
+  the text matches the workflow exactly.
+- Added the two lab-author tools the PR template references but CONTRIBUTING never mentioned:
+  `tools/lint_lab_pack.py` and `tools/check_bundle_fresh.sh` — **verified both exist**, and labelled
+  them honestly as **not** in CI (`lint_lab_pack.py` needs `pyyaml`; CI installs no deps — confirmed
+  `grep -c 'pip install' ci.yml` = 0).
+- Noted the grader byte-compile now covered by the self-contained check.
+
+No behaviour change; docs now match the workflow. Committed `73720e0`, pushed `origin/main`.
+
 ## Run 2026-10-10 11:00 UTC — CI grader-compile gap CLOSED without the blocked workflow-scope token
 
 Measured live: tree clean, `HEAD...origin/main = 0 0`. Re-confirmed the `origin` token scopes
