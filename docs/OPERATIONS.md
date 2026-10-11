@@ -64,10 +64,17 @@ Measured 2026-09-28: with the cache warm, an edited grader kept returning the ol
 
 ---
 
-## Release bundle
+## Release bundle (historical — not shipped in this tree)
 
-`frontend/nexus-release.tar.gz` is the shippable artifact. It contains exactly the two shipping labs
-and the source that runs them:
+**The current shipping model is a git clone.** The README quickstart and `docs/SELF-CONTAINED.md`
+are the source of truth: a clean host clones this repo and runs `install.sh`. **No `nexus-release.tar.gz`
+(or any other bundle tarball) is committed to this tree** — measured live 2026-10-11: `find . -name
+'*.tar.gz'` returns nothing outside `.git/`.
+
+The `nexus-release.tar.gz` bundle was the **older** shipping path. It is documented here because the
+rebuild command in an earlier revision of this file implied the bundle was live; that is no longer
+true. When the bundle *was* the shippable artifact it contained exactly the two shipping labs and the
+source that runs them:
 
 ```
 README.md  install.sh  start_server.py  Dockerfile.frr
@@ -79,31 +86,18 @@ lab-definitions/grader_demo_01_srl.py
 lab-definitions/grader_demo_02.py
 ```
 
-**Rebuild it whenever shipping files change** (it is a snapshot, not a symlink to the tree):
-
-```bash
-tar czf frontend/nexus-release.tar.gz \
-      --exclude='*.bak*' --exclude='__pycache__' --exclude='*.pyc' \
-      --exclude='clab-*' \
-      README.md install.sh start_server.py Dockerfile.frr \
-      backend/main.py frontend/index.html \
-      assets/ \
-      lab-definitions/srl-demo-unsolved/ lab-definitions/srl-demo2-unsolved/ \
-      lab-definitions/grader_demo_01_srl.py lab-definitions/grader_demo_02.py
-```
+Lessons from that era are kept because `tools/check_bundle_fresh.sh` still exists and will act **only
+if a bundle is present** (it no-ops otherwise):
 
 - **`--exclude='clab-*'` (added 2026-10-04):** containerlab writes a live instance directory inside
   the lab's own folder — `lab-definitions/<lab>/clab-<lab>-<session>-<node>/` — holding the switch's
-  runtime config, `authorized_keys`, and TLS **private keys**. Because the command names the lab
-  DIRECTORY rather than individual files, a rebuild done while a session is running sweeps all of it
-  into the shippable artifact (it happened once: the tarball grew +38 KB and carried a `ca.key`). The
+  runtime config, `authorized_keys`, and TLS **private keys**. Because the archive command named the
+  lab DIRECTORY rather than individual files, a rebuild done while a session is running swept all of
+  it into the artifact (it happened once: the tarball grew +38 KB and carried a `ca.key`). The
   exclusion makes it impossible instead of merely unlikely.
-- **`assets/` MUST be included:** it carries the ~20.7 MB pinned FRR image plus `frr-image.pin` and
-  `installed-image-id.txt`. An earlier command block omitted it, which would have produced a bundle
-  with **no substrate image**.
-
-*Historical:* the bundle sat un-rebuilt from 2026-06-13 to 2026-09-28 (3.5 months), shipping neither
-current lab nor current code, and was referenced by nothing so nothing flagged it.
+- **`assets/` must be included** if a bundle is ever rebuilt: it carries the ~20.7 MB pinned FRR image
+  plus `frr-image.pin` and `installed-image-id.txt`. An earlier command block omitted it, which would
+  have produced a bundle with **no substrate image**.
 
 ---
 
@@ -173,15 +167,19 @@ lab-local edit. Recorded so the next operator sees both values.
 
 ---
 
-## Capstone — Net Eng I PBM
+## Capstone — Net Eng I PBM (curriculum context, not a shipped lab)
 
-Performance-based measurement out of 100 points (**70 = proficient**):
+The course outline describes a **performance-based measure** (PBM) out of 100 points, **70 = proficient**:
 
-- **Subnetting (27 pts)** — 192.168.12.0/24 → /25 + /28
+- **Subnetting (27 pts)** — a /24 into /25 + /28
 - **Device Config (67 pts)** — RTR, SW1, PC-A, PC-B
-- **Connectivity (6 pts)** — End-to-end IPv4 + IPv6
+- **Connectivity (6 pts)** — end-to-end IPv4 + IPv6
 
-The Capstone switch uses **Alpine bridge-utils** (not FRR-as-switch) — cleaner L2 behavior.
+The three sub-scores above sum to **100**, and the only in-tree artifact that carries them is
+`lab-guides/lab-03-lock-it-down.md`, which cross-references the capstone (it names 192.168.12.0/24,
+"Auto-graded (100 pts)", and "70% = pass"). **Those numbers are read directly from that shipped guide;
+the capstone itself is not one of the two labs in this tree and is not auto-graded by either shipping
+grader.**
 
 ---
 

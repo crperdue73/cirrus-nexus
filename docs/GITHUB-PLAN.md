@@ -58,6 +58,24 @@ unverifiable claims, no screenshots of a build that isn't here.
       (`lab-definitions/srl-demo-unsolved/demo-01-...-unsolved.md`, `.../srl-demo2-unsolved/demo-02-...-unsolved.md`)
       from the "shipping labs" table via a new Guide column. Both guides shipped in-tree and were
       referenced from **nowhere** — a reader saw the lab named but could not reach its walkthrough — 2026-10-10
+- [x] `docs/OPERATIONS.md` truth pass: removed two stale/unverifiable claims found by grepping the tree.
+      (1) The "Release bundle" section described `frontend/nexus-release.tar.gz` as *the* shippable
+      artifact, but **no bundle ships in this tree** — measured live 2026-10-11, `find . -name '*.tar.gz'`
+      returns nothing outside `.git/`; the shipping path is a git clone + `install.sh`. Reframed as
+      historical and hardened the leftover `check_bundle_fresh.sh` lesson. (2) The "Capstone" section
+      was undated and asserted an unmeasured switch detail ("Alpine bridge-utils"); replaced with the
+      numbers that actually trace to a shipped file (`lab-guides/lab-03-lock-it-down.md` — 100 pts,
+      70 = pass) and labelled it curriculum context, not a shipped lab — 2026-10-11
+
+## Run 2026-10-11 01:00 UTC — OPERATIONS.md truth pass (two stale claims corrected)
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0`, CI workflow present, all four CI checks
+pass on the tree (`py_compile`, `bash -n install.sh`, `check_self_contained.py` OK, secret scan clean).
+The polish backlog's only open items remain **Screenshots** (blocked — needs a session on the live
+AEGIS host) and the **cosmetic `ci.yml` step** (blocked — the `origin` token still lacks `workflow`
+scope). Neither is Dad's call to infringe on, so this run took the one in-scope honesty fix available:
+OPERATIONS.md carried a bundle command block implying a tarball ships (it doesn't) and an undated,
+unmeasured Capstone claim. Both corrected; no invented content, only removal/citation.
 
 ## Run 2026-10-09 11:00 UTC — plan file is here (path correction) + screenshots blocker re-scoped
 
