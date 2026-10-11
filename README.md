@@ -93,8 +93,9 @@ sudo ./install.sh
 ```
 
 `install.sh` installs Docker, ContainerLab, `ttyd`, and the Python deps
-(`fastapi`, `uvicorn`, `pyyaml`), copies the app to `/opt/aegis`, loads the pinned FRR image and
-**verifies it against the shipped pin**, pre-pulls the switch image, and installs a systemd service.
+(`fastapi`, `uvicorn`, `pyyaml`), copies the app to `/opt/aegis`, builds the FRR router image from
+`Dockerfile.frr` (this tree ships no prebuilt FRR tarball), pre-pulls the switch image, and installs a
+systemd service.
 
 ```bash
 sudo systemctl start aegis     # start the server
@@ -155,9 +156,11 @@ bundle; that path is kept there as *historical* because a `nexus-release.tar.gz`
 - **A host reboot loses running labs.** Student containers are not restored on boot.
 - **The SR Linux image is a ~2.35 GB pull**; each switch node runs a full instance of it. Keep to
   **one session per student per lab**; use *Reconnect* for a returning student rather than Start.
-- **A known image-pin drift:** `Dockerfile.frr` hashes differently from `assets/frr-image.pin`. The
-  shipped tarball matches the pin, so installs are unaffected; only a rebuild-from-source would
-  diverge. Details in [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
+- **A known image-pin drift:** `Dockerfile.frr` hashes differently from `assets/frr-image.pin`. No
+  pinned FRR image tarball ships in this tree (`assets/` holds only `frr-image.pin` and
+  `installed-image-id.txt`), so `install.sh` takes its build-from-source fallback and builds
+  `aegis/frr:latest` locally from `Dockerfile.frr`. That build is self-consistent but will not match
+  the pin's `layers_sha256`. Details in [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
 
 ---
 

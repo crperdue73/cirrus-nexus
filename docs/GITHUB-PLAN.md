@@ -206,6 +206,30 @@ files (the two shipped labs), and both `.md` targets exist at the exact relative
 (YAML topology + Markdown guide + Python grader per lab, same directory) — all true of this tree.
 Checks re-run: backend compile OK, `bash -n install.sh` OK, `check_self_contained.py` rc=0.
 
+## Run 2026-10-11 13:00 UTC — the "shipped FRR image tarball" claims were false; corrected in three docs
+
+Measured live: `HEAD...origin/main = 0 0` before this run; `origin` token scopes
+`delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the
+`ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live AEGIS host (this box
+is `192.168.111.40/16`).
+
+Found a real honesty bug beyond the two blocked items. `README.md`, `docs/OPERATIONS.md`, and
+`docs/architecture.md` all asserted that `aegis/frr:latest` **ships as `assets/aegis-frr-image.tar.gz`**
+("the shipped tarball matches the pin"). It does not: `git ls-files | grep -E '\.tar|\.gz|\.tgz'`
+returns nothing, and `find . -name '*.tar.gz'` (excluding `.git/`) is empty. `assets/` holds only
+`frr-image.pin` and `installed-image-id.txt`, both tracked. `install.sh` loads a tarball **only if
+present** (`if [[ -f $PIN_TARBALL ]]`); the pin *names* `aegis-frr-image.tar.gz` but that file is not in
+this tree, so a cold clone takes the **build-from-source fallback** (`docker build` from
+`Dockerfile.frr`) — which is self-consistent but does **not** reproduce the pin's `layers_sha256`.
+
+Corrected four spots to be true of this tree: the README quickstart line ("loads the pinned image and
+verifies it against the shipped pin" → builds locally), the README pin-drift bullet, the
+OPERATIONS substrate table ("✅ shipped as…" → "❌ built locally"), the OPERATIONS bundle-contents
+note, and the OPERATIONS pin-drift paragraph ("the pinned path installs cleanly" → "the pinned path is
+not taken here"), plus the architecture.md substrate row. Backups via `safe-backup.sh`
+(label `frr-tarball-truth`). Checks re-run: backend compile OK, `bash -n install.sh` OK,
+`check_self_contained.py` rc=0 (15 required files present).
+
 ## Rules for the polish runs
 
 > **Push credentials (2026-10-08):** the token in `github.md` is **read-only** — pushes with it return

@@ -95,19 +95,20 @@ if a bundle is present** (it no-ops otherwise):
   lab DIRECTORY rather than individual files, a rebuild done while a session is running swept all of
   it into the artifact (it happened once: the tarball grew +38 KB and carried a `ca.key`). The
   exclusion makes it impossible instead of merely unlikely.
-- **`assets/` must be included** if a bundle is ever rebuilt: it carries the ~20.7 MB pinned FRR image
-  plus `frr-image.pin` and `installed-image-id.txt`. An earlier command block omitted it, which would
-  have produced a bundle with **no substrate image**.
+- **`assets/` must be included** if a bundle is ever rebuilt: today it carries `frr-image.pin` (which
+  *names* `aegis-frr-image.tar.gz`) and `installed-image-id.txt`. In the bundle era it also carried the
+  ~20.7 MB pinned FRR tarball itself; that tarball does **not** ship in this tree, so a rebuild here
+  would need to reproduce it first or fall back to a local `aegis/frr:latest` build.
 
 ---
 
 ## Node substrates: what ships, and what is pulled
 
-The two shipped labs need three node images. **Only one travels in the bundle:**
+The two shipped labs need three node images. **None ships as a tarball in this tree:**
 
 | image | who needs it | shipped? |
 |---|---|---|
-| `aegis/frr:latest` | the router in LAB-B | ✅ shipped as `assets/aegis-frr-image.tar.gz`, pinned by `assets/frr-image.pin` |
+| `aegis/frr:latest` | the router in LAB-B | ❌ built locally by `install.sh` from `Dockerfile.frr` — the pin's tarball (`aegis-frr-image.tar.gz`) is *not* in this tree |
 | `ghcr.io/nokia/srlinux:latest` | the REAL switch in both labs | ❌ pulled at deploy time — **~2.35 GB** |
 | `alpine:latest` | the PCs | ❌ pulled at deploy time (small) |
 
@@ -151,16 +152,20 @@ operational convention.
 
 ## Known drift: `Dockerfile.frr` vs the image pin
 
-`assets/frr-image.pin` records the substrate `install.sh` loads:
+`assets/frr-image.pin` names the substrate `install.sh` *would* prefer to load:
 `dockerfile_sha256=cce15a86…`, `layers_sha256=bb7ef23a…`, `tarball=aegis-frr-image.tar.gz`.
 
 The shipped `Dockerfile.frr` now hashes to `b3046a70…` — changed by commit `0503bc5` (2026-09-20)
 whose message said *"Pin/image id unchanged."* The image file was not rebuilt, so **the pin and the
 Dockerfile disagree.**
 
-- **The pinned path installs cleanly.** `install.sh` loads the shipped tarball and verifies it against
-  the pin on the loaded image's *label* and *layer chain* — both match.
-- **A rebuild-from-source would produce a different substrate** (`b3046a70…` ≠ the pin).
+- **The pinned path is not taken here.** `install.sh` loads the tarball *only if* it is present; the
+  pin's `tarball=aegis-frr-image.tar.gz` is **not in this tree** (measured live 2026-10-11; `assets/`
+  holds only `frr-image.pin` and `installed-image-id.txt`). So a cold clone falls to the
+  build-from-source fallback below.
+- **The fallback builds a different substrate.** With no tarball, `install.sh` runs
+  `docker build` from `Dockerfile.frr` (`b3046a70…`), which installs and self-heals normally but does
+  **not** reproduce the pin's `layers_sha256` (`bb7ef23a…`). That is expected, not a failure.
 
 Not "fixed" on purpose: choosing which substrate is authoritative is a product decision, not a
 lab-local edit. Recorded so the next operator sees both values.

@@ -136,7 +136,7 @@ surface is listed in the [README](../README.md#api).
 | image | node | in the repo? |
 |---|---|---|
 | `alpine:latest` | the PCs | ❌ pulled at deploy time (small) |
-| `aegis/frr:latest` | the router in Demo 2 | ✅ shipped as `assets/aegis-frr-image.tar.gz`, verified against `assets/frr-image.pin` |
+| `aegis/frr:latest` | the router in Demo 2 | ❌ built locally by `install.sh` from `Dockerfile.frr` (no image tarball ships in this tree; the pin's `aegis-frr-image.tar.gz` is absent) |
 | `ghcr.io/nokia/srlinux:latest` | the REAL switches | ❌ pulled at deploy time — **~2.35 GB** |
 
 `install.sh` pre-pulls the two registry images before creating the service, so a blocked
