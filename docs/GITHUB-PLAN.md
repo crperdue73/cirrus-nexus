@@ -67,6 +67,25 @@ unverifiable claims, no screenshots of a build that isn't here.
       numbers that actually trace to a shipped file (`lab-guides/lab-03-lock-it-down.md` — 100 pts,
       70 = pass) and labelled it curriculum context, not a shipped lab — 2026-10-11
 
+## Run 2026-10-11 11:00 UTC — README still told readers to rebuild a bundle that does not ship
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0`; all four CI checks pass on the tree
+(`py_compile`, `bash -n install.sh`, `check_self_contained.py` rc=0, secret scan). The two backlog
+items stay blocked (Screenshots needs a session on the live AEGIS host; the cosmetic `ci.yml` step
+needs a `workflow`-scoped token).
+
+Found the one real, in-scope, unblocked gap: the **2026-10-11 01:00 run corrected `docs/OPERATIONS.md`**
+to state that no `nexus-release.tar.gz` ships in this tree — but it did **not** fix the **README**,
+which is the primary doc. README (~line 145) still instructed the reader to *"Rebuild the release
+bundle (`frontend/nexus-release.tar.gz`) whenever shipping files change — it is a snapshot, not a
+symlink."* Verified the premise false: `find . -path ./.git -prune -o -name '*.tar.gz' -print`
+returns **nothing**. So the front page told users to rebuild a bundle that does not exist.
+
+Fixed: replaced the instruction with the true shipping model (**git clone + `install.sh`**; no
+prebuilt bundle in-tree) and a pointer to the *historical* note in OPERATIONS.md. No behaviour change.
+Backed up `README.md` via `scripts/safe-backup.sh` (out of the served tree). Re-ran all four CI checks
+→ OK. Committed `6ec66f2`, pushed `origin/main` (accepted — README is not a workflow file).
+
 ## Run 2026-10-11 01:00 UTC — OPERATIONS.md truth pass (two stale claims corrected)
 
 Measured live: `git status` clean, `HEAD...origin/main = 0 0`, CI workflow present, all four CI checks
