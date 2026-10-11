@@ -142,9 +142,10 @@ reload:
 curl -X POST http://localhost:8000/api/labs/reload
 ```
 
-**Rebuild the release bundle** (`frontend/nexus-release.tar.gz`) whenever shipping files change — it
-is a snapshot, not a symlink. The exact command, and the reasons behind each exclusion, are in
-[`docs/OPERATIONS.md`](docs/OPERATIONS.md).
+**The shipping model is a git clone plus `install.sh`** — no prebuilt bundle is committed to this
+tree (`find . -name '*.tar.gz'` returns nothing outside `.git/`). Earlier revisions of
+[`docs/OPERATIONS.md`](docs/OPERATIONS.md) described rebuilding a `frontend/nexus-release.tar.gz`
+bundle; that path is kept there as *historical* because a `nexus-release.tar.gz` no longer ships.
 
 ---
 
