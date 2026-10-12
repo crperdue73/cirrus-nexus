@@ -64,6 +64,27 @@ unverifiable claims, no screenshots of a build that isn't here.
       numbers that actually trace to a shipped file (`lab-guides/lab-03-lock-it-down.md` — 100 pts,
       70 = pass) and labelled it curriculum context, not a shipped lab — 2026-10-11
 
+## Run 2026-10-12 19:00 UTC — README claimed an image ships in the repo (none does)
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
+`delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the cosmetic
+`ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live AEGIS host (this box
+is `192.168.111.40/16`). All four CI checks pass on the tree before the change.
+
+The README Quick-start prerequisites closed with: *"Only **one** image travels in the repo; the switch
+image is pulled at install."* Measured false. `find . -path ./.git -prune -o -name '*.tar*' -print`
+(and `*.tgz`/`*.img`) returns **nothing**; `git ls-files assets/` returns only `assets/frr-image.pin`;
+`install.sh` itself says *"No pinned image tarball found — building locally from Dockerfile"* and
+builds `aegis/frr:latest` from `Dockerfile.frr`. So **zero** images travel in the tree, not one: the
+router image is built locally and the switch image is pulled. The "one image travels" line contradicted
+both the tree and the paragraph below it (the pin-drift section already says the FRR image is built
+from source).
+
+Fixed: the prerequisite now reads "**No image ships in the repo:** the router image (`aegis/frr:latest`)
+is built locally from `Dockerfile.frr`, and the switch image is pulled at install." Backed up
+`README.md` via `scripts/safe-backup.sh` (label `no-image-travels-claim`, out of the served tree). All
+four CI checks re-run green. No behaviour change.
+
 ## Run 2026-10-12 11:00 UTC — README sent readers to the wrong directory for the quarantined topologies
 
 Measured live: `git status` clean, `HEAD...origin/main = 0 0`; all four CI checks pass on the tree

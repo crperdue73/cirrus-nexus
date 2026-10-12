@@ -85,7 +85,8 @@ The full component breakdown and the lab lifecycle are in
 ## Quick start
 
 **Prerequisites:** a clean Debian/Ubuntu host, `sudo`, internet access (to pull the SR Linux image),
-and ~3 GB free disk. Only **one** image travels in the repo; the switch image is pulled at install.
+and ~3 GB free disk. **No image ships in the repo:** the router image (`aegis/frr:latest`) is built
+locally from `Dockerfile.frr`, and the switch image is pulled at install.
 
 ```bash
 git clone https://github.com/crperdue73/cirrus-nexus.git aegis
