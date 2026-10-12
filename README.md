@@ -40,8 +40,9 @@ Each lab is a YAML topology plus a Markdown **student guide** (objective, topolo
 instructions) in the same directory, alongside its Python grader. The guides linked above are the ones
 shipped in this tree.
 
-The other topologies under `lab-definitions/` are retained for reference and are **not** part of this
-release (see `lab-definitions-quarantine-2026-09-30/`).
+The other topologies are retained for reference and are **not** part of this release; they live in the
+sibling directory `lab-definitions-quarantine-2026-09-30/` (outside `lab-definitions/`, so the loader
+does not see them).
 
 ---
 
