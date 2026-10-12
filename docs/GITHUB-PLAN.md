@@ -272,6 +272,39 @@ not taken here"), plus the architecture.md substrate row. Backups via `safe-back
 (label `frr-tarball-truth`). Checks re-run: backend compile OK, `bash -n install.sh` OK,
 `check_self_contained.py` rc=0 (15 required files present).
 
+## Run 2026-10-12 13:00 UTC — README API table was missing 4 of the 11 routes
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
+`delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the cosmetic
+`ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live AEGIS host (this box
+is `192.168.111.40/16`). The CI-hardening gap stays satisfied via `tools/check_self_contained.py`.
+
+Found a real, in-scope honesty gap: the README **API** section listed **7** routes, but
+`backend/main.py` exposes **11** (`grep -oE '@app\.(get|post|put|delete)\("[^"]+"' backend/main.py`).
+The four undocumented routes are all user-facing and functional:
+`GET /api` (health/version card), `GET /api/labs/{id}/guide` (serves the student guide — the very
+links the labs table points at), `GET /api/labs/{id}/topology` (renders the topology diagram),
+and `GET /api/sessions/{id}` (one session's status — backs *Reconnect*).
+
+Fixed: completed the table so it matches `main.py` name-for-name (`{id}` shorthand, as the table
+already used). Added one sentence: "the complete route set exposed by `backend/main.py`." Backed up
+`README.md` via `scripts/safe-backup.sh` (label `api-table-completeness`, out of the served tree).
+All four CI checks re-run green (backend compile, `bash -n install.sh`, `check_self_contained.py`
+rc=0, exact secret-scan command → clean). Committed `2b13a19`, pushed `origin/main`. No behaviour change.
+
+### New Dad-gated item — the internal `.nexus/` engineering trail ships publicly
+
+Not acted on (structural/policy decision, not mine). `.nexus/` is **tracked** — 189 files — and public
+on GitHub. It is referenced from `CHANGELOG.md`, `docs/ADDING-A-LAB.md`, and the release-notes draft as
+the evidence trail, and `tools/check_self_contained.py` lists `.nexus/` as an allowed reference target —
+so it is *deliberate*, not junk, and deleting it would break those citations. But it also contains
+material that is not repo documentation: `STATUS.md` (a dated deployment ledger naming colleagues),
+`DECISION-NEEDED-lab04-bgp-20260923.md` ("From: Selina … Status: NOT complete; needs Dad's call"),
+`AUDIT-BY-ZOE-*`, proof files whose names describe failures ("unsolved-lab-ships-solved-config"). None of
+the six public docs (README, CONTRIBUTING, architecture, OPERATIONS, GRADING-MODEL, SELF-CONTAINED)
+link into `.nexus/`. **Dad's call:** keep it public (and label it clearly in the README as an internal
+audit trail), split it to a private repo, or prune it. Not invented work — recorded so it is not lost.
+
 ## Rules for the polish runs
 
 > **Push credentials (2026-10-08):** the token in `github.md` is **read-only** — pushes with it return
