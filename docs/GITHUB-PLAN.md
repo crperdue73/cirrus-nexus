@@ -64,6 +64,26 @@ unverifiable claims, no screenshots of a build that isn't here.
       numbers that actually trace to a shipped file (`lab-guides/lab-03-lock-it-down.md` — 100 pts,
       70 = pass) and labelled it curriculum context, not a shipped lab — 2026-10-11
 
+## Run 2026-10-12 11:00 UTC — README sent readers to the wrong directory for the quarantined topologies
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0`; all four CI checks pass on the tree
+(`py_compile`, `bash -n install.sh`, `check_self_contained.py` rc=0, secret scan clean). The two backlog
+items stay blocked (Screenshots needs a session on the live AEGIS host; the cosmetic `ci.yml` step needs
+a `workflow`-scoped token).
+
+One real, in-scope, unblocked honesty gap: the README **shipping-labs** section closed with "The other
+topologies under `lab-definitions/` are retained for reference … (see
+`lab-definitions-quarantine-2026-09-30/`)." Measured: the quarantine dir is a **top-level sibling of
+`lab-definitions/`**, not inside it — the 2026-09-30 quarantine `git mv`'d the non-release topologies
+out. So a reader taking the sentence literally would list `lab-definitions/` and find **only the two
+shipping labs** (plus three empty dirs `srl-demo/`, `srl-demo2/`, `cumulus-demo/`), not the retained
+set the sentence promises.
+
+Fixed: `README.md` now says the retained topologies live in the sibling
+`lab-definitions-quarantine-2026-09-30/` (outside `lab-definitions/`, so the loader never sees them).
+Backed up via `scripts/safe-backup.sh` (out of the served tree). All four CI checks re-run green.
+Committed `0343bd1`, pushed `origin/main` (README is not a workflow file). No behaviour change.
+
 ## Run 2026-10-11 11:00 UTC — README still told readers to rebuild a bundle that does not ship
 
 Measured live: `git status` clean, `HEAD...origin/main = 0 0`; all four CI checks pass on the tree
