@@ -24,16 +24,13 @@ unverifiable claims, no screenshots of a build that isn't here.
 - [x] `.github/ISSUE_TEMPLATE/` (`bug_report.md`, `lab_request.md`) + `PULL_REQUEST_TEMPLATE.md` (2026-10-07)
 - [x] `docs/architecture.md` + diagrams committed as source (mermaid component + lifecycle) (2026-10-07)
 - [x] CI: GitHub Actions (backend compile, `bash -n install.sh`, self-contained check, secret scan)
-- [ ] CI hardening: extend the compile step to also byte-compile the shipped lab graders
-      (`lab-definitions/grader_*.py`) — `backend/main.py` is the only file CI compiles today, so a
-      syntax error in a grader would pass CI silently. **BLOCKED 2026-10-09:** the change is written
-      and verified (simulated the exact step → STEP OK), but it edits `.github/workflows/ci.yml`, and
-      **neither write token carries the `workflow` scope.** The `ghp_` token `origin` uses reports
-      scopes `delete:packages, repo, write:discussion, write:packages` (no `workflow`), and GitHub
-      rejects the push: *"refusing to allow a Personal Access Token to create or update workflow
-      `.github/workflows/ci.yml` without `workflow` scope"*. Do NOT force it. **Dad's call:** mint a
-      token with `workflow` scope (or grant `Workflows: write` on the fine-grained PAT), then push.
-      The edit was reverted so the tree stays in sync with `origin/main`. — 2026-10-09
+- [x] CI hardening: byte-compile the shipped lab graders (`lab-definitions/grader_*.py`). **CLOSED via an
+      unblocked route 2026-10-10:** `backend/main.py` is the only file CI compiles today, so a syntax
+      error in a grader would pass CI silently — moved the guarantee into `tools/check_self_contained.py`
+      (already a CI step), which now byte-compiles every `lab-definitions/grader_*.py` and fails by name.
+      Proven both ways (clean → rc=0; injected syntax error → rc=1 naming the file/line). Push accepted,
+      no `workflow` scope required. Residual slice — *also* adding the explicit step to `ci.yml` — stays
+      blocked on the `workflow`-scoped token (Dad's call) and is now cosmetic, not load-bearing.
 - [ ] Screenshots: the student UI + a terminal mid-lab (real captures only) — **BLOCKED, premise
       corrected 2026-10-09.** Original note blamed "no running AEGIS/docker on this box". Measured
       live today (2026-10-09 11:00 UTC on host `dept-dragon-tech`): the true reason is that the
@@ -205,6 +202,31 @@ files (the two shipped labs), and both `.md` targets exist at the exact relative
 **Guide** column to the "shipping labs" table linking each lab's guide, plus one honest sentence
 (YAML topology + Markdown guide + Python grader per lab, same directory) — all true of this tree.
 Checks re-run: backend compile OK, `bash -n install.sh` OK, `check_self_contained.py` rc=0.
+
+## Run 2026-10-12 01:00 UTC — a stray BGP-revert backup was committed inside the shipping lab dir
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
+`delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the cosmetic
+`ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live AEGIS host (this box
+is `192.168.111.40/16`). The CI-hardening gap is already satisfied via `tools/check_self_contained.py`
+(byte-compiles `lab-definitions/grader_*.py`; runs in CI) — re-confirmed this run.
+
+Found a real repo-cleanliness bug: `lab-definitions/lab-04-two-as-peering.yml.bgp-revert-bak` — a **1917-byte
+pre-revert snapshot** — was committed *inside the shipping `lab-definitions/` directory*, visible on GitHub.
+It is a **BGP** lab (BGP is explicitly out of scope for this release), it references `aegis/frr-bgp:latest`
+and a grader (`grader_lab_04_two_as_peering`) that **does not exist** in this tree, and it is referenced by
+nothing (`grep` → no hits outside `.git/`). A reader browsing the shipping lab dir sees a broken, ungraded BGP
+artifact. The loader already refuses to load `*.bak` (structural guard at `backend/main.py` ~L469), so it was
+inert at runtime — purely visual clutter.
+
+Fixed, reversibly: `git mv` it into `lab-definitions-quarantine-2026-09-30/` (where its reverted sibling
+`lab-04-two-as-peering.yml` + the real grader already live), and added a `.gitignore` guard
+(`*-revert-bak`, `*.yml.bak-*`, `*.yml.orig`) so a future reverting snapshot cannot be committed into the
+shipping dir. Backed up via `scripts/safe-backup.sh` (label `stray-bak-sweep`, out of the served tree).
+Swept for other strays: `git ls-files | grep -E '\.bak|\.orig|-bak$'` → only this one.
+
+Checks re-run, all four green: backend compile OK, `bash -n install.sh` OK, `check_self_contained.py` rc=0
+(15 required files present), secret scan clean.
 
 ## Run 2026-10-11 13:00 UTC — the "shipped FRR image tarball" claims were false; corrected in three docs
 

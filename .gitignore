@@ -27,6 +27,13 @@ __pycache__/
 *.bak-*
 *~
 *.swp
+# reverting snapshots (e.g. X.yml.bgp-revert-bak). These are working artifacts,
+# not source; the loader already refuses to load *.bak/*.orig, but they must not
+# be committed into the shipping lab-definitions/ dir either.
+*.revert-bak
+*-revert-bak
+*.yml.bak-*
+*.yml.orig
 
 # --- runtime ---------------------------------------------------------------
 *.log
