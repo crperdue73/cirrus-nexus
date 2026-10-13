@@ -64,6 +64,45 @@ unverifiable claims, no screenshots of a build that isn't here.
       numbers that actually trace to a shipped file (`lab-guides/lab-03-lock-it-down.md` — 100 pts,
       70 = pass) and labelled it curriculum context, not a shipped lab — 2026-10-11
 
+## Run 2026-10-13 19:00 UTC — `.nexus/` ships publicly and the README never said what it is
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
+`delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the cosmetic
+`ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live AEGIS host (this box
+is `192.168.111.40/16`). All four CI checks pass on the tree before the change(`py_compile`,
+`bash -n install.sh`, `check_self_contained.py` rc=0, secret scan clean).
+
+The 2026-10-12 13:00 run recorded a **Dad-gated** item: `.nexus/` (189 tracked files) ships publicly
+but the README never mentions it. That note named the *unblocked half* explicitly — *"keep it public
+(and label it clearly in the README as an internal audit trail)"* — so that half is in scope for a
+polish run; only the structural choice (keep / split / prune) is Dad's.
+
+Measured the gap before acting: `grep -n '\.nexus' README.md` → **no match**; `git ls-files .nexus/`
+→ 189 files; the only *public* docs that reference it are `CHANGELOG.md`, `docs/ADDING-A-LAB.md`, and
+`docs/RELEASE-NOTES-v0.1.0-draft.md` — all pointing at `.nexus/proofs/`. A reader therefore saw a
+Documentation table listing every doc, then 189 unexplained files in the tree: an 87 KB `.nexus/STATUS.md`,
+`DECISION-NEEDED-*.md`, audit notes, and — measured, not assumed — **28 slide images** under
+`.nexus/deck-view/` (PNG/JPG) that **no tracked document references at all** (`git grep -l deck-view`
+→ none). The tree was internally consistent but the README gave a stranger no way to know what any of
+it was or that it is not product material.
+
+Fixed by labelling, not by moving anything (moving/pruning is the Dad-gated half): added a
+`.nexus/` row to the Documentation table and a short **About `.nexus/`** section that states what is
+actually there (`proofs/` = dated evidence files; dated status/decision notes; `deck-view/` = rendered
+slide images), that it is **not required to install or run AEGIS** (a cold clone installs from
+`install.sh` + shipped source alone — consistent with `SELF-CONTAINED.md`), and that the dated entries
+are **historical**: where a `.nexus/` note and the shipped code disagree, the code wins. No claim added
+that the tree does not bear out. Backed up `README.md` via `scripts/safe-backup.sh` (label
+`nexus-doc-labeling-2026-10-13`, out of the served tree). All four CI checks re-run green. Committed
+`6137fae`, pushed `origin/main`. No behaviour change.
+
+### Still Dad-gated (unchanged) — the `.nexus/` structural decision
+
+The labelling above makes `.nexus/` *explained*; it does not decide whether it should be public. That
+remains a policy call: keep it public (now labelled), split it to a private repo, or prune it. The
+`deck-view/` images in particular look like they may simply be cruft (28 slide renders referenced
+nowhere) — a prune candidate when Dad rules. Not acted on.
+
 ## Run 2026-10-13 13:00 UTC — README + OPERATIONS claimed `assets/` holds a file that does not ship
 
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
