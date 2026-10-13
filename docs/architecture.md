@@ -66,7 +66,7 @@ flowchart TB
 | `start_server.py` | Foreground launcher for running without the service (see the caveat in [`OPERATIONS.md`](OPERATIONS.md)). |
 | `Dockerfile.frr` | Builds the `aegis/frr:latest` substrate — Alpine + FRR with **only** `zebra` and `staticd`; the build asserts `ospfd=no`/`bgpd=no`. |
 | `Dockerfile.frr-bgp` | A separate, tested-option image for dynamic-routing labs. Not part of the shipped substrate. |
-| `assets/frr-image.pin` | Content-addressed pin (layer chain + tarball sha256) that `install.sh` verifies the loaded substrate against. |
+| `assets/frr-image.pin` | Content-addressed pin (layer chain + tarball sha256) naming the substrate `install.sh` *would* load **and verify** if the pinned tarball were present. **No tarball ships in this tree**, so the verify branch is never taken — `install.sh` builds `aegis/frr:latest` locally from `Dockerfile.frr` instead (self-consistent, but not layer-matched to the pin). See [`OPERATIONS.md`](OPERATIONS.md) → "Known drift". |
 | `tools/` | Maintenance scripts: `check_self_contained.py` (clone-and-install completeness), `lint_lab_pack.py`, `check_bundle_fresh.sh`. |
 | `.github/workflows/ci.yml` | CI: backend compiles, `bash -n install.sh`, self-containment check, secret scan. |
 

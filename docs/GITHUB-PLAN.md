@@ -64,6 +64,34 @@ unverifiable claims, no screenshots of a build that isn't here.
       numbers that actually trace to a shipped file (`lab-guides/lab-03-lock-it-down.md` — 100 pts,
       70 = pass) and labelled it curriculum context, not a shipped lab — 2026-10-11
 
+## Run 2026-10-13 01:00 UTC — architecture.md still claimed install.sh verifies the substrate against the pin
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
+`delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the cosmetic
+`ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live AEGIS host (this box
+is `192.168.111.40/16`). All four CI checks pass on the tree before the change (`py_compile`,
+`bash -n install.sh`, `check_self_contained.py` rc=0, secret scan clean).
+
+The last run fixed the README's "one image travels" claim, but `docs/architecture.md` still carried an
+unqualified version of the same false premise in its Components table: *"`assets/frr-image.pin` —
+Content-addressed pin (layer chain + tarball sha256) that `install.sh` **verifies the loaded substrate
+against**."*
+
+Measured false of this tree. `install.sh` (lines 302–357) only reaches the verify branch **if** the
+pinned tarball is present (`if [[ -n "${PIN_TARBALL}" && -f "${PIN_TARBALL}" ]]`). The pin names
+`tarball=aegis-frr-image.tar.gz`, and `find . -path ./.git -prune -o -name '*.tar*' -print` returns
+**nothing** — no tarball ships. So a cold clone never enters that branch; `install.sh` logs *"No pinned
+image tarball found — building locally from Dockerfile"* and builds `aegis/frr:latest` from source
+(line 363). The build is self-consistent but does **not** reproduce the pin's `layers_sha256`. README,
+`OPERATIONS.md`, and `SELF-CONTAINED.md` were all already corrected to say exactly this; architecture.md
+was the lone hold-out telling readers the pin is enforced at install.
+
+Fixed: the row now reads that the pin names the substrate `install.sh` *would* load and verify **if the
+pinned tarball were present**, states plainly that **no tarball ships in this tree** so the verify
+branch is never taken, and points to `OPERATIONS.md` → "Known drift". No behaviour change; docs now
+agree with each other and with the tree. Backed up `docs/architecture.md` via `scripts/safe-backup.sh`
+(label `pin-verify-claim-2026-10-13`, out of the served tree). All four CI checks re-run green.
+
 ## Run 2026-10-12 19:00 UTC — README claimed an image ships in the repo (none does)
 
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
