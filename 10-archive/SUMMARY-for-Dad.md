@@ -1,5 +1,12 @@
 # AEGIS Topology Audit — Summary for Dad 🐧💍
 
+> **HISTORICAL ARCHIVE — not a description of the shipping tree.** This is a 2026-06-09 audit of an
+> earlier topology layout. The `aegis-topologies/` directory and the `tier-01*`…`tier-04*` YAMLs and
+> `scripts/wait-and-apply.sh` it names **do not exist in this repository** — the shipping tree is the
+> two srl-demo labs under `lab-definitions/` and the retained set under
+> `lab-definitions-quarantine-2026-09-30/`. Kept only because `docs/OPERATIONS.md` (Archive section)
+> points readers here for provenance. Do not rely on its file paths.
+
 **From:** Selina & Ethan
 **Date:** 2026-06-09
 **What we did:** Full audit of all 6 ContainerLab topologies in `aegis-topologies/` — complexity, node count, config approach, audience fit.
@@ -35,7 +42,12 @@ We inventoried every YAML, FRR config, grader script, and Dockerfile. The origin
 
 ## Files Changed
 
-All files are in `aegis-topologies/` and `frr-configs/`:
+> The paths below (`aegis-topologies/`, `frr-configs/`, `scripts/wait-and-apply.sh`, and the tier
+> YAMLs) were the 2026-06-09 layout and are **not present in this tree**; the only two artifacts from
+> this list that survive here are `10-archive/tier-03-bgp-simplified.yml` and
+> `10-archive/frr-configs/`.
+
+All files were in `aegis-topologies/` and `frr-configs/`:
 
 - `tier-01-foundation.yml` — unchanged
 - `tier-01-static-routing.yml` — renamed from 01b
