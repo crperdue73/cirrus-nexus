@@ -64,6 +64,31 @@ unverifiable claims, no screenshots of a build that isn't here.
       numbers that actually trace to a shipped file (`lab-guides/lab-03-lock-it-down.md` — 100 pts,
       70 = pass) and labelled it curriculum context, not a shipped lab — 2026-10-11
 
+## Run 2026-10-13 13:00 UTC — README + OPERATIONS claimed `assets/` holds a file that does not ship
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
+`delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the cosmetic
+`ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live AEGIS host (this box
+is `192.168.111.40/16`). All four CI checks pass on the tree before the change (`py_compile`,
+`bash -n install.sh`, `check_self_contained.py` rc=0, secret scan clean).
+
+The README's Known-limitations section closed the pin-drift bullet with: *"`assets/` holds only
+`frr-image.pin` and `installed-image-id.txt`."* Measured false of this tree. **`installed-image-id.txt`
+does not ship**: `git ls-files assets/` returns only `assets/frr-image.pin`, and `git check-ignore -v
+assets/installed-image-id.txt` confirms it is excluded by `.gitignore:13`. The file exists in my
+working copy, but a reader who clones the repo gets **one** file in `assets/`, not two — the README
+told them to expect a file that is not there. `docs/OPERATIONS.md` carried the same claim in two spots:
+the bundle-contents block (line ~82, which also listed the `aegis-frr-image.tar.gz` that never ships)
+and the Known-drift paragraph (line ~164).
+
+Fixed all three to be true of this tree: README now says `assets/` *tracks* only `frr-image.pin` and
+explicitly notes `installed-image-id.txt` exists locally but is git-ignored; OPERATIONS' bundle-contents
+line reads `frr-image.pin only — the tarball and installed-image-id.txt never ship`; the bundle-rebuild
+note and the Known-drift paragraph say `installed-image-id.txt` is git-ignored and does not ship. No
+behaviour change; docs now agree with each other and with the tracked tree. Backed up `README.md` and
+`docs/OPERATIONS.md` via `scripts/safe-backup.sh` (label `assets-holds-claim-2026-10-13`, out of the
+served tree). All four CI checks re-run green.
+
 ## Run 2026-10-13 01:00 UTC — architecture.md still claimed install.sh verifies the substrate against the pin
 
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes

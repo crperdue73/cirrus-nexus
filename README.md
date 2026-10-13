@@ -165,8 +165,9 @@ bundle; that path is kept there as *historical* because a `nexus-release.tar.gz`
 - **The SR Linux image is a ~2.35 GB pull**; each switch node runs a full instance of it. Keep to
   **one session per student per lab**; use *Reconnect* for a returning student rather than Start.
 - **A known image-pin drift:** `Dockerfile.frr` hashes differently from `assets/frr-image.pin`. No
-  pinned FRR image tarball ships in this tree (`assets/` holds only `frr-image.pin` and
-  `installed-image-id.txt`), so `install.sh` takes its build-from-source fallback and builds
+  pinned FRR image tarball ships in this tree (`assets/` tracks only `frr-image.pin`;
+  `installed-image-id.txt` exists locally but is git-ignored, so it does not ship), so `install.sh`
+  takes its build-from-source fallback and builds
   `aegis/frr:latest` locally from `Dockerfile.frr`. That build is self-consistent but will not match
   the pin's `layers_sha256`. Details in [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
 

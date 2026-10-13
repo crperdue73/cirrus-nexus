@@ -79,7 +79,7 @@ source that runs them:
 ```
 README.md  install.sh  start_server.py  Dockerfile.frr
 backend/main.py  frontend/index.html
-assets/                                   (aegis-frr-image.tar.gz + frr-image.pin + installed-image-id.txt)
+assets/                                   (frr-image.pin only — the tarball and installed-image-id.txt never ship)
 lab-definitions/srl-demo-unsolved/        (demo-01 + its assets/)
 lab-definitions/srl-demo2-unsolved/       (demo-02 + its assets/)
 lab-definitions/grader_demo_01_srl.py
@@ -95,8 +95,9 @@ if a bundle is present** (it no-ops otherwise):
   lab DIRECTORY rather than individual files, a rebuild done while a session is running swept all of
   it into the artifact (it happened once: the tarball grew +38 KB and carried a `ca.key`). The
   exclusion makes it impossible instead of merely unlikely.
-- **`assets/` must be included** if a bundle is ever rebuilt: today it carries `frr-image.pin` (which
-  *names* `aegis-frr-image.tar.gz`) and `installed-image-id.txt`. In the bundle era it also carried the
+- **`assets/` must be included** if a bundle is ever rebuilt: today the *tracked* contents are
+  `frr-image.pin` (which *names* `aegis-frr-image.tar.gz`). An `installed-image-id.txt` may exist on a
+  live host but it is git-ignored (`.gitignore`), so it does **not** ship. In the bundle era it also carried the
   ~20.7 MB pinned FRR tarball itself; that tarball does **not** ship in this tree, so a rebuild here
   would need to reproduce it first or fall back to a local `aegis/frr:latest` build.
 
@@ -160,8 +161,9 @@ whose message said *"Pin/image id unchanged."* The image file was not rebuilt, s
 Dockerfile disagree.**
 
 - **The pinned path is not taken here.** `install.sh` loads the tarball *only if* it is present; the
-  pin's `tarball=aegis-frr-image.tar.gz` is **not in this tree** (measured live 2026-10-11; `assets/`
-  holds only `frr-image.pin` and `installed-image-id.txt`). So a cold clone falls to the
+  pin's `tarball=aegis-frr-image.tar.gz` is **not in this tree** (measured live 2026-10-11; the tracked
+  contents of `assets/` are only `frr-image.pin` — `installed-image-id.txt` is git-ignored and does not
+  ship). So a cold clone falls to the
   build-from-source fallback below.
 - **The fallback builds a different substrate.** With no tarball, `install.sh` runs
   `docker build` from `Dockerfile.frr` (`b3046a70…`), which installs and self-heals normally but does
