@@ -186,6 +186,23 @@ bundle; that path is kept there as *historical* because a `nexus-release.tar.gz`
 | [`docs/RELEASE-NOTES-v0.1.0-draft.md`](docs/RELEASE-NOTES-v0.1.0-draft.md) | staged release notes for v0.1.0 — **draft, not published** (no GitHub Release exists yet) |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | the ground rules, and the checks to run before pushing (the same four CI runs) |
 | [`CHANGELOG.md`](CHANGELOG.md) | what changed, newest first |
+| [`.nexus/`](.nexus/) | internal engineering audit trail — **not required to install or run AEGIS**, and not product documentation (see below) |
+
+### About `.nexus/`
+
+`.nexus/` is this project's **internal working record**, committed here rather than kept private. It is
+**not** part of the product and nothing in it is needed to install, run, or grade a lab: a cold clone
+installs and runs from `install.sh` and the shipped source alone. Its contents are:
+
+- `.nexus/proofs/` — dated evidence files (cold-install runs, reproductions, audit notes) that several
+  documents cite by name (e.g. [`CHANGELOG.md`](CHANGELOG.md) and [`docs/ADDING-A-LAB.md`](docs/ADDING-A-LAB.md)
+  point at `.nexus/proofs/`);
+- dated status and decision notes (`STATUS.md`, `DECISION-NEEDED-*.md`), which are **historical** — they
+  record what was true on their date, not the current state;
+- `.nexus/deck-view/` — rendered slide images used while making a deck, kept here for reference.
+
+Read it as a lab notebook: entries are dated, some are superseded, and a stale entry is not a claim
+about today. Where a `.nexus/` note and the shipped code disagree, **the code and the docs above win.**
 
 ---
 
