@@ -34,7 +34,7 @@ This release ships exactly **two** labs. Both use **Nokia SR Linux** switches.
 | Lab | ID | Topology | Difficulty | Time | Guide |
 |-----|----|----------|-----------|------|-------|
 | **Demo 1 — Two PCs and a Real Switch** | `demo-01-two-pcs-and-a-real-switch-unsolved` | 2 Alpine PCs + 1 SR Linux switch, bridged | Beginner | 25 min | [guide](lab-definitions/srl-demo-unsolved/demo-01-two-pcs-and-a-real-switch-unsolved.md) |
-| **Demo 2 — Two Switches and One Router** | `demo-02-two-switches-one-router-unsolved` | 2 SR Linux switches + 1 FRR router, routed | Intermediate | 35 min | [guide](lab-definitions/srl-demo2-unsolved/demo-02-two-switches-one-router-unsolved.md) |
+| **Demo 2 — Two Switches and One Router** | `demo-02-two-switches-one-router-unsolved` | 2 Alpine PCs + 2 SR Linux switches + 1 FRR router, routed | Intermediate | 35 min | [guide](lab-definitions/srl-demo2-unsolved/demo-02-two-switches-one-router-unsolved.md) |
 
 Each lab is a YAML topology plus a Markdown **student guide** (objective, topology, step-by-step
 instructions) in the same directory, alongside its Python grader. The guides linked above are the ones

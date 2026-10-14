@@ -479,6 +479,30 @@ next=run: least-recently-moved in-scope honesty item; STILL BLOCKED ON DAD: Scre
 live-host session), cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public
 policy call.
 
+## Run 2026-10-14 19:00 UTC — the README lab table counted Demo 1's nodes but not Demo 2's
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
+`delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the cosmetic
+`ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live AEGIS host (this box
+is `192.168.111.40/16`). All four CI checks pass on the tree before the change.
+
+Checked the README lab table against the two shipped topologies line by line. Demo 1's Topology cell
+read *"2 Alpine PCs + 1 SR Linux switch, bridged"* — matches `demo-01-...yml` exactly (nodes
+`pc-a`, `pc-b` = `alpine:latest`, `sw1` = `nokia_srlinux`). Demo 2's cell read *"2 SR Linux switches +
+1 FRR router, routed"* — but `demo-02-...yml` defines **five** nodes: two `alpine:latest` PCs (`pc-a`,
+`pc-b`) plus two `nokia_srlinux` switches (`sw1`, `sw2`) plus one `aegis/frr:latest` router (`r1`), wired
+`pc-a—sw1—r1—sw2—pc-b`. The row named only 3 of the 5 nodes and omitted both PCs, while its sibling row
+counted every node. Not a falsehood, but an inconsistent convention inside the same table: a reader
+scanning rows would under-count Demo 2 and would not know it also ends in two Alpine PCs.
+
+Fixed by making the Demo 2 cell name all five nodes in the same order/convention as Demo 1:
+*"2 Alpine PCs + 2 SR Linux switches + 1 FRR router, routed"* — true of `demo-02-...yml` as measured.
+One-line, no behaviour change. Backed up `README.md` via `scripts/safe-backup.sh` (label
+`demo02-row-2026-10-14`, out of the served tree). All four CI checks re-run green. NOT COMPLETE —
+Dad's word alone. | proof=none (docs) | next=LAB least-recently-moved -> next in-scope honesty item;
+STILL BLOCKED ON DAD: Screenshots (needs live-host session), cosmetic `ci.yml` step (needs
+workflow-scoped token), and the `.nexus/` public policy call.
+
 ## Run 2026-10-14 11:00 UTC — the PR template required contributors to rebuild a bundle that does not ship
 
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
