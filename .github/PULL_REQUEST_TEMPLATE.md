@@ -30,7 +30,7 @@ The same checks CI runs:
 - [ ] `python3 tools/check_self_contained.py`
 - [ ] `python3 tools/lint_lab_pack.py`  (if labs changed)
 
-## If this touches a served lab or the bundle
+## If this touches a served lab
 
 - [ ] I reloaded lab definitions (`POST /api/labs/reload`) and re-ran the grader.
 
@@ -38,9 +38,11 @@ The same checks CI runs:
   curl -X POST http://localhost:8000/api/labs/reload
   ```
 
-- [ ] If shipping files changed, I rebuilt `frontend/nexus-release.tar.gz`
-      (see `docs/OPERATIONS.md`) — it is a snapshot, not a symlink.
-- [ ] The served frontend, source, and bundle still agree (`tools/check_bundle_fresh.sh`).
+There is **no shippable bundle** in this tree: `frontend/nexus-release.tar.gz` does not ship, and a
+clean host installs straight from the git clone + `install.sh` (see `docs/OPERATIONS.md`). You do not
+rebuild or commit a `nexus-release.tar.gz`. `tools/check_bundle_fresh.sh` still exists and is safe to
+run, but it no-ops when no bundle is present — as it is here — so it is not a required check on this
+repo.
 
 ## How it was verified
 
