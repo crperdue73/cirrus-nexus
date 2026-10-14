@@ -184,6 +184,7 @@ bundle; that path is kept there as *historical* because a `nexus-release.tar.gz`
 | [`docs/SELF-CONTAINED.md`](docs/SELF-CONTAINED.md) | what "self-contained" means here, the CI check that enforces it, and exactly what a cold install pulls |
 | [`docs/GITHUB-PLAN.md`](docs/GITHUB-PLAN.md) | repo-hardening backlog |
 | [`docs/RELEASE-NOTES-v0.1.0-draft.md`](docs/RELEASE-NOTES-v0.1.0-draft.md) | staged release notes for v0.1.0 — **draft, not published** (no GitHub Release exists yet) |
+| [`CONFERENCE.md`](CONFERENCE.md) | booth-operator cheat sheet (install, ports, troubleshooting, reset) — **draft / not maintained**; install & lab-catalog sections corrected to this tree |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | the ground rules, and the checks to run before pushing (the same four CI runs) |
 | [`CHANGELOG.md`](CHANGELOG.md) | what changed, newest first |
 | [`.nexus/`](.nexus/) | internal engineering audit trail — **not required to install or run AEGIS**, and not product documentation (see below) |

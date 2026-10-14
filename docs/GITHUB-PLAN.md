@@ -31,6 +31,9 @@ unverifiable claims, no screenshots of a build that isn't here.
       Proven both ways (clean → rc=0; injected syntax error → rc=1 naming the file/line). Push accepted,
       no `workflow` scope required. Residual slice — *also* adding the explicit step to `ci.yml` — stays
       blocked on the `workflow`-scoped token (Dad's call) and is now cosmetic, not load-bearing.
+- [x] `CONFERENCE.md` truth pass: it was orphaned and its install step named a bundle that does not
+      ship (`tar xzf aegis-portable.tar.gz`) plus a stale API response shape; corrected to the real
+      clone+install flow and linked from the README — 2026-10-14
 - [ ] Screenshots: the student UI + a terminal mid-lab (real captures only) — **BLOCKED, premise
       corrected 2026-10-09.** Original note blamed "no running AEGIS/docker on this box". Measured
       live today (2026-10-09 11:00 UTC on host `dept-dragon-tech`): the true reason is that the
@@ -63,6 +66,14 @@ unverifiable claims, no screenshots of a build that isn't here.
       was undated and asserted an unmeasured switch detail ("Alpine bridge-utils"); replaced with the
       numbers that actually trace to a shipped file (`lab-guides/lab-03-lock-it-down.md` — 100 pts,
       70 = pass) and labelled it curriculum context, not a shipped lab — 2026-10-11
+
+## Run 2026-10-14 01:00 UTC — orphaned `CONFERENCE.md` shipped an install step for a bundle that does not exist
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0`; `origin` token scopes `delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (cosmetic `ci.yml` step stays Dad-gated) and Screenshots still needs a session on the live AEGIS host.
+
+Both blocked backlog items re-confirmed blocked, so I swept for a real, in-scope honesty gap. `CONFERENCE.md` (5.5 KB, tracked at repo root) was **referenced by nothing** — `git grep -l CONFERENCE.md` returned only `docs/GITHUB-PLAN.md`'s own orphan-list note — and it began by telling a booth operator to run `tar xzf aegis-portable.tar.gz`. Measured false: `find . -name '*.tar*'` returns **nothing** outside `.git/`, and `git grep aegis-portable` matches only CONFERENCE.md itself. It also printed an API response `{"service":"AEGIS",...,"labs_count":4}` where `backend/main.py:1764` actually returns `{"service":"NEXUS",...,"labs_count":len(LABS)}` (two labs ship). A stranger following the file's first instruction would have failed immediately.
+
+Fixed by making it true of this tree, not by deleting it: replaced the `tar xzf` install with the real git-clone + `install.sh` flow, corrected the API example to the shape `main.py` returns (with an honest note that `labs_count` is whatever ships), updated the walk-up tips to name the two shipping labs instead of the legacy "Tier 1", pointed the "Adding a New Lab" footer at `docs/ADDING-A-LAB.md` (the README does not carry the full schema), added a `refused`/HTTP-409 row to the troubleshooting table, and stamped the whole file **draft / not maintained** with the same "code wins" rule used for `.nexus/`. Linked it from the README Documentation table so it is no longer orphaned. Backed up `CONFERENCE.md` and `README.md` via `scripts/safe-backup.sh` (label `conference-truth-pass-2026-10-14`, out of the served tree). No behaviour change. All four CI checks re-run green.
 
 ## Run 2026-10-13 19:00 UTC — `.nexus/` ships publicly and the README never said what it is
 

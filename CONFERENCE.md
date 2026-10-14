@@ -2,6 +2,12 @@
 
 *Give this to anyone running the booth.*
 
+> **Status: draft / not maintained.** This sheet predates the current tree. Some sections below
+> describe an older release (a `tar xzf` bundle install, the `AEGIS` service name) that this tree no
+> longer matches. Where this sheet and the shipped code disagree, **the code and [`README.md`](README.md)
+> win.** The install and lab-catalog sections have been corrected to today's tree; the two walk-up
+> labs below are the ones that actually ship.
+
 ---
 
 ## Before the Conference
@@ -13,10 +19,14 @@
 - Internet access for first-time install (docker pulls images)
 
 ### Install
+
+**No bundle ships in this tree.** The shipping model is a git clone plus `install.sh`
+(`find . -name '*.tar.gz'` returns nothing outside `.git/`):
+
 ```bash
-tar xzf aegis-portable.tar.gz
+git clone https://github.com/crperdue73/cirrus-nexus.git aegis
 cd aegis
-sudo ./install.sh        # ~5 min, installs everything
+sudo ./install.sh        # installs Docker, ContainerLab, ttyd, Python deps
 sudo systemctl start aegis
 sudo systemctl enable aegis  # auto-start on boot
 ```
@@ -24,8 +34,11 @@ sudo systemctl enable aegis  # auto-start on boot
 Check it's alive:
 ```bash
 curl http://localhost:8000/api
-# → {"service":"AEGIS","version":"0.3.0","labs_count":4}
+# → {"service":"NEXUS","version":"0.3.0","labs_count":<n>}
 ```
+`labs_count` reflects whatever `lab-definitions/` currently holds; this release ships **two** labs
+(demo-01, demo-02), so a fresh install reports `2`, not the older `4`. See
+[`README.md`](README.md) → "The shipping labs".
 
 ### Firewall / Ports
 - **8000** — AEGIS web portal (students open this in browser)
@@ -60,6 +73,7 @@ curl http://localhost:8000/api
 | "Can't reach Docker daemon" | Service user not in docker group — `sudo usermod -aG docker aegis` then restart |
 | Terminals load but are slow | Server is out of RAM — close unused sessions |
 | Student finished, need next one | Click "End Lab" — frees containers and ports |
+| "refused" from Check (HTTP 409) | The grader could not examine the node (down, or substrate changed since start) — this is **not** a failure (see [`docs/GRADING-MODEL.md`](docs/GRADING-MODEL.md)); restart the session |
 
 ### Reset Everything
 ```bash
@@ -72,7 +86,8 @@ sudo systemctl start aegis
 ### Booth Setup Tips
 - Put the URL on a QR code + big text sign
 - Have one tablet/laptop showing the lab catalog as a demo loop
-- Tier 1 (Foundation) is the best for walk-ups — 5 minutes, instant win
+- The two shipping labs are demo-01 (2 PCs + 1 SR Linux switch, bridged, ~25 min) and demo-02
+  (2 switches + 1 router, routed, ~35 min) — demo-01 is the fastest walk-up
 - Bring a "cheat sheet" handout with the IP commands for each lab
 
 ---
@@ -93,7 +108,8 @@ curl -X POST http://localhost:8000/api/labs/reload
 curl http://localhost:8000/api/labs
 ```
 
-See README.md for full details on the YAML format and grader API.
+The full lab schema, the load-time validation the loader refuses by name, and the grader interface
+are in [`docs/ADDING-A-LAB.md`](docs/ADDING-A-LAB.md) — not the README.
 
 ---
 
