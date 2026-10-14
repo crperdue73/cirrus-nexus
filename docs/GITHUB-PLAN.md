@@ -441,6 +441,44 @@ audit trail), split it to a private repo, or prune it. Not invented work — rec
 3. Never claim "complete"/"finished" about Nexus — that's Dad's word alone.
 4. If an item needs a screenshot or a decision only Dad can make, note it here and move on.
 
+## Run 2026-10-14 13:00 UTC — root-level `HANDOFF-2026-09-22.md` was orphaned and asserted labs/counts this tree does not ship
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token
+scopes `delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope**
+(the cosmetic `ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live
+AEGIS host (this box is `192.168.111.40/16`). All four CI checks pass on the tree before the change.
+
+Both blocked backlog items re-confirmed blocked, so I swept for a real, in-scope honesty gap. The
+prior run's own note (line ~304) had already flagged `HANDOFF-2026-09-22.md` as **unreferenced**
+next to `CONFERENCE.md`; last run fixed `CONFERENCE.md` but explicitly left HANDOFF as "Dad's call."
+On review it is squarely the same class of gap as the `CONFERENCE.md` and `10-archive/SUMMARY-for-Dad.md`
+fixes — a **root-level tracked file a stranger sees, referenced by no public doc, asserting things
+false of this tree** — so it is in scope for an honesty pass, not a structural decision.
+
+Measured before acting: `git grep -n HANDOFF-2026-09-22 -- '*.md' ':!docs/GITHUB-PLAN.md' ':!.nexus/'`
+returns **nothing** — no doc a reader sees links it. It ships at repo root, so GitHub shows it. Then
+measured its claims against the tree:
+- It says the server **"serves 14 labs."** False: `find lab-definitions -name '*.yml'` + the loader
+glob (`LABS_DIR.glob('*.yml')` + one level of subdirs, `backend/main.py:466-468`) discover **exactly 2**
+(`demo-01-two-pcs-and-a-real-switch-unsolved`, `demo-02-two-switches-one-router-unsolved`).
+- It says the Cumulus lab **"ships as its own lab."** False: `git ls-files | grep -i cumulus` puts it
+only under `lab-definitions-quarantine-2026-09-30/`, outside the loader's `lab-definitions/` root.
+- It names `tier-01…03`, `lab-01…04`, `neteng-capstone`, `lab-04-two-as-peering` as live — none ship.
+- It points at `projects/aegis-public` (the deprecated fork) and out-of-band `.nexus/proofs/*.txt`.
+
+Fixed by making it true, not by deleting it (it is Dad's handoff — keep the value, mark it historical):
+added a **HISTORICAL — not a description of the shipping tree** banner at the top listing the three
+specific false-of-this-tree claims and the "code + README win" rule; corrected in place the "14 labs"
+line, the Cumulus "ships as its own lab" line (→ retained under quarantine, does not ship), the §4
+HEAD line (→ "as of 2026-09-22; tree has moved on"), the §3 grader list (→ noted those graders are
+not in this release), and the §4 lint red-flags note (→ those labs do not ship). Linked it from the
+README Documentation table as **historical / not maintained** so it is no longer orphaned. Backed up
+via `scripts/safe-backup.sh` (label `handoff-truth-pass-2026-10-14`, out of the served tree). All four
+CI checks re-run green. No behaviour change. NOT COMPLETE — Dad's word alone. | proof=none (docs) |
+next=run: least-recently-moved in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs
+live-host session), cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public
+policy call.
+
 ## Run 2026-10-14 11:00 UTC — the PR template required contributors to rebuild a bundle that does not ship
 
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
