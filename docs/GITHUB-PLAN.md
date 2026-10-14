@@ -440,3 +440,40 @@ audit trail), split it to a private repo, or prune it. Not invented work — rec
 2. Commit with an honest, specific message; push `origin main`.
 3. Never claim "complete"/"finished" about Nexus — that's Dad's word alone.
 4. If an item needs a screenshot or a decision only Dad can make, note it here and move on.
+
+## Run 2026-10-14 11:00 UTC — the PR template required contributors to rebuild a bundle that does not ship
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
+`delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the cosmetic
+`ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live AEGIS host (this box
+is `192.168.111.40/16`). All four CI checks pass on the tree before the change.
+
+Both blocked backlog items re-confirmed blocked, so I swept for a real, in-scope honesty gap — this
+time the doc **every contributor reads first**: `.github/PULL_REQUEST_TEMPLATE.md`. Its truth-check
+section required, under "If this touches a served lab or the bundle":
+
+- *"If shipping files changed, I rebuilt `frontend/nexus-release.tar.gz` (see `docs/OPERATIONS.md`) —
+  it is a snapshot, not a symlink."*
+- *"The served frontend, source, and bundle still agree (`tools/check_bundle_fresh.sh`)."*
+
+Both are false of this tree. Measured: `find . -name 'nexus-release.tar.gz'` returns **nothing** outside
+`.git/`/`.nexus/` — no bundle ships, and it is git-ignored. `tools/check_bundle_fresh.sh` itself prints
+*"no bundle present ... nothing to check"* and exits 0, so the required check is a permanent no-op
+here. The README (line 156) and `docs/OPERATIONS.md` (lines 70–74) were corrected to say the shipping
+path is a **git clone + `install.sh`, not a bundle** in the 2026-10-10/11 runs — the earlier
+2026-10-11 OPERATIONS pass even flagged this exact false premise in the README but missed the PR
+template. So a contributor following their own repo's checklist was told to rebuild and commit a
+non-existent artifact.
+
+Fixed by making the template true of this tree, not by deleting the section: the "or the bundle" branch
+is gone; "If this touches a served lab" now keeps only the reload+regrade step (a real check), and a
+short note states plainly that **no shippable bundle exists** (`frontend/nexus-release.tar.gz` does not
+ship, a clean host installs from the clone + `install.sh`), that contributors must **not** rebuild or
+commit one, and that `check_bundle_fresh.sh` still exists but **no-ops when no bundle is present — as it
+is here — so it is not a required check on this repo.** Backed up via `scripts/safe-backup.sh` (label
+`pr-template-bundle-truth-2026-10-14`, out of the served tree). Re-ran all four CI checks green;
+`check_bundle_fresh.sh` no-ops with rc=0 as documented. Committed `808d9af`→this commit, pushed
+`origin/main`, local==origin 0/0. NOT COMPLETE — Dad's word alone. | proof=none (docs) | next=run:
+LAB least-recently-moved -> next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs
+live-host session), cosmetic ci.yml step (needs workflow-scoped token), and the `.nexus/` public
+policy call.
