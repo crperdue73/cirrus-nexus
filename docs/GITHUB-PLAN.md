@@ -568,3 +568,32 @@ via `scripts/safe-backup.sh` (label `labab-truth-2026-10-15`, out of the served 
 checks re-run green. No behaviour change. NOT COMPLETE — Dad's word alone. | proof=none (docs) |
 next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
 cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public policy call.
+
+## Run 2026-10-15 13:00 UTC — the 11:00 sweep missed two shipped source files: the code still called the labs "LAB-A"/"LAB-B"
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; all four CI checks
+(`check_self_contained.py`, `lint_lab_pack.py`, `check_bundle_fresh.sh`, byte-compile) pass on the tree
+before the change. `origin` token scopes unchanged — still **no `workflow` scope** and no live host for
+Screenshots, so both remain Dad-blocked (re-confirmed, not re-litigated).
+
+The 11:00 run named the four *docs* that said `LAB-A`/`LAB-B`, but its sweep was doc-scoped and missed
+**two shipped source files**, one of them student-facing:
+- `lab-definitions/srl-demo-unsolved/demo-01-two-pcs-and-a-real-switch-unsolved.md` — the served Demo 1
+  student guide, line 48: *"…run 196: LAB-B's guide states its lab-level rule…"*. A student reading
+  Demo 1's own guide cannot resolve "LAB-B".
+- `lab-definitions/grader_demo_02.py` — the shipped grader's docstring: *"Same defect fixed in the
+  LAB-A grader…"*.
+- `backend/main.py` — **seven** more comments across the shipped API (`:401 :538 :709 :1199 :1608
+  :1609 :2298`) that describe measured behaviour in terms of `LAB-A`/`LAB-B`.
+
+Same gap, same fix: name the real labs, add no claim. Mapping unchanged and verified against the shipped
+YAMLs — `LAB-A` = `demo-01-two-pcs-and-a-real-switch-unsolved` (3 nodes: pc-a, pc-b, sw1), `LAB-B` =
+`demo-02-two-switches-one-router-unsolved` (5 nodes: pc-a, pc-b, sw1, sw2, r1). Each comment's measured
+content is preserved verbatim; only the identifier changes to the resolvable one (`Demo 1 (demo-01-…)` /
+`Demo 2 (demo-02-…)`, later uses `Demo 1`/`Demo 2`). `backend/main.py` still byte-compiles,
+`grader_demo_02.py` still byte-compiles, `check_self_contained.py` green. `LAB-A`/`LAB-B` now survive
+**only** in `.nexus/proofs/*` — signed, dated measurement records that are evidence and must not be
+rewritten. Backed up via `scripts/safe-backup.sh` (label `labab-code-2026-10-15`, out of the served
+tree). No behaviour change. NOT COMPLETE — Dad's word alone. | proof=none (docs/comments) |
+next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
+cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public policy call.

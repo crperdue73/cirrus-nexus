@@ -117,9 +117,9 @@ def _node_ip_ok(container, ip, dev, prefixlen=24):
 
     Prefix length MATTERS. Before 2026-09-28 this compared only the address and
     threw the mask away (`split("/")[0]`), so a wrong mask (/32) was reported as
-    /24 and scored full credit. Same defect fixed in the LAB-A grader the same
-    day; both graders share this helper. A grader may not claim a mask it did
-    not verify.
+    /24 and scored full credit. Same defect fixed in the Demo 1 grader
+    (`grader_demo_01_srl.py`) the same day; both graders share this helper. A
+    grader may not claim a mask it did not verify.
 
     BusyBox `ip` (the Alpine host image) does NOT support `-j`/JSON, so we
     try JSON first (iproute2 hosts), then fall back to a plain `ip addr show`

@@ -398,7 +398,8 @@ def _parse_yaml_metadata(path: Path) -> dict | None:
 
     RUN 240: a YAML SYNTAX error used to be caught by the same `except` as "no metadata section" -- both
     returned None, and the discover loop then dropped the file silently. Measured: appending an unclosed
-    flow sequence to LAB-B's definition removed the lab from the catalog and the reload answered a plain
+    flow sequence to Demo 2's definition (`demo-02-two-switches-one-router-unsolved`) removed the lab
+    from the catalog and the reload answered a plain
     {"status":"reloaded","count":1} with NOTHING naming the file. An operator watching the count would see
     2 become 1 and have no way to know why. Unreadable files are now recorded and reported by name.
     """
@@ -535,7 +536,7 @@ def _topology_node_names(topology_file):
     """The node names a lab's topology ACTUALLY defines; None when it cannot be read.
 
     RUN 224 (2026-10-06): nothing cross-checked a lab's declared gradeable_nodes against its own
-    topology. Measured: adding `ghost1` to LAB-B's gradeable_nodes loaded cleanly, the catalog
+    topology. Measured: adding `ghost1` to Demo 2's gradeable_nodes loaded cleanly, the catalog
     advertised it, and grading it answered "This lab has no node 'ghost1'" -- the contradiction was
     only discovered by a student pressing a button that should never have been offered.
     """
@@ -706,7 +707,7 @@ def _lab_verdict_passed(grader, session) -> bool:
             _passed = bool(verdict.get("passed"))
             # RUN 226 (2026-10-06): COVERAGE IS PART OF THE CLAIM. A grader that grades FEWER nodes
             # than the lab declares can report "passed" while a declared node was never checked.
-            # Measured live: with sw2 dropped from LAB-B's grade_all, an unsound sw2 (its IRB address
+            # Measured live: with sw2 dropped from Demo 2's grade_all, an unsound sw2 (its IRB address
             # removed, path still working) ended in a session marked "submitted". So before trusting
             # "passed", check that the nodes the grader says it graded cover the nodes the lab declares.
             _lab = _get_lab(session.get("lab_id", ""))
@@ -1196,7 +1197,7 @@ def _allocate_port() -> int:
 
     RUN 212 (2026-10-05): this was a pure rotating counter over 8765..9765 with a wrap. The docstring
     claimed "next available" but nothing checked availability, so once the counter came round -- after
-    about 333 LAB-A sessions, sooner with LAB-B -- it could hand out a port a LIVE session's ttyd was
+    about 333 Demo 1 sessions, sooner with Demo 2 -- it could hand out a port a LIVE session's ttyd was
     still bound to. Measured across three start/stop cycles: 8776-8778, then 8779-8781, then 8782-8784,
     with nothing released back and no check that the next port was free.
 
@@ -1605,8 +1606,9 @@ def grade_config(session_id: str, lab_id: str, node: str) -> GraderResult:
     # wrong when the truth was that the container had already been torn down and NOBODY
     # LOOKED. The same shape appears on a restart mid-grade. Refuse instead.
     # A node this lab does not have is a different thing from a node that is down (run 201).
-    # Asking LAB-A about "r1" used to answer "Node 'r1' is not running ... restart the lab", which is
-    # advice that can never work: LAB-A has no r1. Say what is true instead.
+    # Asking Demo 1 (`demo-01-two-pcs-and-a-real-switch-unsolved`) about "r1" used to answer
+    # "Node 'r1' is not running ... restart the lab", which is advice that can never work:
+    # Demo 1 has no r1. Say what is true instead.
     if node not in (session.get("nodes") or {}):
         return _refused_result_with(
             "This lab has no node '%s' — nothing to grade. The nodes here are: %s."
@@ -2295,7 +2297,7 @@ def get_lab_guide(lab_id: str):
 
 
 # RUN 245 (2026-10-07): the install record is the ONLY thing that makes an aegis/frr lab attributable
-# (run 244's baseline: LAB-B's r1 IS the pinned substrate, and demo-02 grades off the installer's
+# (run 244's baseline: Demo 2's r1 IS the pinned substrate, and demo-02 grades off the installer's
 # installed_layers_sha256). It was read lazily, only at start/grade time, and NOTHING asserted it was
 # there -- measured live: hide assets/installed-image-id.txt, restart, and the log says nothing at all
 # ("[aegis] serving on 0.0.0.0:8000" and no more). The first to find out would be a student whose

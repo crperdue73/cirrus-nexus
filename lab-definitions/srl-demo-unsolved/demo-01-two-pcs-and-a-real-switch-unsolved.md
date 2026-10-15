@@ -45,8 +45,9 @@ itself must answer.
 | sw1  | real SR Linux switch, `10.0.1.254/24` up on `irb0.0` | shipped pre-configured |
 
 **The lab counts as passed when `pc-a` and `sw1` both pass.** PC-B is implied — PC-A cannot
-earn credit without reaching it. *(Added 2026-10-04, run 196: LAB-B's guide states its lab-level
-rule and this one did not, though the grader has always enforced `pc-a` AND `sw1`.)*
+earn credit without reaching it. *(Added 2026-10-04, run 196: Demo 2's guide
+(`demo-02-two-switches-one-router-unsolved`) states its lab-level rule and this one did not,
+though the grader has always enforced `pc-a` AND `sw1`.)*
 
 > Difference from the *shipped* demo-01 (SR Linux): there, the PCs arrive
 > configured and the lab grades with no work. Here they do not, so a cold
