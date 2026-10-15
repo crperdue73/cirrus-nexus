@@ -597,3 +597,45 @@ rewritten. Backed up via `scripts/safe-backup.sh` (label `labab-code-2026-10-15`
 tree). No behaviour change. NOT COMPLETE — Dad's word alone. | proof=none (docs/comments) |
 next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
 cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public policy call.
+
+## Run 2026-10-15 19:00 UTC — two lab topologies were tracked at the REPO ROOT and referenced by nothing
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; all CI checks
+(`check_self_contained.py`, `lint_lab_pack.py`, `check_bundle_fresh.sh`, byte-compile) green on the
+tree before the change. `origin` token scopes unchanged — still **no `workflow` scope** (cosmetic
+`ci.yml` step stays Dad-gated) and no live host for Screenshots (this box is `192.168.111.40/16`).
+Both blocked items re-confirmed blocked, so I swept for a real, in-scope honesty gap.
+
+An orphan sweep (every tracked `*.md`/`*.html`/`*.yml` that no other file names) returned exactly two
+files, both at the **repo root**:
+- `lab-day1-router.yml` — a FRR single-router lab ("Day 1 Router Configuration"), 88 lines.
+- `tier-03-router-switch-pc.yml` — 116 lines.
+
+Both were introduced in the initial snapshot (`2868142`) and touched by no commit since. Neither is
+referenced anywhere in the shipping tree: `git grep` finds `tier-03-router-switch-pc` only in
+historical notes (`HANDOFF-2026-09-22.md`) and `.nexus/` records, and `lab-day1-router` **nowhere**
+outside the file itself. Meanwhile the README's "shipping labs" section says the release ships exactly
+**two** labs and that "the other topologies ... live in the sibling directory
+`lab-definitions-quarantine-2026-09-30/`". So root placement contradicted the README: a stranger
+cloning the repo sees two `.yml` files named as labs sitting *beside the README*, not in the
+quarantine dir the README points them to.
+
+Two measured facts made this worse than a filing error:
+1. `lab-day1-router.yml` carries **no `metadata:` section**. `backend/main.py:396 _parse_yaml_metadata`
+   returns `None` for it and the discover loop (`:467`) `continue`s — so it is not merely quarantined,
+   it was **never serveable** (`git grep -c 'metadata:'` → 0 in that file). Dead weight with a
+   shipping-sounding name.
+2. `tier-03-router-switch-pc.yml` is a duplicate of the already-quarantined
+   `lab-definitions-quarantine-2026-09-30/05-router-switch-pc.yml`, minus that copy's two honesty
+   annotations (`course: CI-01`, `validates_switch_authenticity: false`). The quarantined copy is the
+   more complete record.
+
+Fixed by moving both into `lab-definitions-quarantine-2026-09-30/` (git mv, history preserved) — the
+directory the README already names — and appending a dated note to that directory's `MANIFEST.txt`
+recording what each is and why it moved. No claim added or removed; the README's "exactly two labs"
+statement is now true of the repo root too. Verified the loader is unaffected (it scans
+`lab-definitions/` and one level of subdirs only, `main.py:456`) and re-ran all CI checks green.
+Backed up both files via `scripts/safe-backup.sh` (label `orphan-yml-2026-10-15`, out of the served
+tree). No behaviour change. NOT COMPLETE — Dad's word alone. | proof=none (docs/tree layout) |
+next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
+cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public policy call.

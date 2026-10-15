@@ -40,3 +40,20 @@ grader_tier02_router_basics.py
 grader_tier03_switch.py
 srl-demo/assets
 srl-demo2/assets
+
+# --- added 2026-10-15 (orphan-yaml truth pass) ---
+# These two topologies were tracked at the REPO ROOT, not here, and were
+# referenced by nothing in the shipping tree (git grep found them only in
+# historical notes and .nexus/ records). Both describe labs that are NOT part
+# of this release, so root placement implied they ship. Moved beside the other
+# quarantined topologies:
+#   lab-day1-router.yml            name: aegis-lab-day1-router (FERR/FRR single
+#                                  router, 1 PC). Carries NO metadata: section,
+#                                  so backend/main.py's loader never served it
+#                                  anyway -- it was dead weight with a live name.
+#   tier-03-router-switch-pc.yml   duplicate of 05-router-switch-pc.yml above,
+#                                  minus that file's two honesty annotations
+#                                  (course: CI-01, validates_switch_authenticity:
+#                                  false). The quarantined copy is the better record.
+lab-day1-router.yml
+tier-03-router-switch-pc.yml
