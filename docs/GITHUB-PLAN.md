@@ -539,3 +539,32 @@ is here — so it is not a required check on this repo.** Backed up via `scripts
 LAB least-recently-moved -> next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs
 live-host session), cosmetic ci.yml step (needs workflow-scoped token), and the `.nexus/` public
 policy call.
+
+## Run 2026-10-15 11:00 UTC — five shipped docs referred to the labs as "LAB-A"/"LAB-B", a nickname no reader can resolve
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
+`delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the cosmetic
+`ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live AEGIS host (this box
+is `192.168.111.40/16`). All four CI checks pass on the tree before the change.
+
+Both blocked backlog items re-confirmed blocked, so I swept for a real, in-scope honesty gap. The
+README names the two shipping labs `demo-01-two-pcs-and-a-real-switch-unsolved` and
+`demo-02-two-switches-one-router-unsolved`. But **five shipped public docs refer to them as `LAB-A` /
+`LAB-B`** — an internal run-log nickname that is defined **nowhere** in the tree. Measured:
+`grep -rn 'LAB-A\|LAB-B'` outside `GITHUB-PLAN.md` hits `CHANGELOG.md` (×2), `docs/OPERATIONS.md`
+(×3), `docs/SELF-CONTAINED.md` (×1), and `docs/RELEASE-NOTES-v0.1.0-draft.md` (×3). A reader who
+clones the repo sees "the router in LAB-B" (SELF-CONTAINED.md:24, OPERATIONS.md:112) and has no way to
+learn that LAB-B = Demo 2, or that LAB-A = 3 nodes / LAB-B = 5. The docs are the product surface; this
+is the same class of gap as the earlier orphaned-doc and bundle-truth passes.
+
+Fixed by naming the real labs, not by deleting context. Mapping verified against the shipped YAMLs:
+`LAB-A` = `demo-01-two-pcs-and-a-real-switch-unsolved` (nodes pc-a, pc-b, sw1 = **3**), `LAB-B` =
+`demo-02-two-switches-one-router-unsolved` (nodes pc-a, pc-b, sw1, sw2, r1 = **5**). In each file the
+first use now carries the real id (`Demo 1 (demo-01-…)` / `Demo 2 (demo-02-…)`) and later uses read
+`Demo 1`/`Demo 2`; the node counts stay attached ("Demo 1 = 3 nodes, Demo 2 = 5"). SELF-CONTAINED.md's
+"the two labs" now names both ids. No claim added or removed — only the identifier a reader can resolve.
+Backed up `CHANGELOG.md`, `docs/OPERATIONS.md`, `docs/SELF-CONTAINED.md`, `docs/RELEASE-NOTES-v0.1.0-draft.md`
+via `scripts/safe-backup.sh` (label `labab-truth-2026-10-15`, out of the served tree). All four CI
+checks re-run green. No behaviour change. NOT COMPLETE — Dad's word alone. | proof=none (docs) |
+next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
+cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public policy call.

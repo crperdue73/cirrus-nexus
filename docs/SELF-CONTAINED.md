@@ -15,13 +15,14 @@ depend on a developer's machine, a private path, or an out-of-band file that isn
 
 ## What a cold install pulls from the network
 
-Only third-party images the two labs need:
+Only third-party images the two labs (`demo-01-two-pcs-and-a-real-switch-unsolved`,
+`demo-02-two-switches-one-router-unsolved`) need:
 
 | image | why | size |
 |---|---|---|
 | `ghcr.io/nokia/srlinux:latest` | the real switch in both labs | ~2.35 GB |
 | `alpine:latest` | the PCs | small |
-| `aegis/frr:latest` | the router in LAB-B | **built locally** from `Dockerfile.frr` |
+| `aegis/frr:latest` | the router in Demo 2 (`demo-02-two-switches-one-router-unsolved`) | **built locally** from `Dockerfile.frr` |
 
 The FRR substrate is **built from source** (`Dockerfile.frr`, in this repo) when no pinned tarball is
 shipped — so no binary blob is required to install. See

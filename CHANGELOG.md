@@ -33,10 +33,10 @@ under `.nexus/proofs/`; nothing here is asserted without a checkable artifact.
 ### Added
 - `tools/check_self_contained.py` (+ CI job): fails if a bare clone isn't installable.
 - **Verification evidence for both labs**, each with a proof file: a student success path end to
-  end (LAB-A 3/3 run 252; LAB-B 5/5 run 253), served guides followed literally (runs 261/262), and
+  end (Demo 1 3/3 run 252; Demo 2 5/5 run 253), served guides followed literally (runs 261/262), and
   graders that reject a wrong answer and discriminate a subtly-wrong config (runs 263/264).
 - **Resilience proofs:** a configured lab keeps grading a passing verdict across a server restart
-  for both labs, including full 5-node LAB-B (runs 269/270/271).
+  for both labs, including the full 5-node Demo 2 (runs 269/270/271).
 - **Refusal safety:** a session with no resolvable runtime digest refuses to grade rather than emit
   a false verdict (runs 251/256).
 - Documentation: `docs/architecture.md` (component + lifecycle diagrams), `docs/ADDING-A-LAB.md`,

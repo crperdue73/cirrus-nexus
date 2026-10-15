@@ -109,7 +109,7 @@ The two shipped labs need three node images. **None ships as a tarball in this t
 
 | image | who needs it | shipped? |
 |---|---|---|
-| `aegis/frr:latest` | the router in LAB-B | ❌ built locally by `install.sh` from `Dockerfile.frr` — the pin's tarball (`aegis-frr-image.tar.gz`) is *not* in this tree |
+| `aegis/frr:latest` | the router in Demo 2 (`demo-02-two-switches-one-router-unsolved`) | ❌ built locally by `install.sh` from `Dockerfile.frr` — the pin's tarball (`aegis-frr-image.tar.gz`) is *not* in this tree |
 | `ghcr.io/nokia/srlinux:latest` | the REAL switch in both labs | ❌ pulled at deploy time — **~2.35 GB** |
 | `alpine:latest` | the PCs | ❌ pulled at deploy time (small) |
 
@@ -141,11 +141,12 @@ cannot be read off the running containers at all returns `""` — a hard refusal
 ## Concurrent sessions
 
 **More than one session of the SAME lab may run at once, and they are fully isolated** (verified
-2026-10-05 with two concurrent LAB-A sessions: distinct container names, non-colliding ttyd ports,
+2026-10-05 with two concurrent Demo 1 (`demo-01-two-pcs-and-a-real-switch-unsolved`) sessions:
+distinct container names, non-colliding ttyd ports,
 and each grade reading its own session's containers). No policy refuses a duplicate start; the UI
 avoids them by accident rather than by rule.
 
-**What this costs:** every session consumes its lab's full container set (LAB-A 3, LAB-B 5), and each
+**What this costs:** every session consumes its lab's full container set (Demo 1 = 3 nodes, Demo 2 = 5), and each
 switch is a ~2.35 GB image. Nothing caps it — treat "one session per student per lab" as the
 operational convention.
 

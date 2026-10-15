@@ -17,11 +17,11 @@ graded containerlab labs, installable from a bare clone. Every claim here is bac
 `.nexus/proofs/`.
 
 ### Highlights
-- **Two labs, verified end to end.** A student success path passes for both labs (LAB-A 3/3,
-  LAB-B 5/5), served guides work when followed literally, and graders discriminate a subtly-wrong
+- **Two labs, verified end to end.** A student success path passes for both labs (Demo 1 3/3,
+  Demo 2 5/5), served guides work when followed literally, and graders discriminate a subtly-wrong
   config rather than rubber-stamping.
 - **Survives a restart.** A configured lab keeps grading a passing verdict across a server restart,
-  including the full 5-node LAB-B path.
+  including the full 5-node Demo 2 path.
 - **Refuses to lie.** A session without a resolvable runtime digest refuses to grade instead of
   emitting a false verdict.
 - **Repo is small and self-contained.** 730 MB → 1.6 MB after purging stale bundle history; a bare
