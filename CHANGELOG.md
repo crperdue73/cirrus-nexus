@@ -16,8 +16,11 @@ under `.nexus/proofs/`; nothing here is asserted without a checkable artifact.
   Pinned to **0.75.0** (the version the labs are verified against). Found by an end-to-end cold-install
   test in a blank container — see `.nexus/proofs/cold-install-verified-and-containerlab-pin-fixed-20261007.txt`.
 - **A stale shippable bundle could be served.** Added `tools/check_bundle_fresh.sh` as a guard; the
-  bundle is rebuilt and the freshness check fails a deploy if source and bundle disagree
-  (runs 258/260).
+  freshness check fails if source and bundle disagree (runs 258/260). **Note:** this guard is
+  vestigial in the shipping tree — the `nexus-release.tar.gz` bundle is the *older* shipping path and
+  **no bundle is committed** (`find . -name '*.tar.gz'` returns nothing outside `.git/`), so the guard
+  no-ops with "no bundle present". The current shipping model is a git clone + `install.sh`; see the
+  README quickstart and `docs/OPERATIONS.md` → "Release bundle (historical)".
 - **The start/session panel could name a substrate the lab does not run.** The pinned substrate is
   now surfaced where a human reads it, with a live-derived, aegis-less identity that includes the
   switch (runs 246–248).
