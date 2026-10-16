@@ -5,6 +5,45 @@ All notable changes to AEGIS are recorded here. This project ships two labs
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — honesty sweep, week of 2026-10-10 → 2026-10-16
+
+No shipped behaviour changed this week. Thirty-five commits, all documentation/provenance corrections with
+one additive CI check; no new feature and no fix to a defect a user could hit. Recorded here because the
+claims below changed, even though the product did not. **No version tag drawn from this window** — a release
+tag should mark a product change, and there is none to mark (see the release-notes draft for the reasoning).
+
+### Changed
+- **Stale-bundle claims retracted across every surface.** README, `docs/OPERATIONS.md`, `CONTRIBUTING.md`,
+  the PR template, `CONFERENCE.md`, the CHANGELOG and the release-notes draft all told the old
+  "rebuild-and-deploy a release bundle" story. No bundle ships in this tree (`find . -name '*.tar.gz'`
+  returns nothing outside `.git/`), and `tools/check_bundle_fresh.sh` **no-ops** ("no bundle present").
+  Each surface now names the shipping model as a git clone + `install.sh` and labels the guard vestigial.
+- **Pre-history `.git` size dropped.** The "730 MB → 1.6 MB" figure was measured at the 2026-09 purge,
+  which predates this git history; measured 2026-10-16 the `.git` is ~21 MB packed / ~24 MB on disk and
+  the working tree ~4 MB. Current figures now stated in place of the inherited number.
+- **Unresolvable `LAB-A`/`LAB-B` nicknames replaced with real lab names** in shipped docs *and* shipped
+  source (`backend/main.py` comments, `grader_demo_02.py` docstring). The nicknames resolved to nothing
+  in this tree; the labs are `demo-01-two-pcs-and-a-real-switch-unsolved` and
+  `demo-02-two-switches-one-router-unsolved`.
+- **README corrections:** Demo 2 lab-table row now counts all 5 nodes (was 3 of 5); the API table is
+  complete (4 undocumented routes added); `.nexus/` labelled (ships publicly but was unexplained);
+  quarantined topologies' path corrected.
+- **Historical disclaimers added** to `10-archive/SUMMARY-for-Dad.md`, `HANDOFF-2026-09-22.md`, and the
+  orphan `lab-guides/lab-03-lock-it-down.md` — each named paths or a provenance link false of this tree.
+- **Inert `_GUIDE_MAP` labelled.** All seven of its target filenames are absent from `lab-definitions/`;
+  it is a fossil of the pre-release layout, kept (not deleted) and now explicitly marked inert in source.
+
+### Added
+- **CI: shipped lab graders are byte-compiled** in `tools/check_self_contained.py`, so a syntax error in
+  a `grader_*.py` now fails CI instead of passing silently.
+- Repo hygiene: two orphaned root lab YAMLs moved into the quarantine dir the README names; a stray
+  BGP-revert backup moved out of the shipping lab dir.
+
+### Known limitations (unchanged, still named)
+- `aegis/frr` image is local-only (never pushed to a registry); cold-host deploy is not hand-step-free.
+- Student browser UI is not smoke-tested end to end (browser policy blocks automated navigation).
+- Static routing only — no BGP/OSPF/EVPN in the shipped labs.
+
 ## [0.1.0] — 2026-10-09
 
 First tagged snapshot of the two-lab shipping set. Every claim below is backed by a proof
