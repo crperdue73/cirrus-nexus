@@ -558,6 +558,14 @@ def _topology_node_names(topology_file):
 LABS_REJECTED: list = []
 
 
+# RUN 2026-10-16: this map is INERT for the shipping tree -- kept, not deleted, and labelled so a
+# reader of the shipped source does not mistake it for live routing. Measured: every one of its seven
+# target filenames is absent from lab-definitions/ (`for t in <targets>; test -e lab-definitions/$t`
+# -> 7 of 7 missing). All seven ids are quarantined labs (see lab-definitions-quarantine-2026-09-30/),
+# so _GUIDE_MAP.get(lab_id) returns None for both SHIPPING labs (demo-01/demo-02) and resolution
+# falls through to the topology-relative branch below, which is where the shipped guides actually
+# live. It is a fossil of the pre-release layout, not a route a student can hit -- but it sits in
+# module-level source with no note, which is how a fossil gets read as live.
 _GUIDE_MAP = {
     "tier-01-foundation": "tier-01-foundation.md",
     "tier-02-router-basics": "tier-02-router-basics.md",

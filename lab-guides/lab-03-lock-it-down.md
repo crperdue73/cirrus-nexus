@@ -1,5 +1,12 @@
 # AEGIS — Lab 03: Lock It Down 🔒
 
+> **Historical — not part of this release.** This guide describes `lab-03-lock-it-down`, which is
+> **not one of the two labs this release ships** (see the README's "The shipping labs"). Its lab
+> definition and grader are quarantined in `lab-definitions-quarantine-2026-09-30/` (`06-lock-it-down.yml`,
+> id `lab-03-lock-it-down`), outside `lab-definitions/`, so the loader never serves it. This file is
+> kept because `docs/OPERATIONS.md` cites it as the in-tree source for the Net Eng I capstone's point
+> numbers; read it as history, not as a lab you can run here.
+
 **Duration:** 90 min | **Difficulty:** Intermediate  
 **Prerequisites:** Lab 01 — Crossing Subnets, Lab 02 — The Switch in the Middle
 
