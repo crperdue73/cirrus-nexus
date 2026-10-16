@@ -6,7 +6,7 @@ explicit OK. This file is the staged text for him to approve, edit, or discard.
 - **Tag:** `v0.1.0` (annotated), points at the current `main` tip.
 - **Scope:** the two-lab shipping set — `demo-01-two-pcs-and-a-real-switch-unsolved`,
   `demo-02-two-switches-one-router-unsolved`.
-- **Date drafted:** 2026-10-09.
+- **Date drafted:** 2026-10-09. **Updated:** 2026-10-16 (weekly roll-up folded in; see §Weekly roll-up).
 
 ---
 
@@ -50,14 +50,46 @@ graded containerlab labs, installable from a bare clone. Every claim here is bac
 - Static routing only — no BGP/OSPF/EVPN in the shipped labs.
 
 ### Not in this release (blocked, awaiting a ruling)
-- CI hardening (byte-compile graders): needs a token with `workflow` scope.
-- Screenshots: need a session on the host where AEGIS actually runs.
+- Screenshots: need a session on the host where AEGIS actually runs (this box is not that host).
+- Cosmetic `ci.yml` step: needs a token with `workflow` scope.
 
 **What this is NOT:** not "complete" — that's Dad's call alone.
 
 ---
 
+## Weekly roll-up — week of 2026-10-10 → 2026-10-16
+
+**No new version is proposed this week.** The 35 commits since the `v0.1.0` tag contain no product
+change: every one is a documentation/provenance correction (retracting stale-bundle claims, replacing
+unresolvable `LAB-A`/`LAB-B` nicknames, dropping a pre-history `.git` size, adding historical
+disclaimers) plus a single additive CI check. A SemVer/CalVer tag should mark a change to what ships;
+there is none to mark here, so drawing one would overstate the week. The week's corrections are
+recorded under `[Unreleased]` in `CHANGELOG.md` instead.
+
+Contents, for the record:
+- **Stale-bundle claims retracted** on every surface (README, OPERATIONS, CONTRIBUTING, PR template,
+  CONFERENCE, CHANGELOG); the guard `tools/check_bundle_fresh.sh` is now labelled vestigial — no bundle
+  ships in-tree, the shipping model is a git clone + `install.sh`.
+- **`LAB-A`/`LAB-B` retired** in shipped docs *and* source in favour of the real lab names.
+- **Pre-history `.git` size (`730 MB → 1.6 MB`) dropped** in favour of the measured current size
+  (~21 MB packed / ~24 MB on disk / ~4 MB tree, 2026-10-16).
+- **README API table completed** (4 routes); Demo 2 lab-table node count corrected (3 → 5); `.nexus/`
+  labelled; quarantined-topology path fixed.
+- **CI now byte-compiles shipped lab graders** (`tools/check_self_contained.py`) — a grader syntax error
+  fails CI. *(This supersedes the older "blocked on `workflow` scope" note above.)*
+- **Hygiene:** orphan root lab YAMLs moved to the quarantine dir; stray BGP-revert backup moved out of
+  the shipping lab dir.
+
+### Tag decision (needs Dad)
+No tag is created from this window. If Dad wants a marker anyway (e.g. to snapshot the honesty sweep),
+say the word and I'll cut an **annotated, non-release** tag (suggestion: `honesty-sweep-2026-10-16`,
+not a version number) and push it. Absent that, nothing is tagged and no Release is published.
+
+---
+
 ## Publish checklist (Dad)
-1. Approve / edit the text above.
-2. Say the word — I publish the GitHub Release from tag `v0.1.0` with this body.
-3. Until then, the tag exists in the repo but **no Release is published**.
+1. Decide the tag: keep `v0.1.0` as the release point, cut the non-release marker tag above, or name a
+   new version. (No tag is created this week absent your say-so.)
+2. Approve / edit the text above.
+3. Say the word — I publish the GitHub Release with this body.
+4. Until then, **no Release is published** and no new tag is pushed.
