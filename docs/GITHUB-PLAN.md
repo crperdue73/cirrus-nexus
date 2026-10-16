@@ -706,3 +706,36 @@ out of the served tree). Re-ran all CI checks green; committed `b9e10d3`, pushed
 `0 0`. NOT COMPLETE — Dad's word alone. | proof=none (source/doc note) |
 next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
 cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public policy call.
+
+## Run 2026-10-16 13:00 UTC — CHANGELOG named the bundle-freshness guard as a live deploy gate, but it ships vestigial
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; all CI checks green
+(`py_compile`, `bash -n install.sh`, `tools/check_self_contained.py` rc=0, `tools/lint_lab_pack.py`,
+secret scan clean). `origin` token scopes unchanged — still **no `workflow` scope** (cosmetic `ci.yml`
+step stays Dad-gated) and no live host for Screenshots (this box is `192.168.111.40/16`). Both blocked
+items re-confirmed blocked.
+
+One in-scope honesty gap, measured and fixed without behaviour change. The `[0.1.0]` **Fixed** bullet
+in `CHANGELOG.md` read: *"Added `tools/check_bundle_fresh.sh` as a guard; the bundle is rebuilt and the
+freshness check fails a deploy if source and bundle disagree (runs 258/260)."* That phrasing states a
+**live rebuild-and-deploy gate** — false of this tree. Measured: `find . -name '*.tar.gz'` returns
+nothing outside `.git/` (no bundle ships); the shipping model is clone + `install.sh`; and
+`tools/check_bundle_fresh.sh` **no-ops** with `"no bundle present at frontend/nexus-release.tar.gz —
+nothing to check"` (it exits 0 early when the file is absent). So the CHANGELOG claimed the repo carries
+a deploy gate it does not run — a reader would believe a stale-bundle class of bug is guarded here,
+when the guard is inert. This is the same drift README + `docs/OPERATIONS.md` were already corrected
+for ("Release bundle (historical — not shipped in this tree)"); the CHANGELOG was the last un-swept
+surface still telling the old story.
+
+Fixed by making the bullet true of this tree, not by deleting it: kept the historical fact (the guard
+was added, runs 258/260) and appended an honest **Note** that the guard is vestigial here — no bundle is
+committed, the guard no-ops, and the current shipping model is a git clone + `install.sh`, pointing at
+the README quickstart and `docs/OPERATIONS.md` → "Release bundle (historical)". No claim added that the
+tree does not bear out. Backed up `CHANGELOG.md` via `scripts/safe-backup.sh` (label
+`changelog-bundle-guard-truth-2026-10-16`; the script's backup landed under `.nexus/bundle-archive/`,
+which is git-ignored at `.gitignore:48` and therefore does not ship — verified with `git status`, which
+showed only `CHANGELOG.md` modified). All four CI checks re-run green; committed `dd76cbc`, pushed
+`origin/main`, local==origin `0 0`. No behaviour change. NOT COMPLETE — Dad's word alone. | proof=none
+(docs) |
+next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
+cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public policy call.
