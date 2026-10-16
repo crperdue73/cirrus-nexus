@@ -1,11 +1,13 @@
 # AEGIS Topology Audit — Summary for Dad 🐧💍
 
 > **HISTORICAL ARCHIVE — not a description of the shipping tree.** This is a 2026-06-09 audit of an
-> earlier topology layout. The `aegis-topologies/` directory and the `tier-01*`…`tier-04*` YAMLs and
-> `scripts/wait-and-apply.sh` it names **do not exist in this repository** — the shipping tree is the
-> two srl-demo labs under `lab-definitions/` and the retained set under
-> `lab-definitions-quarantine-2026-09-30/`. Kept only because `docs/OPERATIONS.md` (Archive section)
-> points readers here for provenance. Do not rely on its file paths.
+> earlier topology layout. The `aegis-topologies/` directory, the `scripts/wait-and-apply.sh` it names,
+> and the `tier-01*`/`tier-02*`/`tier-04*` YAMLs **do not exist in this repository** — the shipping tree
+> is the two srl-demo labs under `lab-definitions/` and the retained set under
+> `lab-definitions-quarantine-2026-09-30/`. The one file from this audit that does survive is
+> `10-archive/tier-03-bgp-simplified.yml` (see "Files Changed" below). Kept only because
+> `docs/OPERATIONS.md` (Archive section) points readers here for provenance. Do not rely on its file
+> paths.
 
 **From:** Selina & Ethan
 **Date:** 2026-06-09

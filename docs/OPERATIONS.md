@@ -195,3 +195,7 @@ grader.**
 
 Anything removed from the active lab set is in `10-archive/` and
 `lab-definitions-quarantine-2026-09-30/` — retained for reference, not deployed.
+
+Provenance for the older layout is in [`10-archive/SUMMARY-for-Dad.md`](../10-archive/SUMMARY-for-Dad.md),
+a dated 2026-06-09 topology audit. It describes a tree that predates this release (its
+`aegis-topologies/` paths do not exist here) — read it as history, not as the shipping tree.

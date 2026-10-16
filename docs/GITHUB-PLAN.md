@@ -639,3 +639,32 @@ Backed up both files via `scripts/safe-backup.sh` (label `orphan-yml-2026-10-15`
 tree). No behaviour change. NOT COMPLETE — Dad's word alone. | proof=none (docs/tree layout) |
 next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
 cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public policy call.
+
+## Run 2026-10-16 01:00 UTC — `10-archive/SUMMARY-for-Dad.md` cited a provenance link that did not exist
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run
+(`85d9f7d`); all four CI checks green on the tree before the change (backend `py_compile`,
+`bash -n install.sh`, `tools/check_self_contained.py` rc=0, secret scan clean). `origin` token scopes
+unchanged — still **no `workflow` scope** (cosmetic `ci.yml` step stays Dad-gated) and no live host for
+Screenshots (this box is `192.168.111.40/16`). Both blocked items re-confirmed blocked, so I swept for
+a real, in-scope honesty gap.
+
+`10-archive/SUMMARY-for-Dad.md` opened with a banner whose last substantive sentence was:
+*"Kept only because `docs/OPERATIONS.md` (Archive section) points readers here for provenance."*
+Measured false of this tree: `git grep 'SUMMARY-for-Dad' -- . ':!.nexus'` matched **nothing** in any
+doc outside `.nexus/` and this plan — including `docs/OPERATIONS.md`. That file's Archive section
+(`docs/OPERATIONS.md:194`) named only the *directory* (`10-archive/`) and the sibling quarantine dir;
+it never named this file. And the file was **unreachable from the README** (`grep -n '10-archive\|SUMMARY' README.md` → no match) while every other doc is in the Documentation table. So the file's
+stated reason for existing was untrue, and a reader had no path to it anyway.
+
+Fixed so the claim is true rather than by deleting the claim: (1) `docs/OPERATIONS.md` Archive section
+now names `10-archive/SUMMARY-for-Dad.md` as the provenance source for the older layout, with the same
+"read it as history, not the shipping tree" caveat; (2) added it to the README Documentation table;
+(3) tightened the file's own banner — it previously said the `tier-01*`…`tier-04*` YAMLs do not exist,
+but `10-archive/tier-03-bgp-simplified.yml` **does** ship (`git ls-files` confirms it) and the file's
+own "Files Changed" note says so, so the banner now names `tier-01*`/`tier-02*`/`tier-04*` and calls out
+the one survivor explicitly. No claim added that the tree does not bear out. Backed up all three files
+via `scripts/safe-backup.sh` (label `provenance-claim-2026-10-16`, out of the served tree). No
+behaviour change. NOT COMPLETE — Dad's word alone. | proof=none (docs) |
+next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
+cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public policy call.
