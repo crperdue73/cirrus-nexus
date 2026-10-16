@@ -739,3 +739,38 @@ showed only `CHANGELOG.md` modified). All four CI checks re-run green; committed
 (docs) |
 next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
 cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public policy call.
+
+## Run 2026-10-16 19:00 UTC — CHANGELOG + RELEASE-NOTES still quoted a pre-history `.git` size (730 MB → 1.6 MB) that no longer describes this tree
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; CI checks green
+(`py_compile` OK, `bash -n install.sh` OK, `tools/check_self_contained.py` rc=0, secret scan clean).
+`tools/lint_lab_pack.py` cannot run **here** — this box has no PyYAML (`import yaml` → ModuleNotFoundError);
+that is a pre-existing local-env gap, not a regression (this run touched no code, and the lint runs in CI
+where deps install). `origin` token scopes unchanged — still **no `workflow` scope** (cosmetic `ci.yml`
+step stays Dad-gated) and no live host for Screenshots (this box is `192.168.111.40/16`). Both blocked
+items re-confirmed blocked.
+
+One in-scope honesty gap, measured and fixed without behaviour change. Two surfaces carried the same
+number: `CHANGELOG.md` ("Changed" → *"`.git`: 730 MB → 1.6 MB"*) and
+`docs/RELEASE-NOTES-v0.1.0-draft.md` ("Highlights" → *"730 MB → 1.6 MB after purging stale bundle history"*).
+That reduction was measured at the **2026-09 purge**, which **predates this git history** (earliest commit
+here is `2868142`, 2026-09-20) — it is not a fact about the tree a reader clones today. Measured live:
+`.git` is **~21 MB packed / ~24 MB on disk** (`git count-objects -vH` → size-pack 21.08 MiB; `du -sh .git`
+→ 24M) and the working tree is **~4 MB**. So the present-tense framing ("Repo is now … 1.6 MB") was false
+of this tree: a cloner sees ~21–24 MB, ~15× the quoted figure. No shipped proof carries the 730/1.6 numbers
+either (`git grep '730\|1\.6 MB'` → only these two docs), so they were inherited, not evidenced here. Same
+class as the 13:00 run's vestigial-bundle-guard drift: a surface still telling a pre-release story.
+
+Fixed by making each line true of this tree, not by deleting the history: kept the purge fact, dropped the
+unbacked current-tense number and **named the measured current size** (~21 MB packed / ~24 MB on disk /
+~4 MB tree, 2026-10-16), stating plainly that 730→1.6 was the 2026-09 purge figure and predates this
+history. Also corrected the adjacent RELEASE-NOTES "Fixed" bullet that still read *"bundle freshness is now
+guarded"* — same vestigial-guard correction the 13:00 run applied to the CHANGELOG: no `nexus-release.tar.gz`
+is committed, so `tools/check_bundle_fresh.sh` no-ops; the shipping model is git clone + `install.sh`. No
+claim added that the tree does not bear out. Backed up both files via `scripts/safe-backup.sh` (label
+`git-repo-size-truth-2026-10-16`; backups landed under `.nexus/bundle-archive/`, git-ignored, do not ship —
+`git status` showed only the two files modified). CI checks re-run green as above; committed, pushed
+`origin/main`, local==origin `0 0`. No behaviour change. NOT COMPLETE — Dad's word alone. | proof=none
+(docs) |
+next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
+cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public policy call.

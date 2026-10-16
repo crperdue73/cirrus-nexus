@@ -24,9 +24,10 @@ graded containerlab labs, installable from a bare clone. Every claim here is bac
   including the full 5-node Demo 2 path.
 - **Refuses to lie.** A session without a resolvable runtime digest refuses to grade instead of
   emitting a false verdict.
-- **Repo is small and self-contained.** 730 MB → 1.6 MB after purging stale bundle history; a bare
-  clone installs; CI compiles the backend, syntax-checks `install.sh`, checks self-containment, and
-  scans for secrets.
+- **Repo is small and self-contained.** Stale bundle history was purged (the `730 MB → 1.6 MB`
+  reduction was measured at that 2026-09 purge, before this history; measured 2026-10-16 the
+  `.git` is ~21 MB packed / ~24 MB on disk and the working tree ~4 MB); a bare clone installs; CI
+  compiles the backend, syntax-checks `install.sh`, checks self-containment, and scans for secrets.
 - **Docs + hygiene.** README for a public audience, `docs/` guides (architecture, adding-a-lab,
   grading model, self-contained, operations), `CONTRIBUTING.md`, `CITATION.cff`, issue/PR templates,
   Apache-2.0 `LICENSE`.
@@ -34,7 +35,10 @@ graded containerlab labs, installable from a bare clone. Every claim here is bac
 ### Fixed
 - Cold install could not deploy a lab: containerlab pin corrected 0.60.0 → 0.75.0 (the version the
   labs are verified against).
-- A stale shippable bundle could be served; bundle freshness is now guarded.
+- A stale shippable bundle could be served (back when a bundle shipped); `tools/check_bundle_fresh.sh`
+  guarded it. **Note:** the guard is vestigial in the current tree — no `nexus-release.tar.gz` is
+  committed, so the check no-ops ("no bundle present"). The shipping model is now a git clone +
+  `install.sh`.
 - The session panel could name a substrate the lab does not run; the pinned substrate is now
   surfaced and live-derived.
 

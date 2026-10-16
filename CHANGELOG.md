@@ -27,8 +27,11 @@ under `.nexus/proofs/`; nothing here is asserted without a checkable artifact.
 
 ### Changed
 - **Repo is now self-contained and small.** Removed 82 stale ~20 MB bundle snapshots from
-  `.nexus/bundle-archive/` and purged them from history (`.git`: 730 MB → 1.6 MB; a cold
-  clone is now <1 s). `.gitignore` tightened so a future run can't re-commit them.
+  `.nexus/bundle-archive/` and purged them from history; `.gitignore` tightened so a future run
+  can't re-commit them. **Note:** the `730 MB → 1.6 MB` figure that stood here was the size at the
+  2026-09 purge moment and predates this history — it is no longer the shipped size. Measured now
+  (2026-10-16): `.git` is ~21 MB packed / ~24 MB on disk, the working tree ~4 MB. Still small, and
+  a cold clone is fast; the old number is kept out because a cloner does not see 1.6 MB.
 - README rewritten for a public audience; operational detail moved to `docs/OPERATIONS.md`.
 - Added Apache-2.0 `LICENSE`, `CONTRIBUTING.md`, `requirements.txt`, and CI.
 - Removed the last hard-coded developer path from `install.sh`.
