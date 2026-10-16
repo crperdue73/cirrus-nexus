@@ -668,3 +668,41 @@ via `scripts/safe-backup.sh` (label `provenance-claim-2026-10-16`, out of the se
 behaviour change. NOT COMPLETE — Dad's word alone. | proof=none (docs) |
 next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
 cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public policy call.
+
+## Run 2026-10-16 11:00 UTC — `_GUIDE_MAP` was an unlabelled fossil and `lab-guides/lab-03-lock-it-down.md` was an unlisted orphan
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; all CI checks green
+(`py_compile`, `bash -n install.sh`, `tools/check_self_contained.py` rc=0, `tools/lint_lab_pack.py`,
+secret scan clean). `origin` token scopes unchanged — still **no `workflow` scope** (cosmetic `ci.yml`
+step stays Dad-gated) and no live host for Screenshots. Both blocked items re-confirmed blocked.
+
+Host note (recorded, not acted on): `nexus.service` does **not** exist on this box (`dept-dragon-tech`,
+`192.168.111.40/16`), and neither does `/srv` (so `AGENTS.md`'s `/srv/canon/README.md` reference is not
+satisfiable here). The live-product verification legs of earlier runs were run against the Nexus host;
+the work this host can honestly do is the tree/docs/CI lane, which is what this run stayed in.
+
+Two in-scope honesty gaps, both measured, both fixed without behaviour change:
+
+1. **`backend/main.py` `_GUIDE_MAP`** (7 entries) is a fossil of the pre-release layout. Measured: all
+   seven target filenames are **absent** from `lab-definitions/` (`test -e lab-definitions/<t>` → 7 of 7
+   missing), and all seven ids (`tier-01-foundation`, `tier-02-router-basics`, `lab-01-crossing-subnets`,
+   `lab-02-switch-in-the-middle`, `tier-03-router-switch-pc`, `lab-03-lock-it-down`, `neteng-capstone`)
+   are quarantined labs. `_GUIDE_MAP.get()` therefore returns `None` for **both shipping labs**
+   (`demo-01`/`demo-02`) and resolution falls through to the topology-relative branch — which is where the
+   shipped demo guides actually live and are served. So the map is inert, not live routing; the gap was
+   that it sat in unlabelled **module-level** source, which is exactly how a fossil gets read as live
+   (run 239's lesson: this module executes at import).
+2. **`lab-guides/lab-03-lock-it-down.md`** is a guide for `lab-03-lock-it-down`, which this release does
+   **not** ship (README: "ships exactly two labs"). It was unlisted in the README Documentation table and
+   referenced only by `docs/OPERATIONS.md:187` as the in-tree source for the Net Eng I capstone's point
+   numbers. Its lab definition is quarantined (`lab-definitions-quarantine-2026-09-30/06-lock-it-down.yml`,
+   id `lab-03-lock-it-down`), outside `lab-definitions/`, so the loader never serves it.
+
+Fix (no behaviour change): a comment naming `_GUIDE_MAP` **inert for the shipping tree** with the 7/7
+measurement; a **historical banner** on the orphan guide naming its quarantined definition; and a README
+Documentation-table row so the file has a discoverable path (same reachability medicine as the 01:00
+SUMMARY-for-Dad run). Backed up both files via `scripts/safe-backup.sh` (label `guide-map-truth-2026-10-16`,
+out of the served tree). Re-ran all CI checks green; committed `b9e10d3`, pushed `origin/main`, local==origin
+`0 0`. NOT COMPLETE — Dad's word alone. | proof=none (source/doc note) |
+next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
+cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public policy call.
