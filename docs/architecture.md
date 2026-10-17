@@ -65,7 +65,7 @@ flowchart TB
 | `install.sh` | One-command host setup: Docker, containerlab, ttyd, Python deps, the app copy to `/opt/aegis`, the substrate image, pre-pulled node images, and the systemd unit. |
 | `start_server.py` | Foreground launcher for running without the service (see the caveat in [`OPERATIONS.md`](OPERATIONS.md)). |
 | `Dockerfile.frr` | Builds the `aegis/frr:latest` substrate — Alpine + FRR with **only** `zebra` and `staticd`; the build asserts `ospfd=no`/`bgpd=no`. |
-| `Dockerfile.frr-bgp` | A separate, tested-option image for dynamic-routing labs. Not part of the shipped substrate. |
+| `Dockerfile.frr-bgp` | A separate image for dynamic-routing labs. **Not built by anything in this tree** — `install.sh`'s Step 7b was removed 2026-09-20 (commit `0583677`), so no code path builds or pushes it, and lab-04 (its only consumer) is quarantined outside `lab-definitions/`. Kept as static source, not as a shipping substrate. |
 | `assets/frr-image.pin` | Content-addressed pin (layer chain + tarball sha256) naming the substrate `install.sh` *would* load **and verify** if the pinned tarball were present. **No tarball ships in this tree**, so the verify branch is never taken — `install.sh` builds `aegis/frr:latest` locally from `Dockerfile.frr` instead (self-consistent, but not layer-matched to the pin). See [`OPERATIONS.md`](OPERATIONS.md) → "Known drift". |
 | `tools/` | Maintenance scripts: `check_self_contained.py` (clone-and-install completeness), `lint_lab_pack.py`, `check_bundle_fresh.sh`. |
 | `.github/workflows/ci.yml` | CI: backend compiles, `bash -n install.sh`, self-containment check, secret scan. |
@@ -150,8 +150,10 @@ registry fails early instead of at first deploy.
   in the shipped labs.
 - **One host, no database.** Session state is in-process; a host reboot loses running labs
   (containers are not restored on boot).
-- **No dynamic routing in the demo set.** `Dockerfile.frr-bgp` exists as a tested option for
-  future labs but is not the shipped substrate.
+- **No dynamic routing in the demo set.** `Dockerfile.frr-bgp` is retained as source for a
+  possible future dynamic-routing lab, but **nothing in this tree builds it** (installer Step 7b
+  removed 2026-09-20) and the install record publishes one substrate digest, not a set. It is
+  not the shipped substrate and not a currently usable option.
 
 ---
 

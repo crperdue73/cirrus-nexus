@@ -1472,14 +1472,23 @@ def _resolve_runtime_digest_once(containers: dict) -> str:
 def _pinned_substrate_digests(pin: dict) -> set[str]:
     """The set of substrate layer-chain digests the installer verified.
 
-    AEGIS ships more than one substrate: the base (static routing) and the
-    BGP variant (bgpd enabled, for lab-04). Each is a legitimate, install-verified
-    substrate with its OWN transport-invariant layer chain, so the install record
-    publishes a SET of accepted digests. A grade on any of them is citable.
-
     Reads `installed_substrate_digests` (space-separated) when present, and
     always folds in the legacy single `installed_layers_sha256` for
     backward-compatibility with records written by older installers.
+
+    MEASURED 2026-10-17 (honesty sweep) -- in THIS release the set-reading half is
+    inert: the multi-substrate era (base + `aegis/frr-bgp` for lab-04) was removed
+    2026-09-20 (commit 0583677 dropped install.sh Step 7b), and the installer now
+    writes ONLY `installed_layers_sha256` (install.sh:393), never
+    `installed_substrate_digests`. So `multi` is always empty and the legacy key is
+    the whole accepted set. This docstring previously claimed the installer
+    "publishes a SET" and that lab-04 shipped a BGP variant -- both false of this
+    tree (lab-04's definition is quarantined; `Dockerfile.frr-bgp` is a tracked
+    leftover no code references).
+
+    The set-reading code is retained deliberately, not dead-by-accident: it is what
+    keeps a record written by an older installer (or a future second substrate)
+    citable without a code change. It is inert for this release, not broken.
     """
     digests: set[str] = set()
     multi = pin.get("installed_substrate_digests", "").split()
