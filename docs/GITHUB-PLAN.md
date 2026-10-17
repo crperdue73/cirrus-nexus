@@ -875,6 +875,39 @@ cosmetic `ci.yml` step (needs workflow-scoped token), the `.nexus/` public polic
 DELETE-OR-KEEP `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` (both tracked, both
 outside the product — his call whether they stay in a public tree).
 
+## Run 2026-10-17 19:00 UTC — the Documentation table described `lab-guides/` and `10-archive/` as bigger than they are
+
+Measured live before acting: `git status` clean, `HEAD...origin/main = 0 0`; CI checks green
+(`py_compile`, `bash -n install.sh`, `check_self_contained.py` rc=0, secret scan clean). `origin` token
+still `delete:packages, repo, write:discussion, write:packages` — **no `workflow` scope** (cosmetic
+`ci.yml` step stays Dad-gated). Screenshots still blocked (needs a live AEGIS host).
+
+Swept the README's Documentation table against the tree and found two rows that make browsing claims a
+reader would find untrue:
+
+1. **`lab-guides/` row.** It said "`lab-guides/lab-03-lock-it-down.md` — guide for `lab-03-lock-it-down`".
+   Measured: `git ls-files lab-guides` → **exactly one file**, and it is that one. The *name* of the
+   directory plus a plural "guides" anywhere in prose suggests a set of guides, so a reader who opens
+   the folder expecting the shipping labs' walkthroughs finds the one guide for a lab that is **not in
+   this release**. Row now says plainly it is the only file there and its lab is quarantined.
+2. **`10-archive/` was linked but only by its summary.** The table linked `10-archive/SUMMARY-for-Dad.md`
+   and nothing pointed at the other three tracked files (`tier-03-bgp-simplified.yml`, `r1-frr.conf`,
+   `r2-frr.conf`). Measured with `git grep`: `tier-03-bgp-simplified.yml` → **1 hit**, only inside that
+   same summary; `r1-frr.conf`/`r2-frr.conf` → 2 hits, both the summary and the YAML that binds them.
+   The YAML is a **BGP** topology in a repo whose README says "No BGP", so leaving it unlabelled in an
+   archive a visitor can browse is a standing contradiction. Added a `10-archive/` row stating what is
+   in it, that the BGP topology is **not shipped and not deployable here** (BGP is disabled in the
+   substrate), and that provenance is in the summary.
+
+No new claim beyond the measured; no behaviour change. Backed up `README.md` and this plan via
+`scripts/safe-backup.sh` (label `lab-guides-desc-2026-10-17`, landed in `.nexus/bundle-archive/`,
+git-ignored at `.gitignore:48`, does not ship). All four CI checks re-run green.
+NOT COMPLETE — Dad's word alone. | proof=none (docs) |
+next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
+cosmetic `ci.yml` step (needs workflow-scoped token), the `.nexus/` public policy call,
+DELETE-OR-KEEP `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` / `10-archive/`,
+and the `v0.1.0` tag re-point/re-cut decision.
+
 ## Run 2026-10-17 13:00 UTC — README had no maturity signal, and never explained the three names
 
 Measured live before acting: `git status` clean, `HEAD...origin/main = 0 0`; CI checks green
