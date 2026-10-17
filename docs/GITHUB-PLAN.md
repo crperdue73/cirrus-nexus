@@ -774,3 +774,46 @@ claim added that the tree does not bear out. Backed up both files via `scripts/s
 (docs) |
 next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
 cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public policy call.
+
+## Run 2026-10-17 01:00 UTC — release-notes draft said the `v0.1.0` tag "points at the current `main` tip" — it does not (37 commits behind)
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; CI checks green
+(`python3 -m py_compile backend/main.py` OK, `bash -n install.sh` OK, `tools/check_self_contained.py`
+rc=0 — "15 required files present, lab assets + graders resolve, no developer paths leak"). `origin`
+token scopes unchanged — still **no `workflow` scope** (cosmetic `ci.yml` step stays Dad-gated) and no
+live host for Screenshots (this box is `192.168.111.40/16`). Both blocked backlog items re-confirmed
+blocked.
+
+One in-scope honesty gap, measured and fixed without behaviour change. The prior (19:00) run swept the
+`.git`-size claim in `docs/RELEASE-NOTES-v0.1.0-draft.md`; reading the same file end to end this run,
+its **second bullet** was also false: *"Tag: `v0.1.0` (annotated), points at the current `main` tip."*
+
+Measured before acting: `git tag -l` → `v0.1.0` **exists**; `git cat-file -t v0.1.0` → `tag` (annotated);
+`git rev-parse v0.1.0` → **`26053ef…`** (tag object) / `35e271d` (commit it points at);
+`git describe` → **`v0.1.0-37-g4a37ea9`**, i.e. `main`'s tip (`4a37ea9`) is **37 commits past** the tagged
+commit. So the tag exists and is on `origin` (`git ls-remote --tags origin` lists it), but it pointed at a
+commit that is *not* the current `main` tip and never was after the following 37 doc-only commits landed.
+The same file's §Tag-decision also read as though **no tag existed at all** ("No tag is created from this
+window … nothing is tagged"), which a reader could only read as "there is no `v0.1.0` tag" — contradicted
+by `git tag -l`.
+
+Separately verified the one claim in that file that *could* have been false but is **true**: no GitHub
+Release exists — `GET /repos/crperdue73/cirrus-nexus/releases` with the repo's own write token returns
+**`[]`**. So the tag ships without a Release; the README's "no GitHub Release exists yet" line is correct
+and was left alone.
+
+Fixed by making the draft true of this tree, not by deleting it: the **Tag** bullet now names the actual
+tagged commit (`35e271d`), states plainly that it is **37 commits behind** `main` (and that those commits
+are doc-only, so the tagged *tree* and `main` differ only in docs), and adds a **GitHub Release: none
+exists** line with the measured evidence. The **Tag decision** section now says the tag *exists* and
+frames the real open call for Dad (does the existing `v0.1.0` stand as the release point where it sits,
+or get re-pointed / re-cut) instead of implying nothing was tagged; the publish checklist and a dated
+correction note were updated to match. Added a matching bullet under `[Unreleased] → Changed` in
+`CHANGELOG.md` so the sweep's own record stays complete. No claim added that the tree does not bear out.
+Backed up both files via `scripts/safe-backup.sh` (label `tag-pointer-truth-2026-10-17`; backups landed
+under `.nexus/bundle-archive/`, git-ignored at `.gitignore:48`, do not ship — `git status` confirmed only
+`docs/RELEASE-NOTES-v0.1.0-draft.md` and `CHANGELOG.md` modified). CI checks re-run green as above;
+committed, pushed `origin/main`, local==origin `0 0`. No behaviour change. NOT COMPLETE — Dad's word
+alone. | proof=none (docs) |
+next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
+cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public policy call.

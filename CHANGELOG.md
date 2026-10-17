@@ -32,6 +32,11 @@ tag should mark a product change, and there is none to mark (see the release-not
   orphan `lab-guides/lab-03-lock-it-down.md` — each named paths or a provenance link false of this tree.
 - **Inert `_GUIDE_MAP` labelled.** All seven of its target filenames are absent from `lab-definitions/`;
   it is a fossil of the pre-release layout, kept (not deleted) and now explicitly marked inert in source.
+- **Release-notes draft tag-pointer statement corrected.** It claimed the `v0.1.0` tag "points at the
+  current `main` tip." Measured live 2026-10-17: the tag exists on `origin` at `35e271d` and `main` is
+  **37 commits ahead** (`git describe` → `v0.1.0-37-g4a37ea9`); no GitHub Release exists (releases API
+  → `[]`). The draft now states the measured tag commit, the drift, and that only the tag (not a
+  Release) exists.
 
 ### Added
 - **CI: shipped lab graders are byte-compiled** in `tools/check_self_contained.py`, so a syntax error in

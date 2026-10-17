@@ -3,10 +3,16 @@
 **Status: DRAFT — not published.** Per standing rule, no GitHub Release is created without Dad's
 explicit OK. This file is the staged text for him to approve, edit, or discard.
 
-- **Tag:** `v0.1.0` (annotated), points at the current `main` tip.
+- **Tag:** `v0.1.0` (annotated) — **cut and pushed 2026-10-09**, pointing at commit `35e271d`. It does
+  **not** point at the current `main` tip: `main` has moved **37 commits** on since (measured 2026-10-17,
+  `git describe` → `v0.1.0-37-g4a37ea9`). Those 37 commits are documentation-only, so the tagged tree and
+  `main` differ in docs, not in what ships.
+- **GitHub Release:** none exists (`GET /repos/crperdue73/cirrus-nexus/releases` → `[]`, measured
+  2026-10-17). The tag exists on `origin`; the Release does not.
 - **Scope:** the two-lab shipping set — `demo-01-two-pcs-and-a-real-switch-unsolved`,
   `demo-02-two-switches-one-router-unsolved`.
-- **Date drafted:** 2026-10-09. **Updated:** 2026-10-16 (weekly roll-up folded in; see §Weekly roll-up).
+- **Date drafted:** 2026-10-09. **Updated:** 2026-10-17 (tag-pointer statement corrected to the measured
+  tag; see below).
 
 ---
 
@@ -81,15 +87,27 @@ Contents, for the record:
   the shipping lab dir.
 
 ### Tag decision (needs Dad)
-No tag is created from this window. If Dad wants a marker anyway (e.g. to snapshot the honesty sweep),
-say the word and I'll cut an **annotated, non-release** tag (suggestion: `honesty-sweep-2026-10-16`,
-not a version number) and push it. Absent that, nothing is tagged and no Release is published.
+**A tag already exists:** `v0.1.0` (annotated), cut and pushed 2026-10-09 at `35e271d`. No *new* tag is
+proposed from this window, and no GitHub Release has been published for the existing one. Two open calls:
+
+- **Does the existing `v0.1.0` tag stand as the release point?** It is **37 commits behind** `main`
+  (documentation-only commits). Either it stands as-is (the tagged *tree* is the release; later doc
+  corrections are not part of v0.1.0), or it is re-pointed / a fresh tag is drawn from current `main`.
+- **Marker tag for the honesty sweep, if wanted:** say the word and I'll cut an **annotated,
+  non-release** tag (suggestion: `honesty-sweep-2026-10-16`, not a version number) and push it.
+
+Absent a ruling, nothing new is tagged and no Release is published.
 
 ---
 
 ## Publish checklist (Dad)
-1. Decide the tag: keep `v0.1.0` as the release point, cut the non-release marker tag above, or name a
-   new version. (No tag is created this week absent your say-so.)
+1. Decide: keep `v0.1.0` as the release point where it stands, re-point it, cut the non-release marker
+   tag above, or name a new version. (No *new* tag is created this week absent your say-so.)
 2. Approve / edit the text above.
-3. Say the word — I publish the GitHub Release with this body.
+3. Say the word — I publish the GitHub Release for `v0.1.0` with this body.
 4. Until then, **no Release is published** and no new tag is pushed.
+
+> **Correction (2026-10-17):** an earlier revision of this draft said the tag "points at the current
+> `main` tip" and implied no tag existed. Measured live: `v0.1.0` exists on `origin` at `35e271d`
+> (`git rev-parse v0.1.0`), `main` is 37 commits ahead (`git describe` → `v0.1.0-37-g4a37ea9`), and no
+> GitHub Release exists (releases API → `[]`). Corrected in place.
