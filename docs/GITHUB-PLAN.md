@@ -817,3 +817,56 @@ committed, pushed `origin/main`, local==origin `0 0`. No behaviour change. NOT C
 alone. | proof=none (docs) |
 next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
 cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public policy call.
+
+## Run 2026-10-17 11:00 UTC — backend told readers "the install record publishes a SET" of substrate digests; it publishes one
+
+Measured live before acting: `git status` clean, `HEAD...origin/main = 0 0`; CI checks green
+(`python3 -m py_compile backend/main.py` OK, `bash -n install.sh` OK, `tools/check_self_contained.py`
+rc=0 — "15 required files present, lab assets + graders resolve, no developer paths leak", CI's secret
+scan regex clean). `origin` token still has **no `workflow` scope** (cosmetic `ci.yml` step stays
+Dad-gated) and this box is `192.168.111.40/16` with no route to the live host (Screenshots stays
+blocked). Both blocked items re-confirmed blocked.
+
+Swept for a fresh honesty gap: orphan check found **0** (every `.md`/`.py`/`.sh` in the tree is named
+somewhere), and every backticked path in `README.md` + `docs/*.md` resolves except placeholder/ellipsis
+names and `installed-image-id.txt`, which is deliberately git-ignored and documented as such. So the
+gap was not in the docs — it was in a **docstring**, which is where a reader trusts what the code says
+about itself.
+
+`backend/main.py::_pinned_substrate_digests` claimed: *"AEGIS ships more than one substrate: the base
+(static routing) and the BGP variant (bgpd enabled, for lab-04) ... so the install record publishes a
+SET of accepted digests."* Measured false, in four places:
+
+- `install.sh` writes the install record at **one** site (line 393) and emits **only**
+  `installed_layers_sha256`; `git grep installed_substrate_digests` matches **no** `.sh` file. So
+  `pin.get("installed_substrate_digests", "").split()` is always `[]` — the set half is inert.
+- The multi-substrate era was removed **2026-09-20** in commit `0583677`, which deleted installer
+  Step 7b ("Step 7b removed 2026-09-20 — it built a substrate the product does not ship").
+- `Dockerfile.frr-bgp` is **tracked but built by nothing** — no `docker build`/`load`/`push` reference
+  anywhere outside `.nexus/` proof files. A tracked Dockerfile with no consumer reads as a shipping
+  substrate.
+- Its only consumer, `lab-04-two-as-peering.yml`, is **quarantined** (`lab-definitions-quarantine-2026-09-30/`),
+  and `lab-definitions/` contains no `.yml` for it — so "for lab-04" describes a lab this release does not ship.
+
+This is the same class as the 10-16 `_GUIDE_MAP` fossil and the 2026-10-08 `DEMO-LAB` fix: a
+pre-release story surviving in unexamined code. It is worse in one way — the docstring was the only
+place a reader could learn what the install record contains, and it was wrong about the installer's
+contract while the code it described still ran.
+
+Fixed (no behaviour change, no code path altered): the docstring now states that only
+`installed_layers_sha256` is written today (with the file:line), that the set-reading branch is
+**inert for this release and retained deliberately** (it keeps an older installer's record citable),
+and it no longer implies lab-04 or a BGP substrate ships. `docs/architecture.md` corrected in two
+places that called `Dockerfile.frr-bgp` a "tested option" / "tested option for future labs": it is now
+labelled as built by nothing since Step 7b's removal, kept as static source. Deliberately **not**
+deleted — removing a tracked Dockerfile is Dad's call, not a docs sweep's, and the file is harmless
+where it sits once labelled honestly.
+
+Backed up all three files via `scripts/safe-backup.sh` (label `substrate-set-truth-2026-10-17`; landed
+under `.nexus/bundle-archive/`, git-ignored at `.gitignore:48`, do not ship — `git status` showed only
+the three files modified). CI checks re-run green as above; committed `bd4a883`, pushed `origin/main`,
+local==origin `0 0`. NOT COMPLETE — Dad's word alone. | proof=none (docstring/docs) |
+next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
+cosmetic `ci.yml` step (needs workflow-scoped token), the `.nexus/` public policy call, and now also
+DELETE-OR-KEEP `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` (both tracked, both
+outside the product — his call whether they stay in a public tree).
