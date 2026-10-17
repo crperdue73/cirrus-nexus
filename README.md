@@ -1,6 +1,7 @@
 # AEGIS — Networking Labs for the Classroom
 
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![status: v0.1.0 — early release](https://img.shields.io/badge/status-v0.1.0%20early%20release-yellow.svg)](#release-status)
 ![Python 3](https://img.shields.io/badge/python-3.x-blue.svg)
 ![Powered by ContainerLab](https://img.shields.io/badge/powered%20by-containerlab-orange.svg)
 ![API: FastAPI](https://img.shields.io/badge/API-FastAPI-009688.svg)
@@ -107,6 +108,10 @@ sudo systemctl status aegis    # check
 
 The UI is at `http://localhost:8000/`; the API at `http://localhost:8000/api`.
 
+> **Service names:** the installer registers **`aegis.service`**. The *product* is named NEXUS —
+> the API's own health card says `"service": "NEXUS"` — so you will see both names in the product,
+> the docs, and this repository (which is `cirrus-nexus`). Everything you type is `aegis`.
+
 ---
 
 ## Grading — three honest outcomes
@@ -157,6 +162,17 @@ tree (`find . -name '*.tar.gz'` returns nothing outside `.git/`). Earlier revisi
 bundle; that path is kept there as *historical* because a `nexus-release.tar.gz` no longer ships.
 
 ---
+
+## Release status
+
+**v0.1.0 — early release.** The tree is a working, installable teaching platform for its two shipped
+labs; it is not a finished product. What that means concretely:
+
+- **No published release.** A `v0.1.0` git tag exists, but it sits 37 commits behind `main` and
+  (measured 2026-10-17: `git describe` → `v0.1.0-40-g82c8f25`) and **no GitHub Release has been published** — see [`docs/RELEASE-NOTES-v0.1.0-draft.md`](docs/RELEASE-NOTES-v0.1.0-draft.md).
+- **No screenshots in this README.** Every capture would have to come from a live install; none has
+  been taken yet, and none is faked here.
+- **Two labs only, static routing only** (see below).
 
 ## Known limitations (read these before you rely on it)
 

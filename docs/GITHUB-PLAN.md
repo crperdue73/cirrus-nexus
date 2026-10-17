@@ -34,6 +34,10 @@ unverifiable claims, no screenshots of a build that isn't here.
 - [x] `CONFERENCE.md` truth pass: it was orphaned and its install step named a bundle that does not
       ship (`tar xzf aegis-portable.tar.gz`) plus a stale API response shape; corrected to the real
       clone+install flow and linked from the README — 2026-10-14
+- [x] README hardening pass 6 (2026-10-17): **release-status badge + section** (v0.1.0, early release,
+      no GitHub Release published, no screenshots) and a **service-name note** (`aegis.service` vs the
+      product name NEXUS). Both gaps were real: the front page had no maturity signal at all, and the
+      repo/README/product use three different names with nothing telling a reader they are one thing.
 - [ ] Screenshots: the student UI + a terminal mid-lab (real captures only) — **BLOCKED, premise
       corrected 2026-10-09.** Original note blamed "no running AEGIS/docker on this box". Measured
       live today (2026-10-09 11:00 UTC on host `dept-dragon-tech`): the true reason is that the
@@ -870,3 +874,36 @@ next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs l
 cosmetic `ci.yml` step (needs workflow-scoped token), the `.nexus/` public policy call, and now also
 DELETE-OR-KEEP `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` (both tracked, both
 outside the product — his call whether they stay in a public tree).
+
+## Run 2026-10-17 13:00 UTC — README had no maturity signal, and never explained the three names
+
+Measured live before acting: `git status` clean, `HEAD...origin/main = 0 0`; CI checks green
+(`py_compile`, `bash -n install.sh`, `check_self_contained.py` rc=0, secret scan clean). `origin` token
+still `delete:packages, repo, write:discussion, write:packages` — **no `workflow` scope** (cosmetic
+`ci.yml` step stays Dad-gated). Backlog's last unchecked *true* item is Screenshots, still blocked.
+
+Scanned the hardening list against the README (badges, features, architecture diagram, quickstart,
+install, screenshots, lab table, grading model, license) and found the README **satisfied nine of ten**.
+Two honest gaps were left, both in-scope and unblocked:
+
+1. **No maturity signal.** The badge row said license / python / containerlab / FastAPI / CI — all true,
+   but nothing told a visitor that this is a **v0.1.0 early release**. Measured: `git describe --tags`
+   → **`v0.1.0-40-g82c8f25`**; the GitHub API returns **`[]`** for `/releases` (no Release published).
+   Added a **`status: v0.1.0 — early release`** badge anchored to a new **Release status** section that
+   states those two facts with their evidence, plus "no screenshots in this README, none faked".
+2. **Three names, no explanation.** The repo is `cirrus-nexus`, the README/product is **AEGIS**, and
+   `backend/main.py`'s health card returns `"service": "NEXUS"`; the installer writes
+   **`aegis.service`** (`install.sh:436`). Nothing in the README said these are one thing, so a reader
+   told to `curl /api` and see "NEXUS" would reasonably wonder what they installed. Added a short
+   **Service names** note under Quick start. No behaviour change and no new claim beyond the measured.
+
+Also corrected while measuring: the previous run's plan entry recorded the tag as **37** commits behind
+`main`; it is now **40** (`82c8f25` vs `35e271d`). The README states the live figure, not the remembered one.
+
+Backed up `README.md` via `scripts/safe-backup.sh` (label `readme-release-status-2026-10-17`; landed in
+`.nexus/bundle-archive/`, git-ignored at `.gitignore:48`, does not ship). All four CI checks re-run green.
+NOT COMPLETE — Dad's word alone. | proof=none (docs) |
+next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
+cosmetic `ci.yml` step (needs workflow-scoped token), the `.nexus/` public policy call,
+DELETE-OR-KEEP `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/`, and the `v0.1.0` tag
+re-point/re-cut decision.
