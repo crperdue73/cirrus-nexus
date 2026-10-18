@@ -958,3 +958,45 @@ re-point/re-cut decision.
       citation holds for a reader of the repo, not just of this checkout. Backed up `README.md`
       (label `readme-api-pass-7-2026-10-18`, out of the served tree). No code change; all four CI
       checks re-run green.
+
+## Run 2026-10-18 11:00 UTC — the release notes said "docs only"; measured, the gap also ships a CI guard
+
+Measured live before acting: `git status` clean, `HEAD...origin/main = 0 0`, all four CI checks green
+(`py_compile`, `bash -n install.sh`, `check_self_contained.py` rc=0, secret scan clean). `v0.1.0` is the
+only tag. Screenshots stays blocked (no live host); `ci.yml` step stays Dad-gated (no `workflow` scope).
+
+Last run (11:00 2026-10-18, README API pass 7) committed `dac647e` and pushed. That push is the premise
+of this run: the README's Release-status section now carries a **live-sounding figure** — "the tag sits
+43 commits behind `main`" — and I had been recomputing that number by hand each run (37 → 40 → 43) while
+three other tracked docs still published **37**, one of them in a phrase that was simply wrong.
+
+FOUND (measured, `git diff --numstat v0.1.0..HEAD`): `docs/RELEASE-NOTES-v0.1.0-draft.md` claimed the
+commits since the tag "are documentation-only, so the tagged tree and `main` differ in docs, not in what
+ships." True by category, **false by name**: `backend/main.py` (+31/−12), `lab-definitions/grader_demo_02.py`
+(+3/−3), `tools/check_self_contained.py` (**+11, a new CI guard**), `.gitignore` (+7), and four lab
+definitions moved into `lab-definitions-quarantine-2026-09-30/`. Reading the diffs line by line: the
+`main.py` and grader changes are **comments and docstrings only** (no behaviour), but `check_self_contained.py`
+is a **shipped guard `main` has and the tag does not**, and four YAMLs are **moved**. So the honest
+statement is "no runtime behaviour differs; `main` adds one CI guard and relocates four definitions" —
+which is what the draft now says. Also found the drift itself: the same 37 is published in `CHANGELOG.md:37`,
+`README.md:193` (with a *stale* `v0.1.0-40-g82c8f25` in the same sentence) and twice in the draft.
+
+FIXED (docs only, no code, no behaviour change): the draft's tag bullet now states 43 with its measurement
+date, names every non-`.md` path in the range with its line counts, and separates "comments only" from
+"a real guard" rather than lumping both under "documentation"; added how I checked it (the tag's
+`backend/main.py` compiles, and the four warning paths it cites are present in `v0.1.0` at
+655/2307/2328/2337 — so the tag's behaviour was not retroactively falsified by later docs); corrected the
+"37 commits behind main (documentation-only commits)" phrasing in the open-calls list; corrected CHANGELOG
+and README to the live figure with its date. Left the one historical mention of 37 that is explicitly
+dated ("Measured live 2026-10-17 … was 37, 43 as of 2026-10-18") — a dated measurement is a record, not drift.
+
+Did NOT re-point, re-cut, or delete the tag; did NOT publish a Release. Both are Dad's call and stay
+on the blocked list. Backups via `.nexus/bundle-archive/` (`main.py`, draft; label `tag-scope-truth-2026-10-18`),
+git-ignored at `.gitignore:48`, does not ship. All four CI checks re-run green after the edit.
+
+NOT COMPLETE — Dad's word alone. | proof=none (docs) |
+next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
+cosmetic `ci.yml` step (needs workflow-scoped token), the `.nexus/` public policy call,
+DELETE-OR-KEEP `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` / `10-archive/`,
+the `v0.1.0` tag re-point/re-cut decision, and now whether `main`'s `check_self_contained.py` guard
+(+11 lines, ships but is not in the tag) should be pulled into the release at all.

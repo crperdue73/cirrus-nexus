@@ -4,9 +4,22 @@
 explicit OK. This file is the staged text for him to approve, edit, or discard.
 
 - **Tag:** `v0.1.0` (annotated) — **cut and pushed 2026-10-09**, pointing at commit `35e271d`. It does
-  **not** point at the current `main` tip: `main` has moved **37 commits** on since (measured 2026-10-17,
-  `git describe` → `v0.1.0-37-g4a37ea9`). Those 37 commits are documentation-only, so the tagged tree and
-  `main` differ in docs, not in what ships.
+  **not** point at the current `main` tip: `main` has moved **43 commits** on since (measured 2026-10-18,
+  `git describe` → `v0.1.0-43-gdac647e`; `git rev-list --count v0.1.0..HEAD` → 43).
+  **CORRECTION (2026-10-18):** earlier revisions of this file said those commits were documentation-only
+  "so the tagged tree and `main` differ in docs, not in what ships." Measured false by name, not by
+  category count — `git diff --numstat v0.1.0..HEAD` shows every non-`.md` path changed in that range:
+  `backend/main.py` (+31/−12, **comments and docstrings only** — verified diff read line by line),
+  `lab-definitions/grader_demo_02.py` (+3/−3, **docstring only**), `tools/check_self_contained.py`
+  (**+11, a new CI guard**), `.gitignore` (+7), and four lab-definition moves into
+  `lab-definitions-quarantine-2026-09-30/` (content unchanged, 0/0). So the accurate statement is:
+  **`main` adds no runtime behaviour the tag lacks, but it does add a shipped CI guard and moves four
+  lab definitions.** The tag remains a true snapshot of the product; it is not byte-identical to what
+  CI validates today.
+- **How this was checked:** `git show v0.1.0:backend/main.py` compiles (`py_compile`, doraise), so the
+  tagged tree is runnable, and the warning paths cited in the "Fixed" section below (frontend mount,
+  missing install record, guide-less lab) are all present in the tag at lines 655/2307/2328/2337 — i.e.
+  the tag's behaviour was not retroactively falsified by later docs.
 - **GitHub Release:** none exists (`GET /repos/crperdue73/cirrus-nexus/releases` → `[]`, measured
   2026-10-17). The tag exists on `origin`; the Release does not.
 - **Scope:** the two-lab shipping set — `demo-01-two-pcs-and-a-real-switch-unsolved`,
@@ -90,8 +103,9 @@ Contents, for the record:
 **A tag already exists:** `v0.1.0` (annotated), cut and pushed 2026-10-09 at `35e271d`. No *new* tag is
 proposed from this window, and no GitHub Release has been published for the existing one. Two open calls:
 
-- **Does the existing `v0.1.0` tag stand as the release point?** It is **37 commits behind** `main`
-  (documentation-only commits). Either it stands as-is (the tagged *tree* is the release; later doc
+- **Does the existing `v0.1.0` tag stand as the release point?** It is **43 commits behind** `main`
+  (all non-behavioural, but *not* all documentation — see the tag correction at the top of this file:
+  `main` adds a shipped CI guard and moves four lab definitions). Either it stands as-is (the tagged *tree* is the release; later doc
   corrections are not part of v0.1.0), or it is re-pointed / a fresh tag is drawn from current `main`.
 - **Marker tag for the honesty sweep, if wanted:** say the word and I'll cut an **annotated,
   non-release** tag (suggestion: `honesty-sweep-2026-10-16`, not a version number) and push it.
@@ -109,5 +123,6 @@ Absent a ruling, nothing new is tagged and no Release is published.
 
 > **Correction (2026-10-17):** an earlier revision of this draft said the tag "points at the current
 > `main` tip" and implied no tag existed. Measured live: `v0.1.0` exists on `origin` at `35e271d`
-> (`git rev-parse v0.1.0`), `main` is 37 commits ahead (`git describe` → `v0.1.0-37-g4a37ea9`), and no
-> GitHub Release exists (releases API → `[]`). Corrected in place.
+> (`git rev-parse v0.1.0`), `main` is 43 commits ahead (`git describe` → `v0.1.0-43-gdac647e`, measured
+> 2026-10-18; it was 37 at the time of that correction — the figure is drift, so it is always stated
+> with its measurement date), and no GitHub Release exists (releases API → `[]`). Corrected in place.
