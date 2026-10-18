@@ -129,21 +129,43 @@ The last case matters: a student should never be told "wrong" when the truth is 
 
 ## API
 
-The table below is the complete route set exposed by `backend/main.py`.
+The table below is the complete route set exposed by `backend/main.py` (11 routes). Parameters are
+**query parameters** — the `start` and `submit` handlers read them from the query string, which is
+exactly how the shipped UI calls them.
 
-| Method | Route | Purpose |
-|--------|-------|---------|
-| `GET` | `/api` | service health/version card |
-| `GET` | `/api/labs` | the served lab catalog |
-| `GET` | `/api/labs/{id}` | one lab's definition |
-| `GET` | `/api/labs/{id}/guide` | the lab's Markdown student guide |
-| `GET` | `/api/labs/{id}/topology` | the lab's rendered topology diagram |
-| `POST` | `/api/labs/reload` | re-read lab definitions and clear the grader cache |
-| `POST` | `/api/sessions/start` | deploy a lab and open a session |
-| `GET` | `/api/sessions` | running sessions |
-| `GET` | `/api/sessions/{id}` | one session's status (used by *Reconnect*) |
-| `POST` | `/api/sessions/{id}/submit` | grade a node |
-| `POST` | `/api/sessions/{id}/stop` | tear down a session |
+| Method | Route | Parameters | Purpose |
+|--------|-------|------------|---------|
+| `GET` | `/api` | — | service card: `{"service": "NEXUS", "version", "labs_count"}` |
+| `GET` | `/api/labs` | — | the served lab catalog |
+| `GET` | `/api/labs/{id}` | — | one lab's definition |
+| `GET` | `/api/labs/{id}/guide` | — | the lab's Markdown student guide (served raw) |
+| `GET` | `/api/labs/{id}/topology` | — | the lab's rendered topology diagram |
+| `POST` | `/api/labs/reload` | — | re-read lab definitions and clear the grader cache |
+| `POST` | `/api/sessions/start` | `lab_id` (required), `student_name` (default `Student`) | deploy a lab and open a session |
+| `GET` | `/api/sessions` | — | running sessions, newest first |
+| `GET` | `/api/sessions/{id}` | — | one session's status (used by *Reconnect*) |
+| `POST` | `/api/sessions/{id}/submit` | `node` (required) | grade one node |
+| `POST` | `/api/sessions/{id}/stop` | — | tear down a session |
+
+Example — start, grade, stop (the same three calls the UI makes):
+
+```bash
+# 1. deploy a lab; the response carries session_id and a per-node ttyd URL
+curl -X POST 'http://localhost:8000/api/sessions/start?lab_id=demo-01-two-pcs-and-a-real-switch-unsolved&student_name=Ada'
+
+# 2. grade one node
+curl -X POST 'http://localhost:8000/api/sessions/<session_id>/submit?node=sw1'
+
+# 3. tear it down
+curl -X POST 'http://localhost:8000/api/sessions/<session_id>/stop'
+```
+
+**Responses.** A grade returns `{session_id, node, grade}` where `grade` carries `passed`, `score`,
+`feedback`, `competencies`, the in-band `status` (`graded` / `error` / `refused`) and the
+`runtime_digest` it was taken against. A **refusal** is HTTP `409` with the reason in `detail` — the
+same three-outcome rule as the grading model above. An unknown lab, session or node is `404` (a node
+that the *lab* does not have is a `409` refusal with the node list, since that is a question, not a
+missing record); a failed deploy is `500`.
 
 ---
 

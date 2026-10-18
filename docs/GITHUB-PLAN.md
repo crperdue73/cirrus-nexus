@@ -940,3 +940,21 @@ next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs l
 cosmetic `ci.yml` step (needs workflow-scoped token), the `.nexus/` public policy call,
 DELETE-OR-KEEP `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/`, and the `v0.1.0` tag
 re-point/re-cut decision.
+- [x] README hardening pass 7 (**API section truth pass**) — 2026-10-18. The README's API section was
+      the one part of the front page that was *load-bearing* rather than descriptive (a reader can call
+      it straight away), and it was wrong in three measured ways:
+      (1) it published **no parameters at all**, while both `POST /api/sessions/start` and
+      `POST /api/sessions/{id}/submit` take their inputs as **query parameters**
+      (`lab_id` + optional `student_name`; `node`) — `frontend/index.html` builds exactly those URLs,
+      so a reader following the table would have sent body JSON and been defaulted to `Student` /
+      hit the missing-`node` path. (2) It called itself "the complete route set" while listing 10 of
+      the **11** routes in `backend/main.py` (counted by AST walk over the `@app.*` decorators), and
+      (3) it documented no response shapes or error codes, so the README's own "refused, never a
+      silent pass" promise had nothing on the wire to point at. Now: an 11-row table with a Parameters
+      column, a 3-call `curl` start/grade/stop example, and the response contract (grade payload with
+      in-band `status` + `runtime_digest`; refusal = **409**; unknown record = **404**; unknown *node*
+      = 409 with the node list, per `grade_config`; failed deploy = **500**). Verified against the
+      pushed GitHub copy too — `main`'s `backend/main.py` is byte-identical to this tree, so the
+      citation holds for a reader of the repo, not just of this checkout. Backed up `README.md`
+      (label `readme-api-pass-7-2026-10-18`, out of the served tree). No code change; all four CI
+      checks re-run green.
