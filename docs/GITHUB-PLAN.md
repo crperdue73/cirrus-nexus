@@ -1000,3 +1000,50 @@ cosmetic `ci.yml` step (needs workflow-scoped token), the `.nexus/` public polic
 DELETE-OR-KEEP `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` / `10-archive/`,
 the `v0.1.0` tag re-point/re-cut decision, and now whether `main`'s `check_self_contained.py` guard
 (+11 lines, ships but is not in the tag) should be pulled into the release at all.
+
+## Run 2026-10-18 13:00 UTC — CONTRIBUTING told you the rules but never the process
+
+Measured live before acting: `git status` clean, `HEAD...origin/main = 0 0`, all four CI checks green
+(`py_compile`, `bash -n install.sh`, `check_self_contained.py` rc=0 → "15 required files present",
+secret scan clean — re-run after the edit, not remembered). `v0.1.0` remains the only tag. Screenshots
+stays blocked (no live host); the cosmetic `ci.yml` step stays Dad-gated (token has no `workflow` scope).
+
+Scanned the hardening list against the tree. README items are all satisfied; the one front-door doc that
+had never had a truth pass was **`CONTRIBUTING.md`** — 62 lines, last touched 2026-10-07, before the
+honesty sweep. Two measured defects, both in-scope and unblocked:
+
+1. **It gave no path to contributing.** "Fork and PR" appeared nowhere. No fork step, no branch convention,
+   no statement that `legacy-orphan-tree` on `origin` is not for new work, no issue-vs-PR guidance, no
+   security route. A visitor following it would have to guess. Added *How a change gets in*, *Reporting
+   instead of fixing*, and *Security*.
+2. **Its lab-layout line was wrong.** It said a lab is `lab-definitions/<name>.yml` +
+   `lab-definitions/grader_<name>.py`. Measured with `git ls-files lab-definitions`: **no `.yml` sits
+   flat** — both shipped topologies live one level down (`lab-definitions/srl-demo-unsolved/*.yml`,
+   `lab-definitions/srl-demo2-unsolved/*.yml`, with `assets/` and `.md` beside them), while both graders
+   **do** sit flat. The README and `docs/ADDING-A-LAB.md` already describe the nested layout, so
+   CONTRIBUTING was the only surface telling contributors to put files where the loader's own doc says
+   they don't go. Now describes the folder layout, quotes the grader reference as it actually appears
+   (`grader: grader_demo_01_srl`), and adds the loader's skip rule (`.`-prefixed, `.bak`/`.stale`/`.orig`)
+   from `ADDING-A-LAB.md`.
+
+Also documented `lint_lab_pack.py`'s exit contract (green = "no pre-solved lab detected", **not** "lab is
+correct"; rc=1 when anything is flagged — verified at `tools/lint_lab_pack.py:327`), because the doc told
+people to run it without saying what a pass means.
+
+Two claims in the new Security section were verified rather than assumed: there is **no** `SECURITY.md`
+or `.github/SECURITY.md` in the tree (`ls`, both ENOENT) — so the text says so and points at a private
+contact instead of inventing a disclosure policy; and the API has **no** authentication anywhere in
+`backend/main.py` (grep for `HTTPBearer|OAuth2|Depends(|Authorization|api_key`: no hits), so "the API has
+no auth" is stated as a known design boundary rather than left for a security researcher to discover and
+report as a bug.
+
+Docs only. No code, no templates, no behaviour change. Backed up via `scripts/safe-backup.sh`
+(label `contributing-workflow-2026-10-18`, landed in `.nexus/bundle-archive/`, git-ignored, does not ship).
+
+NOT COMPLETE — Dad's word alone. | proof=none (docs) |
+next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
+cosmetic `ci.yml` step (needs workflow-scoped token), the `.nexus/` public policy call,
+DELETE-OR-KEEP `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` / `10-archive/`,
+the `v0.1.0` tag re-point/re-cut decision, whether `main`'s `check_self_contained.py` guard should be
+pulled into the release, and whether to add a real `SECURITY.md` (now referenced by CONTRIBUTING as
+absent, not linked as present).
