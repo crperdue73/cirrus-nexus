@@ -160,6 +160,26 @@ curl -X POST 'http://localhost:8000/api/sessions/<session_id>/submit?node=sw1'
 curl -X POST 'http://localhost:8000/api/sessions/<session_id>/stop'
 ```
 
+### Interactive API docs
+
+FastAPI generates these three pages from the routes above — they are served by the app itself, not
+written by hand, so they cannot drift from the code:
+
+| page | what it is |
+|------|------------|
+| `/docs` | Swagger UI — every route, its parameters, and a *Try it out* button |
+| `/redoc` | the same schema as reference documentation |
+| `/openapi.json` | the raw OpenAPI 3 document, for codegen or an external client |
+
+```
+http://localhost:8000/docs
+```
+
+They are **only readable from where the server is reachable.** Unlike the student UI, the API has no
+login and no per-session token (see *Binds to every interface* below), so on a shared network `/docs`
+is open to anyone who can hit port 8000 — bind the server to localhost (or put it behind your own
+auth) if that is not what you want.
+
 **Responses.** A grade returns `{session_id, node, grade}` where `grade` carries `passed`, `score`,
 `feedback`, `competencies`, the in-band `status` (`graded` / `error` / `refused`) and the
 `runtime_digest` it was taken against. A **refusal** is HTTP `409` with the reason in `detail` — the
@@ -200,6 +220,11 @@ labs; it is not a finished product. What that means concretely:
 
 - **Static routing only** — see "what this is not," above.
 - **A host reboot loses running labs.** Student containers are not restored on boot.
+- **Binds to every interface, with no authentication.** The server listens on `0.0.0.0:8000`
+  (`AEGIS_HOST` / `AEGIS_PORT` override that, and `install.sh` prints the LAN URL), and every route —
+  including `start`, `stop`, and `/docs` — is unauthenticated. That is deliberate for a classroom's
+  own network and is **not** safe exposed to the internet. The in-browser terminals (ttyd, ports
+  `8765`–`9765`) are similarly open, which is why those ports ship bound to all interfaces too.
 - **The SR Linux image is a ~2.35 GB pull**; each switch node runs a full instance of it. Keep to
   **one session per student per lab**; use *Reconnect* for a returning student rather than Start.
 - **A known image-pin drift:** `Dockerfile.frr` hashes differently from `assets/frr-image.pin`. No
