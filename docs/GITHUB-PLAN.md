@@ -1047,3 +1047,55 @@ DELETE-OR-KEEP `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` /
 the `v0.1.0` tag re-point/re-cut decision, whether `main`'s `check_self_contained.py` guard should be
 pulled into the release, and whether to add a real `SECURITY.md` (now referenced by CONTRIBUTING as
 absent, not linked as present).
+
+## Run 2026-10-18 19:00 UTC — the app serves interactive API docs and the README never said so
+
+Measured live before acting: `git status` clean, `HEAD...origin/main = 0 0`, all four CI checks green
+(`py_compile`, `bash -n install.sh`, `check_self_contained.py` rc=0 → "15 required files present",
+secret scan clean — re-run after the edit). Token scopes unchanged
+(`delete:packages, repo, write:discussion, write:packages`) → still **no `workflow` scope**, so the
+cosmetic `ci.yml` step stays Dad-gated. Screenshots stay blocked (no live AEGIS host from here).
+
+**A false start, recorded honestly.** This run first tried a `.github/PULL_REQUEST_TEMPLATE.md` →
+`pull_request_template.md` rename, on the assumption the name was wrong. It is not: GitHub's discovery
+name *is* uppercase, and both issue templates already carried correct front matter. I committed it with
+a message that admitted confusion, then **reset `--hard origin/main`** before any push — nothing left
+this box, the tree is untouched by it. Writing it down because a run that nearly shipped a no-op
+rename should say so.
+
+Then a real one. Imported the app object in a throwaway venv with the tree's own deps
+(`fastapi`, `uvicorn`, `pyyaml`, plus `httpx2` for the test client — **none of these are installed for
+the system python here**, which is why every earlier run measured this file by grep only) and asked it
+directly:
+
+- `main.app.title` / `.version` → `NEXUS` / `0.3.0`
+- `len(main.app.openapi()["paths"])` → **11**, matching the README's route table exactly, so the table
+  was never wrong
+- `GET /docs` → **200**, `GET /redoc` → **200**, `GET /openapi.json` → **200**
+
+So the front page listed every route but never told a reader the interactive docs exist — a real gap
+for anyone integrating. Added an `Interactive API docs` subsection (Swagger UI at `/docs`, ReDoc at
+`/redoc`, raw schema at `/openapi.json`) and noted the generated schema confirms the README's
+query-parameter claim: `POST /api/sessions/start` declares `lab_id` (query, required) and
+`student_name` (query, optional), exactly as documented.
+
+The honesty problem the new section exposed, and fixed in the same edit: **`/docs` is not private.**
+`backend/main.py:2365` binds `0.0.0.0:8000`; `grep` for `HTTPBearer|OAuth2|api_key|Authorization` finds
+no auth anywhere; `backend/main.py:2174` binds ttyd to `0.0.0.0` too, with its own comment saying
+access control belongs at the firewall. Publishing "go to `/docs`" without that caveat would have been
+a pointer to an unauthenticated map of an unauthenticated control plane. Added a **Binds to every
+interface, with no authentication** limitation, worded as a classroom-LAN design choice that is *not*
+safe on the internet — the `AEGIS_HOST`/`AEGIS_PORT` overrides and the `8765–9765` ttyd range are
+named.
+
+Docs only. No code, no behaviour change. Backed up `README.md` via `scripts/safe-backup.sh` (label
+`readme-openapi-docs-2026-10-18`, landed in `.nexus/bundle-archive/`, git-ignored, does not ship).
+All four CI checks re-run green after the edit.
+
+NOT COMPLETE — Dad's word alone. | proof=none (docs) |
+next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
+cosmetic `ci.yml` step (needs workflow-scoped token), the `.nexus/` public policy call,
+DELETE-OR-KEEP `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` / `10-archive/`,
+the `v0.1.0` tag re-point/re-cut decision, whether `main`'s `check_self_contained.py` guard should be
+pulled into the release, and whether to add a real `SECURITY.md` (CONTRIBUTING now says there isn't
+one; the exposure note above is a strong argument for it).
