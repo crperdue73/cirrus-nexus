@@ -968,6 +968,49 @@ re-point/re-cut decision.
       (label `readme-api-pass-7-2026-10-18`, out of the served tree). No code change; all four CI
       checks re-run green.
 
+## Run 2026-10-19 13:00 UTC — the "N commits behind" figure was published as fact and rotted every run
+
+Measured live before acting: `git status` clean, `HEAD...origin/main = 0 0`, all four CI checks green
+(`py_compile`, `bash -n install.sh`, `check_self_contained.py` rc=0, secret scan clean). Screenshots
+stays blocked (no session on the live AEGIS host); the `ci.yml` step stays Dad-gated (no `workflow`
+scope). Swept for orphaned docs first — **none**: every tracked `.md` outside `.nexus/`, `10-archive/`
+and the quarantine dir is referenced by name from at least one other tracked file.
+
+FOUND (root cause, not just a stale number): the README's Release-status bullet published
+"it sits **43 commits behind** `main` (measured 2026-10-18: `git describe` → `v0.1.0-43-gdac647e`)".
+Measured live this run: `git rev-list --count v0.1.0..HEAD` → **48**, `git describe` →
+`v0.1.0-48-g9f72f36`. The plan itself shows the pattern — the figure was 37, then 40, then 43, and I
+have been recomputing it by hand every polish run and hand-correcting three other documents each
+time. That is the defect: a monotonically-rotting derived number that **each run's own commit
+deprecated**, published on the front page as if it were a property of the release. Same figure was
+live in the draft's tag bullet, in its open-calls list, and in its 2026-10-17 correction note.
+
+FIXED (docs only, no code, no behaviour change): replaced the count with the durable statement it was
+standing in for — the tag points at an **older commit than the tip of `main`**, every commit since is
+documentation or CI with no change to how a lab runs, and **no GitHub Release is published**. The
+README now says explicitly that the position is *not* given as a count because a count goes stale with
+every push, and points the reader at `git describe --tags` to measure it themselves. The draft does
+the same in all three places, naming the drift it caused (37 → 40 → 43 → 48) as the reason.
+
+Verified the replacement claim rather than citing the prior run: `git diff --numstat v0.1.0..HEAD`
+non-`.md` paths are `.gitignore` (+7), `backend/main.py` (+31/−12), `grader_demo_02.py` (+3/−3),
+`tools/check_self_contained.py` (+11), `lab-definitions-quarantine-2026-09-30/MANIFEST.txt` (+17) and
+four renamed YAMLs (0/0). A scripted pass over every added/removed line in the two Python files found
+**29 non-comment changed lines, all of them prose inside docstrings/comments** — no executable line
+differs. So "no change to how a lab runs" is measured, not inherited from the 2026-10-18 note. No
+counts remain in either reader-facing file except the historical, explicitly-dated ones.
+
+Did NOT add a guard that would re-publish the number, and did NOT touch the tag or publish a Release —
+both stay Dad's call. Backups at `.nexus-bak/*.2026-10-19` (outside the served tree; the in-repo
+`scripts/safe-backup.sh` path cited by earlier run notes is not this script). All four CI checks re-run
+green after the edit.
+
+NOT COMPLETE — Dad's word alone. | proof=none (docs) |
+next=next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
+cosmetic `ci.yml` step (needs workflow-scoped token), the `.nexus/` public policy call,
+DELETE-OR-KEEP `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` / `10-archive/`,
+and the `v0.1.0` tag re-point/re-cut decision.
+
 ## Run 2026-10-18 11:00 UTC — the release notes said "docs only"; measured, the gap also ships a CI guard
 
 Measured live before acting: `git status` clean, `HEAD...origin/main = 0 0`, all four CI checks green

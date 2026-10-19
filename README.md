@@ -210,8 +210,13 @@ bundle; that path is kept there as *historical* because a `nexus-release.tar.gz`
 **v0.1.0 — early release.** The tree is a working, installable teaching platform for its two shipped
 labs; it is not a finished product. What that means concretely:
 
-- **No published release.** A `v0.1.0` git tag exists, but it sits 43 commits behind `main`
-  (measured 2026-10-18: `git describe` → `v0.1.0-43-gdac647e`) and **no GitHub Release has been published** — see [`docs/RELEASE-NOTES-v0.1.0-draft.md`](docs/RELEASE-NOTES-v0.1.0-draft.md).
+- **No published release.** A `v0.1.0` git tag exists, but it points at an older commit than the tip
+  of `main` — every commit since the tag is documentation or CI, with no change to how a lab runs
+  (see the sweep in [`CHANGELOG.md`](CHANGELOG.md)) — and **no GitHub Release has been published**
+  for it. Tag position is deliberately not given as a commit count here: a count goes stale with every
+  push. Measure it yourself with `git describe --tags` — see
+  [`docs/RELEASE-NOTES-v0.1.0-draft.md`](docs/RELEASE-NOTES-v0.1.0-draft.md) for the tag's full
+  history.
 - **No screenshots in this README.** Every capture would have to come from a live install; none has
   been taken yet, and none is faked here.
 - **Two labs only, static routing only** (see below).
