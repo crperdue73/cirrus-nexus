@@ -250,6 +250,7 @@ labs; it is not a finished product. What that means concretely:
 | [`CONFERENCE.md`](CONFERENCE.md) | booth-operator cheat sheet (install, ports, troubleshooting, reset) — **draft / not maintained**; install & lab-catalog sections corrected to this tree |
 | [`HANDOFF-2026-09-22.md`](HANDOFF-2026-09-22.md) | dated handoff note from a 2026-09-22 demo drive — **historical / not maintained**; counts and lab names in it describe a wider tree than this release (see the banner in the file) |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | the ground rules, and the checks to run before pushing (the same four CI runs) |
+| [`SECURITY.md`](SECURITY.md) | how to report a vulnerability privately, the threat model (unauthenticated by design), what's in scope, and the automated checks that exist (four, and no more) |
 | [`CHANGELOG.md`](CHANGELOG.md) | what changed, newest first |
 | [`10-archive/SUMMARY-for-Dad.md`](10-archive/SUMMARY-for-Dad.md) | dated 2026-06-09 topology audit — **historical**, describes a pre-release layout (see `docs/OPERATIONS.md` → Archive) |
 | [`lab-guides/lab-03-lock-it-down.md`](lab-guides/lab-03-lock-it-down.md) | a single student guide for `lab-03-lock-it-down` — **historical / not a shipping lab** (the only file in `lab-guides/`; its lab definition is quarantined); cited by `docs/OPERATIONS.md` as the in-tree source for the capstone's point numbers |

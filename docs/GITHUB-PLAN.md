@@ -38,6 +38,15 @@ unverifiable claims, no screenshots of a build that isn't here.
       no GitHub Release published, no screenshots) and a **service-name note** (`aegis.service` vs the
       product name NEXUS). Both gaps were real: the front page had no maturity signal at all, and the
       repo/README/product use three different names with nothing telling a reader they are one thing.
+- [x] **`SECURITY.md`** (2026-10-19). `CONTRIBUTING.md` admitted in as many words that none existed and
+      that there was no published security contact, while the README was already telling readers the API
+      is unauthenticated on `0.0.0.0:8000` with unauthenticated terminals on `8765`–`9765` — a policy that
+      stays silent about the exposures the docs already admit is worse than none. New file carries the
+      private reporting route, the threat model, what is actually in scope (wrong-`pass` graders, a verdict
+      returned when no node was examined, container escapes, committed secrets, installer integrity), what
+      is *not* claimed (no dep scanning / SAST / fuzzing / bounty, no backports, no disclosure timeline),
+      and the correct fix for an untrusted network (authenticating proxy or firewall on the lab subnet).
+      CONTRIBUTING now links it instead of saying it is absent; CHANGELOG records it.
 - [ ] Screenshots: the student UI + a terminal mid-lab (real captures only) — **BLOCKED, premise
       corrected 2026-10-09.** Original note blamed "no running AEGIS/docker on this box". Measured
       live today (2026-10-09 11:00 UTC on host `dept-dragon-tech`): the true reason is that the
@@ -1099,3 +1108,49 @@ DELETE-OR-KEEP `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` /
 the `v0.1.0` tag re-point/re-cut decision, whether `main`'s `check_self_contained.py` guard should be
 pulled into the release, and whether to add a real `SECURITY.md` (CONTRIBUTING now says there isn't
 one; the exposure note above is a strong argument for it).
+
+## Run 2026-10-19 01:00 UTC — `CONTRIBUTING.md` said there was no `SECURITY.md`; there now is
+
+Measured live before acting: `git status` clean, `HEAD...origin/main = 0 0`, all four CI checks green
+(`py_compile`, `bash -n install.sh`, `check_self_contained.py` rc=0 → "15 required files present",
+secret scan clean — re-run after the edit; the only two grep hits are `ci.yml`'s own pattern and its
+backup under the git-ignored `.nexus/bundle-archive/`). Token scopes unchanged → still **no `workflow`
+scope**, so the cosmetic `ci.yml` step stays Dad-gated; Screenshots stay blocked (no live AEGIS host
+from this box).
+
+Picked the one blocked-adjacent item that was *not* actually Dad-gated: the repo had no security
+policy, and `CONTRIBUTING.md`'s Security section said so in as many words — *"There is no `SECURITY.md`
+in this tree yet and no published security contact"* — then told the reader to DM a GitHub profile. A
+private-reporting route that is admittedly ad hoc is a weak signal on a repo whose README (as of
+2026-10-18) openly documents an unauthenticated API on `0.0.0.0:8000` and unauthenticated `ttyd`
+terminals on `8765`–`9765`. Every claim in the new file was read out of this tree, not written from
+memory: the bind default is `backend/main.py:2365-2366`; the `ttyd` range is
+`TTYD_PORT_BASE`/`TTYD_PORT_MAX` at `backend/main.py:94-95` and the bind is hard-coded `0.0.0.0` in
+`start_ttyd_process`; the service user is `User=aegis` in `install.sh:450`, created by
+`useradd -r -s /bin/false` at `install.sh:207-211` with `docker` (and `clab_admins`) group membership —
+so a student's root is *inside the container*, and the isolation boundary is the container, not a shell;
+sessions are keyed by student name (no authenticated identity); CI is exactly four checks and nothing
+else.
+
+Written as a policy that matches the product instead of a template: the known design boundaries are
+named as boundaries (so they get answered as such, not treated as fresh findings), the in-scope list is
+the failures this project actually cares about — a grader that passes with zero student work (the
+documented pre-solved history, guarded by `tools/lint_lab_pack.py`), a verdict returned when no node
+was examined (`docs/GRADING-MODEL.md`'s refuse invariant), container escape / host-file reads by a lab or
+grader, a committed secret, installer integrity — and the absences are stated rather than implied: no
+mailing list, no PGP, no bounty, no dependency scanning / SAST / fuzzing, no backports off `main`, no
+disclosure timeline.
+
+Docs only. No code, no behaviour change. Backups of `README.md`/`CONTRIBUTING.md`/`CHANGELOG.md` via
+`scripts/safe-backup.sh` (landed as `.nexus/bundle-archive/README.md.bak-2026-10-19-0101-CONTRIBUTING.md`,
+git-ignored, does not ship — the helper takes no label argument and stops at the first existing
+destination, so that one archive is what actually got written; noted rather than re-run blindly).
+
+NOT COMPLETE — Dad's word alone. | proof=none (docs) |
+next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
+cosmetic `ci.yml` step (needs workflow-scoped token), the `.nexus/` public policy call,
+DELETE-OR-KEEP `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` / `10-archive/`,
+the `v0.1.0` tag re-point/re-cut decision, whether `main`'s `check_self_contained.py` guard should be
+pulled into the release, and — new — whether a real security contact address should exist at all
+(`SECURITY.md` currently points at the maintainer's GitHub profile, the same route `CONTRIBUTING.md`
+already offered, because no other contact is published anywhere in this tree).

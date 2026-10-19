@@ -109,8 +109,8 @@ grading model working — see [`docs/GRADING-MODEL.md`](docs/GRADING-MODEL.md)).
 
 ## Security
 
-Do not open a public issue for a vulnerability. There is no `SECURITY.md` in this tree yet and no
-published security contact, so the honest instruction is: **contact the maintainer privately**
-([@crperdue73](https://github.com/crperdue73)) rather than posting proof-of-concept details publicly.
+Do not open a public issue for a vulnerability. Read [`SECURITY.md`](SECURITY.md) first — it carries the
+reporting route (**contact the maintainer privately**, [@crperdue73](https://github.com/crperdue73),
+no public proof-of-concept), the threat model, what is in scope, and what this project checks today.
 Note the threat model before you dig: this runs on a single trusted host with no authentication on the
-API, so "the API has no auth" is a known design boundary, not an undisclosed flaw.
+API or the terminals, so "the API has no auth" is a known design boundary, not an undisclosed flaw.

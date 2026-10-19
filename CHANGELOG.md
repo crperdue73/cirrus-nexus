@@ -12,6 +12,15 @@ one additive CI check; no new feature and no fix to a defect a user could hit. R
 claims below changed, even though the product did not. **No version tag drawn from this window** — a release
 tag should mark a product change, and there is none to mark (see the release-notes draft for the reasoning).
 
+### Added
+- **`SECURITY.md`.** The repo had no security policy; `CONTRIBUTING.md` said so in as many words. The new
+  file states a reporting route (contact the maintainer privately, no public proof-of-concept), the threat
+  model it is assessed against (single trusted host, unauthenticated API on `0.0.0.0:8000`, unauthenticated
+  `ttyd` terminals on `8765`–`9765`, labs run as a non-login `aegis` service user with docker access — i.e.
+  container isolation, not shell isolation), what is actually in scope (wrong-`pass` graders, verdicts
+  returned when a node was never examined, container escapes, committed secrets, installer integrity), and
+  what this project does **not** do (no dependency scanning, SAST, fuzzing, or bug bounty). No code change.
+
 ### Changed
 - **Stale-bundle claims retracted across every surface.** README, `docs/OPERATIONS.md`, `CONTRIBUTING.md`,
   the PR template, `CONFERENCE.md`, the CHANGELOG and the release-notes draft all told the old
