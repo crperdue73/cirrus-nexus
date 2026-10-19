@@ -9,6 +9,8 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] `.gitattributes` — mark shipped YAML/source text as LF and images binary (there was none; 20 lab
+      topologies + graders had no line-ending rule) — 2026-10-19
 
 - [x] Promote `projects/aegis` to the shipping tree; push to `origin/main` (2026-10-06)
 - [x] Repo description + topics set (networking, containerlab, frr, srlinux, education, …)
@@ -79,6 +81,29 @@ unverifiable claims, no screenshots of a build that isn't here.
       was undated and asserted an unmeasured switch detail ("Alpine bridge-utils"); replaced with the
       numbers that actually trace to a shipped file (`lab-guides/lab-03-lock-it-down.md` — 100 pts,
       70 = pass) and labelled it curriculum context, not a shipped lab — 2026-10-11
+
+## Run 2026-10-19 19:00 UTC — no `.gitattributes`: line endings on the lab topologies were left to the clone
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; all four CI checks pass on
+the tree (`py_compile`, `bash -n install.sh`, `check_self_contained.py` rc=0, secret scan clean).
+The two long-standing items stay blocked exactly as recorded (Screenshots needs a session on the live
+AEGIS host — this box is `192.168.111.40/16`; the cosmetic explicit `ci.yml` grader step needs a
+`workflow`-scoped token). Re-confirmed nothing new there, so I swept the repo root instead of making work.
+
+Found: **no `.gitattributes` in the tree** (`cat` → absent; `git ls-files -s` → 280 files, no
+submodules). The repo ships 20 YAML topologies and 17 Python files with no line-ending rule at all, so
+what a contributor or a Windows classroom host gets on `git clone` is whatever `core.autocrlf` and their
+editor decide. A CRLF checkout of a lab YAML feeds the loader and the containerlab templates; that is a
+real failure class with nothing in CI able to catch it. Images (20 jpg, 8 png) were unmarked too, so
+they diff as text.
+
+Fixed additively: `.gitattributes` marks `*.yml`, `*.yaml`, `*.py`, `*.sh`, `*.md`, `*.cfg`, `*.conf` as
+`text eol=lf` and `*.png` / `*.jpg` as `binary`. Measured before claiming a normalization happened:
+`git ls-files -z | xargs -0 file` reports **no** committed file with CRLF or a BOM, so this changes
+**zero** file bytes today — it pins the rule for future clones and edits. No behaviour change. All four
+CI checks re-run green after the change.
+
+---
 
 ## Run 2026-10-14 01:00 UTC — orphaned `CONFERENCE.md` shipped an install step for a bundle that does not exist
 
