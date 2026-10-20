@@ -140,7 +140,15 @@ if [[ "$ORPHANS_ONLY" -eq 1 ]]; then
     echo "clab-reaper: could not read $NEXUS_URL/api/sessions - refusing to reap on a guess" >&2
     exit 3
   fi
-  if ! OWNED_IDS="$(python3 -c '
+  # NOTE: this used a `python3` one-liner with embedded newlines. `python3` only treats
+  # `-c` as a script when it is the IMMEDIATELY following argv element; here it was
+  # `python3` + a multi-line argv + the json path, so the first line went to the
+  # interpreter as a FILE NAME (-> "can't open file '"$ python3 -c '": [Errno 2]") and
+  # the json path was silently swallowed. The `if !` then read that as "did not parse"
+  # and exited 3, so against a reachable app this reaper ALWAYS refused before: it
+  # never reaped anything and never said why. Same fix as scripts/session-read.py and
+  # the 2026-10-06 lesson: python-in-shell goes in a HEREDOC, never a `-c` one-liner.
+  if ! OWNED_IDS="$(python3 - "$SNAP/sessions.json" <<'PY' | sort -u
 import json, sys
 docs = json.load(open(sys.argv[1]))
 if isinstance(docs, dict):
@@ -148,7 +156,8 @@ if isinstance(docs, dict):
 for s in docs:
     if isinstance(s, dict) and s.get("session_id"):
         print(s["session_id"])
-' "$SNAP/sessions.json" | sort -u)"; then
+PY
+)"; then
     echo "clab-reaper: the sessions response did not parse - refusing to reap on a guess" >&2
     exit 3
   fi
