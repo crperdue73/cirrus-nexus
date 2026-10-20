@@ -41,6 +41,13 @@ Each lab is a YAML topology plus a Markdown **student guide** (objective, topolo
 instructions) in the same directory, alongside its Python grader. The guides linked above are the ones
 shipped in this tree.
 
+> **Reading a guide in the browser:** the **Lab Guide** button opens the served copy at
+> `/api/labs/{id}/guide`. That endpoint answers `Content-Type: text/markdown`, which browsers display
+> inconsistently (Firefox renders it; Chrome and Safari typically download it instead). Open the
+> downloaded file in a text editor or Markdown viewer, or read the linked file on GitHub. This release
+> ships **no in-app Markdown renderer** — the frontend is a single `fetch()`-driven page (`frontend/index.html`)
+> and the guide opens in a new tab.
+
 The other topologies are retained for reference and are **not** part of this release; they live in the
 sibling directory `lab-definitions-quarantine-2026-09-30/` (outside `lab-definitions/`, so the loader
 does not see them).

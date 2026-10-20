@@ -5,6 +5,19 @@ All notable changes to AEGIS are recorded here. This project ships two labs
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — honesty sweep, week of 2026-10-20
+
+### Changed
+- **README: how a lab guide actually opens.** The "Lab Guide" button points at
+  `/api/labs/{id}/guide`, and `backend/main.py` answers that route with
+  `PlainTextResponse(..., media_type="text/markdown")` — verified by calling the route against the
+  shipped tree (HTTP 200, `text/markdown; charset=utf-8`, 2140 / 2649 bytes for the two guides).
+  Browsers display that type inconsistently (Firefox renders it; Chrome/Safari commonly download it),
+  and the frontend ships **no** Markdown renderer (`frontend/index.html` contains no `marked`/Markdown
+  code — the handler is one `window.open()`). The README's lab table linked the files but said nothing
+  about what a student would see, so the note is now stated next to the table. Documentation only; the
+  endpoint behaviour is unchanged.
+
 ## [Unreleased] — honesty sweep, week of 2026-10-10 → 2026-10-16
 
 No shipped behaviour changed this week. Thirty-five commits, all documentation/provenance corrections with

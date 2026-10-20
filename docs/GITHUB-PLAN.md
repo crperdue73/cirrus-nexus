@@ -9,6 +9,13 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **README: what the Lab Guide button actually does** (2026-10-20). The guide route answers
+      `Content-Type: text/markdown` (`PlainTextResponse(..., media_type="text/markdown")`, verified by
+      calling `/api/labs/{id}/guide` against this tree: 200, 2140 / 2649 bytes). Browsers render that
+      inconsistently, and the frontend has no Markdown renderer — `openLabGuide()` is a bare
+      `window.open()`. The README linked both guides without saying a student may get a *download*
+      rather than a page. One honest note added beside the lab table; endpoint unchanged.
+
 - [x] **`scripts/clab-reaper.sh` ownership gate** (2026-10-20). The reaper selected labs by
       **age alone**, so a learner sitting in a lab for six hours was destroyed by the nightly cron —
       the very lifecycle `start`/`stop` was rewritten to protect (`backend/main.py` RUN 209: a stop
