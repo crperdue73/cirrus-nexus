@@ -50,7 +50,8 @@ shipped in this tree.
 
 The other topologies are retained for reference and are **not** part of this release; they live in the
 sibling directory `lab-definitions-quarantine-2026-09-30/` (outside `lab-definitions/`, so the loader
-does not see them).
+does not see them). That is a different place from `10-archive/` — see the Archive section of
+[`docs/OPERATIONS.md`](docs/OPERATIONS.md) for what is in each.
 
 ---
 
@@ -266,7 +267,7 @@ labs; it is not a finished product. What that means concretely:
 | [`CHANGELOG.md`](CHANGELOG.md) | what changed, newest first |
 | [`10-archive/SUMMARY-for-Dad.md`](10-archive/SUMMARY-for-Dad.md) | dated 2026-06-09 topology audit — **historical**, describes a pre-release layout (see `docs/OPERATIONS.md` → Archive) |
 | [`lab-guides/lab-03-lock-it-down.md`](lab-guides/lab-03-lock-it-down.md) | a single student guide for `lab-03-lock-it-down` — **historical / not a shipping lab** (the only file in `lab-guides/`; its lab definition is quarantined); cited by `docs/OPERATIONS.md` as the in-tree source for the capstone's point numbers |
-| [`10-archive/`](10-archive/) | the rest of the archive: `tier-03-bgp-simplified.yml` (an older BGP topology — **not shipped, not deployable here**, since BGP is disabled in the substrate) and two FRR configs it binds; provenance in `SUMMARY-for-Dad.md` (below) |
+| [`10-archive/`](10-archive/) | an older archive (not the rest of it): `tier-03-bgp-simplified.yml` (an older BGP topology — **not shipped, not deployable here**, since BGP is disabled in the substrate), the two FRR configs it binds under `frr-configs/`, and `SUMMARY-for-Dad.md` (provenance, below) |
 | [`.nexus/`](.nexus/) | internal engineering audit trail — **not required to install or run AEGIS**, and not product documentation (see below) |
 
 ### About `.nexus/`

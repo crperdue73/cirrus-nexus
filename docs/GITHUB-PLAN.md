@@ -104,6 +104,32 @@ unverifiable claims, no screenshots of a build that isn't here.
       numbers that actually trace to a shipped file (`lab-guides/lab-03-lock-it-down.md` — 100 pts,
       70 = pass) and labelled it curriculum context, not a shipped lab — 2026-10-11
 
+## Run 2026-10-20 19:00 UTC — README + OPERATIONS said the archive lives in one place; it lives in two
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; all four CI checks pass
+(`py_compile`, `bash -n install.sh`, `check_self_contained.py` rc=0, secret scan clean). Both long-standing
+blocked items re-confirmed unchanged (Screenshots needs a session on the live AEGIS host; the cosmetic
+`ci.yml` grader step needs a `workflow`-scoped token), so I swept for a real honesty gap instead.
+
+Found one, and it was created by an earlier polish run fixing a different one. The 2026-10-12 11:00 run
+corrected the README's claim that the retained topologies are "under `lab-definitions/`" — true fix —
+but `docs/OPERATIONS.md`'s Archive section still opened: *"Anything removed from the active lab set is in
+`10-archive/` and `lab-definitions-quarantine-2026-09-30/`"*. Measured: `git ls-files 10-archive/`
+returns **4** files (`SUMMARY-for-Dad.md`, `frr-configs/r1-frr.conf`, `frr-configs/r2-frr.conf`,
+`tier-03-bgp-simplified.yml`), while the quarantine is a **top-level sibling** holding **46** tracked
+files — and `10-archive/` contains no quarantine directory at all. So the sentence told a reader that
+removed labs would be found inside `10-archive/`; they never are. The README compounded it: its
+`10-archive/` doc-table row read "**the rest of** the archive", which reads as if `10-archive/` were the
+whole archive — the exact wrong impression the OPERATIONS line gives.
+
+Fixed additively, both files now true of this tree: OPERATIONS' Archive section names the two places
+separately with what is actually in each (quarantine: the 2026-09-30 pull, 46 tracked files, list in its
+`MANIFEST.txt`; `10-archive/`: the older BGP topology, its two FRR configs, the audit summary) and states
+neither is read by the loader. README's row drops "the rest of" and lists the three real contents; the
+sibling-directory paragraph below the lab table now says explicitly it is a different place and points at
+OPERATIONS. Backed up `README.md` and `docs/OPERATIONS.md` via `scripts/safe-backup.sh` (label
+`archive-truth-2026-10-20`, out of the served tree). No behaviour change. All four CI checks re-run green.
+
 ## Run 2026-10-19 19:00 UTC — no `.gitattributes`: line endings on the lab topologies were left to the clone
 
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; all four CI checks pass on

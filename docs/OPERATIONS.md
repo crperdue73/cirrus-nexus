@@ -193,8 +193,15 @@ grader.**
 
 ## Archive
 
-Anything removed from the active lab set is in `10-archive/` and
-`lab-definitions-quarantine-2026-09-30/` — retained for reference, not deployed.
+Anything removed from the active lab set is retained for reference, not deployed, in **two separate
+places — neither is inside `10-archive/`**:
+
+- `lab-definitions-quarantine-2026-09-30/` — the topologies, guides and graders pulled from
+  `lab-definitions/` on 2026-09-30 (46 tracked files; the file list is its `MANIFEST.txt`).
+- `10-archive/` — an older, smaller archive: `tier-03-bgp-simplified.yml`, the two FRR configs it
+  binds (`10-archive/frr-configs/`), and `SUMMARY-for-Dad.md`.
+
+Neither directory is read by the loader (it globs `lab-definitions/**/*.yml` only).
 
 Provenance for the older layout is in [`10-archive/SUMMARY-for-Dad.md`](../10-archive/SUMMARY-for-Dad.md),
 a dated 2026-06-09 topology audit. It describes a tree that predates this release (its
