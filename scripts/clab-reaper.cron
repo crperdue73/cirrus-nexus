@@ -1,0 +1,9 @@
+# clab-reaper — nightly teardown of orphaned containerlab labs.
+# Set by Selina 2026-10-19 at the operator's order: 3:30 with 6 hours.
+# Only touches clab-* containers; the six real services are never in scope.
+# --orphans: a lab is reaped only if the product's own session list does not
+# account for it. Age alone is not evidence of an orphan -- a learner can sit in
+# a lab for hours. If the app cannot be reached the run refuses rather than guesses.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+30 3 * * * root /usr/local/bin/clab-reaper.sh --orphans --apply --min-age 360 >> /var/log/clab-reaper/cron.log 2>&1

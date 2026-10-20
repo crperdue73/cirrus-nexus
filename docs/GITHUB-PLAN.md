@@ -9,6 +9,21 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **`scripts/clab-reaper.sh` ownership gate** (2026-10-20). The reaper selected labs by
+      **age alone**, so a learner sitting in a lab for six hours was destroyed by the nightly cron —
+      the very lifecycle `start`/`stop` was rewritten to protect (`backend/main.py` RUN 209: a stop
+      must never report success it cannot back). The product already stamps `aegis.session.id` on
+      every container it deploys and rebuilds its view from it at startup (`reconcile_sessions`),
+      so the reaper was ignoring the authoritative list that existed. Now ownership is checked by
+      default: a lab is reaped only when **every** node's label is absent from `GET /api/sessions`.
+      Refuses (exit 3) if the app cannot be read, refuses (exit 4) if any clab container is
+      unlabelled — "could not ask" is not "nothing is owned". Age-only kept but demoted to
+      `--age-only`, which needs `CLAB_REAPER_I_MEAN_IT=1` to run with `--apply` (exit 5 otherwise).
+      Proven with stub `docker`/`containerlab`/`curl`: owned labs skipped (3 kept, 2 reaped), app
+      down → exit 3 nothing destroyed, unlabelled container → exit 4 nothing destroyed, age-only
+      without confirmation → exit 5 nothing destroyed, confirmation path reaps as before, dry-run
+      unchanged. Cron updated to `--orphans`. No product code changed.
+
 - [x] `.gitattributes` — mark shipped YAML/source text as LF and images binary (there was none; 20 lab
       topologies + graders had no line-ending rule) — 2026-10-19
 
