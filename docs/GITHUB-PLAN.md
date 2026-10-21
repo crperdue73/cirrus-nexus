@@ -9,6 +9,23 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **`tools/lint_lab_pack.py`: "could not run" was reported as a per-lab verdict** (2026-10-21).
+      The PR template and `.github/ISSUE_TEMPLATE/lab_request.md` both gate on
+      `python3 tools/lint_lab_pack.py`, but the `import yaml` lived inside the per-lab path, so on a box
+      without PyYAML every lab printed `ERROR` under a header called `STATUS`, the `NOT CHECKED` honesty
+      line never ran, and the exit code was **0**. A contributor could tick that checklist box having
+      examined nothing, and `ERROR` was not even in the tool's own documented classification list.
+      Now: PyYAML is checked once up front; missing → one `UNAVAILABLE` message naming the install
+      command and **exit 2** (was 0), so 0 = clean / 1 = a lab is SOLVED / 2 = could not run are three
+      distinct answers. The module docstring lists the non-verdict statuses
+      (`NO-GRADER`, `NO-EXPECTED`, `UNAVAILABLE`) explicitly. `CONTRIBUTING.md` told contributors to
+      `sudo pip install pyyaml` for a dep the repo already declares — `requirements.txt` ships `pyyaml`,
+      so it now points at `pip install -r requirements.txt`, and documents exit 2 plus "NO-EXPECTED means
+      unknown, not a pass". Verified both ways: no PyYAML → `UNAVAILABLE`, rc=2, zero lab rows; with
+      PyYAML → 2 labs UNSOLVED, rc=0. Red-flag path re-proven by seeding both PC addresses into
+      demo-02's `exec` blocks in a scratch copy → SOLVED 2/2 / rc=1 (one node → PARTIAL 1/2), then
+      restored; `git status` clean. No grader, topology, or backend change.
+      Committed `22a8d10`, pushed `origin/main`.
 - [x] **README: what the Lab Guide button actually does** (2026-10-20). The guide route answers
       `Content-Type: text/markdown` (`PlainTextResponse(..., media_type="text/markdown")`, verified by
       calling `/api/labs/{id}/guide` against this tree: 200, 2140 / 2649 bytes). Browsers render that
@@ -104,6 +121,74 @@ unverifiable claims, no screenshots of a build that isn't here.
       numbers that actually trace to a shipped file (`lab-guides/lab-03-lock-it-down.md` — 100 pts,
       70 = pass) and labelled it curriculum context, not a shipped lab — 2026-10-11
 
+## Run 2026-10-21 01:00 UTC — the lab-pack lint gate reported "could not run" as a per-lab result
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; all four CI checks pass
+(`py_compile`, `bash -n install.sh`, `check_self_contained.py` rc=0, secret scan clean). Token scopes
+unchanged (`delete:packages, repo, write:discussion, write:packages` — **no `workflow` scope**), and
+Screenshots still needs a session on the live AEGIS host. Both blocked items re-confirmed, so I swept the
+tree instead of manufacturing work.
+
+Found it by trying to *use* my own documented gate. `tools/lint_lab_pack.py` is a required checkbox in
+both `.github/ISSUE_TEMPLATE/lab_request.md` and `.github/PULL_REQUEST_TEMPLATE.md`, so a contributor is
+told to run it — and on this box it printed:
+
+```
+STATUS    SEEDED   LAB
+ERROR     -        demo-01-two-pcs-and-a-real-switch-unsolved  (No module named 'yaml')
+ERROR     -        demo-02-two-switches-one-router-unsolved      (No module named 'yaml')
+```
+
+with **exit code 0**. Three separate honesty problems in that output. (1) The `import yaml` sat inside
+the per-lab classify path, so the failure was caught per lab and rendered as a *status* under a header
+called `STATUS` — a verdict-shaped presentation for something that examined no lab. (2) `ERROR` is not in
+the tool's own docstring classification, which lists only SOLVED / PARTIAL / UNSOLVED. (3) Exit 0 is the
+tool's "nothing flagged" code, so the one signal a script or a careful contributor reads said *clean*.
+The `NOT CHECKED` honesty line at the bottom — which exists specifically so silence is not read as a pass
+— never printed, because it only scans rows with status `NO-EXPECTED`.
+
+Worse, `CONTRIBUTING.md` documented the reason as "it needs `pyyaml`, which CI does not install" and told
+contributors `sudo pip install pyyaml`. Measured: `requirements.txt` **already declares `pyyaml`** (line 5,
+under a header saying install.sh and tooling share one source of truth), and `install.sh` installs it. So
+the documented workaround was for a dependency the repo already ships, and the real gap was only ever
+that a hand-run on an unprepared box degraded silently.
+
+Fixed in two files, additively, no grader or topology touched:
+
+- `tools/lint_lab_pack.py`: PyYAML is now checked once up front. Missing → a single `UNAVAILABLE` message
+  naming `pip install -r requirements.txt` and **exit 2**. Three exit codes now mean three distinct things:
+  `0` nothing flagged, `1` at least one lab is SOLVED (unchanged), `2` could not run. The docstring lists
+  the non-verdict statuses (`NO-GRADER`, `NO-EXPECTED`, `UNAVAILABLE`) explicitly. Also fixed the
+  non-verdict row printer, which would print `(ERROR)` for rows with no `error` key.
+- `CONTRIBUTING.md`: the install step points at `requirements.txt` instead of a bare `sudo pip install`;
+  documents exit 2, and states that `NO-EXPECTED` means *unknown*, not a pass.
+
+Verified, not assumed — all four behaviours reproduced on this tree:
+
+| case | result |
+|---|---|
+| system `python3`, no PyYAML | one `UNAVAILABLE` line, **rc=2**, zero lab rows |
+| venv with PyYAML | 2 labs `UNSOLVED`, **rc=0** |
+| `--json` with PyYAML | valid JSON, both labs listed |
+| one PC seeded into demo-02 `exec:` (scratch copy) | `PARTIAL 1/2`, rc=0 |
+| both PCs seeded (scratch copy) | `SOLVED 2/2`, **rc=1**, RED FLAG |
+
+Scratch edits were made to the lab YAML and then restored (`cp` from a `/tmp` copy); `git status` shows
+only the two intended files. The seeded-address case is the tool's whole reason to exist, so proving it
+still fires meant its exit 1 could not be conflated with the new exit 2 — that was the point of the change.
+
+Backed up `tools/lint_lab_pack.py` and `CONTRIBUTING.md` via `~/scripts/safe-backup.sh` (label
+`lint-gate-honesty-2026-10-21`, written out of the served tree). Note for the record: the plan's path
+notation for that helper has been wrong — it lives at the **workspace root** (`~/scripts/safe-backup.sh`),
+**not** `projects/aegis/scripts/` (this tree's `scripts/` holds only `clab-reaper.*`), and its arguments
+are `<file> [label]`, one file at a time. Corrected here so the next run does not mis-call it. (An earlier
+draft of this note spelled that path out absolutely and `check_self_contained.py` failed on it — the
+check doing its job on the file that logs it.)
+
+Committed `22a8d10`, pushed `origin/main`. All four CI checks re-run green.
+
+---
+
 ## Run 2026-10-20 19:00 UTC — README + OPERATIONS said the archive lives in one place; it lives in two
 
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; all four CI checks pass
@@ -127,7 +212,7 @@ separately with what is actually in each (quarantine: the 2026-09-30 pull, 46 tr
 `MANIFEST.txt`; `10-archive/`: the older BGP topology, its two FRR configs, the audit summary) and states
 neither is read by the loader. README's row drops "the rest of" and lists the three real contents; the
 sibling-directory paragraph below the lab table now says explicitly it is a different place and points at
-OPERATIONS. Backed up `README.md` and `docs/OPERATIONS.md` via `scripts/safe-backup.sh` (label
+OPERATIONS. Backed up `README.md` and `docs/OPERATIONS.md` via `~/scripts/safe-backup.sh` (label
 `archive-truth-2026-10-20`, out of the served tree). No behaviour change. All four CI checks re-run green.
 
 ## Run 2026-10-19 19:00 UTC — no `.gitattributes`: line endings on the lab topologies were left to the clone
@@ -159,7 +244,7 @@ Measured live: `git status` clean, `HEAD...origin/main = 0 0`; `origin` token sc
 
 Both blocked backlog items re-confirmed blocked, so I swept for a real, in-scope honesty gap. `CONFERENCE.md` (5.5 KB, tracked at repo root) was **referenced by nothing** — `git grep -l CONFERENCE.md` returned only `docs/GITHUB-PLAN.md`'s own orphan-list note — and it began by telling a booth operator to run `tar xzf aegis-portable.tar.gz`. Measured false: `find . -name '*.tar*'` returns **nothing** outside `.git/`, and `git grep aegis-portable` matches only CONFERENCE.md itself. It also printed an API response `{"service":"AEGIS",...,"labs_count":4}` where `backend/main.py:1764` actually returns `{"service":"NEXUS",...,"labs_count":len(LABS)}` (two labs ship). A stranger following the file's first instruction would have failed immediately.
 
-Fixed by making it true of this tree, not by deleting it: replaced the `tar xzf` install with the real git-clone + `install.sh` flow, corrected the API example to the shape `main.py` returns (with an honest note that `labs_count` is whatever ships), updated the walk-up tips to name the two shipping labs instead of the legacy "Tier 1", pointed the "Adding a New Lab" footer at `docs/ADDING-A-LAB.md` (the README does not carry the full schema), added a `refused`/HTTP-409 row to the troubleshooting table, and stamped the whole file **draft / not maintained** with the same "code wins" rule used for `.nexus/`. Linked it from the README Documentation table so it is no longer orphaned. Backed up `CONFERENCE.md` and `README.md` via `scripts/safe-backup.sh` (label `conference-truth-pass-2026-10-14`, out of the served tree). No behaviour change. All four CI checks re-run green.
+Fixed by making it true of this tree, not by deleting it: replaced the `tar xzf` install with the real git-clone + `install.sh` flow, corrected the API example to the shape `main.py` returns (with an honest note that `labs_count` is whatever ships), updated the walk-up tips to name the two shipping labs instead of the legacy "Tier 1", pointed the "Adding a New Lab" footer at `docs/ADDING-A-LAB.md` (the README does not carry the full schema), added a `refused`/HTTP-409 row to the troubleshooting table, and stamped the whole file **draft / not maintained** with the same "code wins" rule used for `.nexus/`. Linked it from the README Documentation table so it is no longer orphaned. Backed up `CONFERENCE.md` and `README.md` via `~/scripts/safe-backup.sh` (label `conference-truth-pass-2026-10-14`, out of the served tree). No behaviour change. All four CI checks re-run green.
 
 ## Run 2026-10-13 19:00 UTC — `.nexus/` ships publicly and the README never said what it is
 
@@ -189,7 +274,7 @@ actually there (`proofs/` = dated evidence files; dated status/decision notes; `
 slide images), that it is **not required to install or run AEGIS** (a cold clone installs from
 `install.sh` + shipped source alone — consistent with `SELF-CONTAINED.md`), and that the dated entries
 are **historical**: where a `.nexus/` note and the shipped code disagree, the code wins. No claim added
-that the tree does not bear out. Backed up `README.md` via `scripts/safe-backup.sh` (label
+that the tree does not bear out. Backed up `README.md` via `~/scripts/safe-backup.sh` (label
 `nexus-doc-labeling-2026-10-13`, out of the served tree). All four CI checks re-run green. Committed
 `6137fae`, pushed `origin/main`. No behaviour change.
 
@@ -222,7 +307,7 @@ explicitly notes `installed-image-id.txt` exists locally but is git-ignored; OPE
 line reads `frr-image.pin only — the tarball and installed-image-id.txt never ship`; the bundle-rebuild
 note and the Known-drift paragraph say `installed-image-id.txt` is git-ignored and does not ship. No
 behaviour change; docs now agree with each other and with the tracked tree. Backed up `README.md` and
-`docs/OPERATIONS.md` via `scripts/safe-backup.sh` (label `assets-holds-claim-2026-10-13`, out of the
+`docs/OPERATIONS.md` via `~/scripts/safe-backup.sh` (label `assets-holds-claim-2026-10-13`, out of the
 served tree). All four CI checks re-run green.
 
 ## Run 2026-10-13 01:00 UTC — architecture.md still claimed install.sh verifies the substrate against the pin
@@ -250,7 +335,7 @@ was the lone hold-out telling readers the pin is enforced at install.
 Fixed: the row now reads that the pin names the substrate `install.sh` *would* load and verify **if the
 pinned tarball were present**, states plainly that **no tarball ships in this tree** so the verify
 branch is never taken, and points to `OPERATIONS.md` → "Known drift". No behaviour change; docs now
-agree with each other and with the tree. Backed up `docs/architecture.md` via `scripts/safe-backup.sh`
+agree with each other and with the tree. Backed up `docs/architecture.md` via `~/scripts/safe-backup.sh`
 (label `pin-verify-claim-2026-10-13`, out of the served tree). All four CI checks re-run green.
 
 ## Run 2026-10-12 19:00 UTC — README claimed an image ships in the repo (none does)
@@ -271,7 +356,7 @@ from source).
 
 Fixed: the prerequisite now reads "**No image ships in the repo:** the router image (`aegis/frr:latest`)
 is built locally from `Dockerfile.frr`, and the switch image is pulled at install." Backed up
-`README.md` via `scripts/safe-backup.sh` (label `no-image-travels-claim`, out of the served tree). All
+`README.md` via `~/scripts/safe-backup.sh` (label `no-image-travels-claim`, out of the served tree). All
 four CI checks re-run green. No behaviour change.
 
 ## Run 2026-10-12 11:00 UTC — README sent readers to the wrong directory for the quarantined topologies
@@ -291,7 +376,7 @@ set the sentence promises.
 
 Fixed: `README.md` now says the retained topologies live in the sibling
 `lab-definitions-quarantine-2026-09-30/` (outside `lab-definitions/`, so the loader never sees them).
-Backed up via `scripts/safe-backup.sh` (out of the served tree). All four CI checks re-run green.
+Backed up via `~/scripts/safe-backup.sh` (out of the served tree). All four CI checks re-run green.
 Committed `0343bd1`, pushed `origin/main` (README is not a workflow file). No behaviour change.
 
 ## Run 2026-10-11 11:00 UTC — README still told readers to rebuild a bundle that does not ship
@@ -310,7 +395,7 @@ returns **nothing**. So the front page told users to rebuild a bundle that does 
 
 Fixed: replaced the instruction with the true shipping model (**git clone + `install.sh`**; no
 prebuilt bundle in-tree) and a pointer to the *historical* note in OPERATIONS.md. No behaviour change.
-Backed up `README.md` via `scripts/safe-backup.sh` (out of the served tree). Re-ran all four CI checks
+Backed up `README.md` via `~/scripts/safe-backup.sh` (out of the served tree). Re-ran all four CI checks
 → OK. Committed `6ec66f2`, pushed `origin/main` (accepted — README is not a workflow file).
 
 ## Run 2026-10-11 01:00 UTC — OPERATIONS.md truth pass (two stale claims corrected)
@@ -452,7 +537,7 @@ inert at runtime — purely visual clutter.
 Fixed, reversibly: `git mv` it into `lab-definitions-quarantine-2026-09-30/` (where its reverted sibling
 `lab-04-two-as-peering.yml` + the real grader already live), and added a `.gitignore` guard
 (`*-revert-bak`, `*.yml.bak-*`, `*.yml.orig`) so a future reverting snapshot cannot be committed into the
-shipping dir. Backed up via `scripts/safe-backup.sh` (label `stray-bak-sweep`, out of the served tree).
+shipping dir. Backed up via `~/scripts/safe-backup.sh` (label `stray-bak-sweep`, out of the served tree).
 Swept for other strays: `git ls-files | grep -E '\.bak|\.orig|-bak$'` → only this one.
 
 Checks re-run, all four green: backend compile OK, `bash -n install.sh` OK, `check_self_contained.py` rc=0
@@ -498,7 +583,7 @@ and `GET /api/sessions/{id}` (one session's status — backs *Reconnect*).
 
 Fixed: completed the table so it matches `main.py` name-for-name (`{id}` shorthand, as the table
 already used). Added one sentence: "the complete route set exposed by `backend/main.py`." Backed up
-`README.md` via `scripts/safe-backup.sh` (label `api-table-completeness`, out of the served tree).
+`README.md` via `~/scripts/safe-backup.sh` (label `api-table-completeness`, out of the served tree).
 All four CI checks re-run green (backend compile, `bash -n install.sh`, `check_self_contained.py`
 rc=0, exact secret-scan command → clean). Committed `2b13a19`, pushed `origin/main`. No behaviour change.
 
@@ -559,7 +644,7 @@ line, the Cumulus "ships as its own lab" line (→ retained under quarantine, do
 HEAD line (→ "as of 2026-09-22; tree has moved on"), the §3 grader list (→ noted those graders are
 not in this release), and the §4 lint red-flags note (→ those labs do not ship). Linked it from the
 README Documentation table as **historical / not maintained** so it is no longer orphaned. Backed up
-via `scripts/safe-backup.sh` (label `handoff-truth-pass-2026-10-14`, out of the served tree). All four
+via `~/scripts/safe-backup.sh` (label `handoff-truth-pass-2026-10-14`, out of the served tree). All four
 CI checks re-run green. No behaviour change. NOT COMPLETE — Dad's word alone. | proof=none (docs) |
 next=run: least-recently-moved in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs
 live-host session), cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public
@@ -583,7 +668,7 @@ scanning rows would under-count Demo 2 and would not know it also ends in two Al
 
 Fixed by making the Demo 2 cell name all five nodes in the same order/convention as Demo 1:
 *"2 Alpine PCs + 2 SR Linux switches + 1 FRR router, routed"* — true of `demo-02-...yml` as measured.
-One-line, no behaviour change. Backed up `README.md` via `scripts/safe-backup.sh` (label
+One-line, no behaviour change. Backed up `README.md` via `~/scripts/safe-backup.sh` (label
 `demo02-row-2026-10-14`, out of the served tree). All four CI checks re-run green. NOT COMPLETE —
 Dad's word alone. | proof=none (docs) | next=LAB least-recently-moved -> next in-scope honesty item;
 STILL BLOCKED ON DAD: Screenshots (needs live-host session), cosmetic `ci.yml` step (needs
@@ -618,7 +703,7 @@ is gone; "If this touches a served lab" now keeps only the reload+regrade step (
 short note states plainly that **no shippable bundle exists** (`frontend/nexus-release.tar.gz` does not
 ship, a clean host installs from the clone + `install.sh`), that contributors must **not** rebuild or
 commit one, and that `check_bundle_fresh.sh` still exists but **no-ops when no bundle is present — as it
-is here — so it is not a required check on this repo.** Backed up via `scripts/safe-backup.sh` (label
+is here — so it is not a required check on this repo.** Backed up via `~/scripts/safe-backup.sh` (label
 `pr-template-bundle-truth-2026-10-14`, out of the served tree). Re-ran all four CI checks green;
 `check_bundle_fresh.sh` no-ops with rc=0 as documented. Committed `808d9af`→this commit, pushed
 `origin/main`, local==origin 0/0. NOT COMPLETE — Dad's word alone. | proof=none (docs) | next=run:
@@ -650,7 +735,7 @@ first use now carries the real id (`Demo 1 (demo-01-…)` / `Demo 2 (demo-02-…
 `Demo 1`/`Demo 2`; the node counts stay attached ("Demo 1 = 3 nodes, Demo 2 = 5"). SELF-CONTAINED.md's
 "the two labs" now names both ids. No claim added or removed — only the identifier a reader can resolve.
 Backed up `CHANGELOG.md`, `docs/OPERATIONS.md`, `docs/SELF-CONTAINED.md`, `docs/RELEASE-NOTES-v0.1.0-draft.md`
-via `scripts/safe-backup.sh` (label `labab-truth-2026-10-15`, out of the served tree). All four CI
+via `~/scripts/safe-backup.sh` (label `labab-truth-2026-10-15`, out of the served tree). All four CI
 checks re-run green. No behaviour change. NOT COMPLETE — Dad's word alone. | proof=none (docs) |
 next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
 cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public policy call.
@@ -679,7 +764,7 @@ content is preserved verbatim; only the identifier changes to the resolvable one
 `Demo 2 (demo-02-…)`, later uses `Demo 1`/`Demo 2`). `backend/main.py` still byte-compiles,
 `grader_demo_02.py` still byte-compiles, `check_self_contained.py` green. `LAB-A`/`LAB-B` now survive
 **only** in `.nexus/proofs/*` — signed, dated measurement records that are evidence and must not be
-rewritten. Backed up via `scripts/safe-backup.sh` (label `labab-code-2026-10-15`, out of the served
+rewritten. Backed up via `~/scripts/safe-backup.sh` (label `labab-code-2026-10-15`, out of the served
 tree). No behaviour change. NOT COMPLETE — Dad's word alone. | proof=none (docs/comments) |
 next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
 cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public policy call.
@@ -721,7 +806,7 @@ directory the README already names — and appending a dated note to that direct
 recording what each is and why it moved. No claim added or removed; the README's "exactly two labs"
 statement is now true of the repo root too. Verified the loader is unaffected (it scans
 `lab-definitions/` and one level of subdirs only, `main.py:456`) and re-ran all CI checks green.
-Backed up both files via `scripts/safe-backup.sh` (label `orphan-yml-2026-10-15`, out of the served
+Backed up both files via `~/scripts/safe-backup.sh` (label `orphan-yml-2026-10-15`, out of the served
 tree). No behaviour change. NOT COMPLETE — Dad's word alone. | proof=none (docs/tree layout) |
 next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
 cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public policy call.
@@ -750,7 +835,7 @@ now names `10-archive/SUMMARY-for-Dad.md` as the provenance source for the older
 but `10-archive/tier-03-bgp-simplified.yml` **does** ship (`git ls-files` confirms it) and the file's
 own "Files Changed" note says so, so the banner now names `tier-01*`/`tier-02*`/`tier-04*` and calls out
 the one survivor explicitly. No claim added that the tree does not bear out. Backed up all three files
-via `scripts/safe-backup.sh` (label `provenance-claim-2026-10-16`, out of the served tree). No
+via `~/scripts/safe-backup.sh` (label `provenance-claim-2026-10-16`, out of the served tree). No
 behaviour change. NOT COMPLETE — Dad's word alone. | proof=none (docs) |
 next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
 cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public policy call.
@@ -787,7 +872,7 @@ Two in-scope honesty gaps, both measured, both fixed without behaviour change:
 Fix (no behaviour change): a comment naming `_GUIDE_MAP` **inert for the shipping tree** with the 7/7
 measurement; a **historical banner** on the orphan guide naming its quarantined definition; and a README
 Documentation-table row so the file has a discoverable path (same reachability medicine as the 01:00
-SUMMARY-for-Dad run). Backed up both files via `scripts/safe-backup.sh` (label `guide-map-truth-2026-10-16`,
+SUMMARY-for-Dad run). Backed up both files via `~/scripts/safe-backup.sh` (label `guide-map-truth-2026-10-16`,
 out of the served tree). Re-ran all CI checks green; committed `b9e10d3`, pushed `origin/main`, local==origin
 `0 0`. NOT COMPLETE — Dad's word alone. | proof=none (source/doc note) |
 next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
@@ -817,7 +902,7 @@ Fixed by making the bullet true of this tree, not by deleting it: kept the histo
 was added, runs 258/260) and appended an honest **Note** that the guard is vestigial here — no bundle is
 committed, the guard no-ops, and the current shipping model is a git clone + `install.sh`, pointing at
 the README quickstart and `docs/OPERATIONS.md` → "Release bundle (historical)". No claim added that the
-tree does not bear out. Backed up `CHANGELOG.md` via `scripts/safe-backup.sh` (label
+tree does not bear out. Backed up `CHANGELOG.md` via `~/scripts/safe-backup.sh` (label
 `changelog-bundle-guard-truth-2026-10-16`; the script's backup landed under `.nexus/bundle-archive/`,
 which is git-ignored at `.gitignore:48` and therefore does not ship — verified with `git status`, which
 showed only `CHANGELOG.md` modified). All four CI checks re-run green; committed `dd76cbc`, pushed
@@ -853,7 +938,7 @@ unbacked current-tense number and **named the measured current size** (~21 MB pa
 history. Also corrected the adjacent RELEASE-NOTES "Fixed" bullet that still read *"bundle freshness is now
 guarded"* — same vestigial-guard correction the 13:00 run applied to the CHANGELOG: no `nexus-release.tar.gz`
 is committed, so `tools/check_bundle_fresh.sh` no-ops; the shipping model is git clone + `install.sh`. No
-claim added that the tree does not bear out. Backed up both files via `scripts/safe-backup.sh` (label
+claim added that the tree does not bear out. Backed up both files via `~/scripts/safe-backup.sh` (label
 `git-repo-size-truth-2026-10-16`; backups landed under `.nexus/bundle-archive/`, git-ignored, do not ship —
 `git status` showed only the two files modified). CI checks re-run green as above; committed, pushed
 `origin/main`, local==origin `0 0`. No behaviour change. NOT COMPLETE — Dad's word alone. | proof=none
@@ -896,7 +981,7 @@ frames the real open call for Dad (does the existing `v0.1.0` stand as the relea
 or get re-pointed / re-cut) instead of implying nothing was tagged; the publish checklist and a dated
 correction note were updated to match. Added a matching bullet under `[Unreleased] → Changed` in
 `CHANGELOG.md` so the sweep's own record stays complete. No claim added that the tree does not bear out.
-Backed up both files via `scripts/safe-backup.sh` (label `tag-pointer-truth-2026-10-17`; backups landed
+Backed up both files via `~/scripts/safe-backup.sh` (label `tag-pointer-truth-2026-10-17`; backups landed
 under `.nexus/bundle-archive/`, git-ignored at `.gitignore:48`, do not ship — `git status` confirmed only
 `docs/RELEASE-NOTES-v0.1.0-draft.md` and `CHANGELOG.md` modified). CI checks re-run green as above;
 committed, pushed `origin/main`, local==origin `0 0`. No behaviour change. NOT COMPLETE — Dad's word
@@ -948,7 +1033,7 @@ labelled as built by nothing since Step 7b's removal, kept as static source. Del
 deleted — removing a tracked Dockerfile is Dad's call, not a docs sweep's, and the file is harmless
 where it sits once labelled honestly.
 
-Backed up all three files via `scripts/safe-backup.sh` (label `substrate-set-truth-2026-10-17`; landed
+Backed up all three files via `~/scripts/safe-backup.sh` (label `substrate-set-truth-2026-10-17`; landed
 under `.nexus/bundle-archive/`, git-ignored at `.gitignore:48`, do not ship — `git status` showed only
 the three files modified). CI checks re-run green as above; committed `bd4a883`, pushed `origin/main`,
 local==origin `0 0`. NOT COMPLETE — Dad's word alone. | proof=none (docstring/docs) |
@@ -982,7 +1067,7 @@ reader would find untrue:
    substrate), and that provenance is in the summary.
 
 No new claim beyond the measured; no behaviour change. Backed up `README.md` and this plan via
-`scripts/safe-backup.sh` (label `lab-guides-desc-2026-10-17`, landed in `.nexus/bundle-archive/`,
+`~/scripts/safe-backup.sh` (label `lab-guides-desc-2026-10-17`, landed in `.nexus/bundle-archive/`,
 git-ignored at `.gitignore:48`, does not ship). All four CI checks re-run green.
 NOT COMPLETE — Dad's word alone. | proof=none (docs) |
 next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
@@ -1015,7 +1100,7 @@ Two honest gaps were left, both in-scope and unblocked:
 Also corrected while measuring: the previous run's plan entry recorded the tag as **37** commits behind
 `main`; it is now **40** (`82c8f25` vs `35e271d`). The README states the live figure, not the remembered one.
 
-Backed up `README.md` via `scripts/safe-backup.sh` (label `readme-release-status-2026-10-17`; landed in
+Backed up `README.md` via `~/scripts/safe-backup.sh` (label `readme-release-status-2026-10-17`; landed in
 `.nexus/bundle-archive/`, git-ignored at `.gitignore:48`, does not ship). All four CI checks re-run green.
 NOT COMPLETE — Dad's word alone. | proof=none (docs) |
 next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
@@ -1162,7 +1247,7 @@ contact instead of inventing a disclosure policy; and the API has **no** authent
 no auth" is stated as a known design boundary rather than left for a security researcher to discover and
 report as a bug.
 
-Docs only. No code, no templates, no behaviour change. Backed up via `scripts/safe-backup.sh`
+Docs only. No code, no templates, no behaviour change. Backed up via `~/scripts/safe-backup.sh`
 (label `contributing-workflow-2026-10-18`, landed in `.nexus/bundle-archive/`, git-ignored, does not ship).
 
 NOT COMPLETE — Dad's word alone. | proof=none (docs) |
@@ -1213,7 +1298,7 @@ interface, with no authentication** limitation, worded as a classroom-LAN design
 safe on the internet — the `AEGIS_HOST`/`AEGIS_PORT` overrides and the `8765–9765` ttyd range are
 named.
 
-Docs only. No code, no behaviour change. Backed up `README.md` via `scripts/safe-backup.sh` (label
+Docs only. No code, no behaviour change. Backed up `README.md` via `~/scripts/safe-backup.sh` (label
 `readme-openapi-docs-2026-10-18`, landed in `.nexus/bundle-archive/`, git-ignored, does not ship).
 All four CI checks re-run green after the edit.
 
@@ -1258,7 +1343,7 @@ mailing list, no PGP, no bounty, no dependency scanning / SAST / fuzzing, no bac
 disclosure timeline.
 
 Docs only. No code, no behaviour change. Backups of `README.md`/`CONTRIBUTING.md`/`CHANGELOG.md` via
-`scripts/safe-backup.sh` (landed as `.nexus/bundle-archive/README.md.bak-2026-10-19-0101-CONTRIBUTING.md`,
+`~/scripts/safe-backup.sh` (landed as `.nexus/bundle-archive/README.md.bak-2026-10-19-0101-CONTRIBUTING.md`,
 git-ignored, does not ship — the helper takes no label argument and stops at the first existing
 destination, so that one archive is what actually got written; noted rather than re-run blindly).
 
