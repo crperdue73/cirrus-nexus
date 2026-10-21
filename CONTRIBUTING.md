@@ -21,7 +21,24 @@ python3 tools/check_self_contained.py     # 3. a bare clone is installable
 
 `check_self_contained.py` (step 3) is the important one: it fails if a required file is missing, a
 lab's `startup-config` or `grader` doesn't resolve, a shipped grader fails to byte-compile, or a
-developer's absolute path leaked into source.
+developer's absolute path leaked into source. It runs *inside* a clone, so **it only ever checks the
+files that are present** — it cannot notice a required file you never added, and it will not catch a
+file you deleted before committing. It also resolves its root from its own path, so it checks the
+checkout it lives in, not the one you are standing in.
+
+Step 4 is a shell command in CI, not a script, so there is nothing to run locally for it. The same
+grep, run by hand, is:
+
+```bash
+grep -rInE 'gho_[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|BEGIN [A-Z ]*PRIVATE KEY' \
+  --include='*.py' --include='*.sh' --include='*.yml' --include='*.json' \
+  --include='*.html' --include='*.md' .
+```
+
+No output is the pass. Use `grep`, not `git grep`: `git grep` only reads tracked files, so it misses
+a secret in a file you have not staged yet — which is exactly when a secret gets committed. (Both forms
+read `*.py *.sh *.yml *.json *.html *.md`; CI also reads `*.txt` and `*.cfg` via its wider include
+list, so a token in one of those is caught there and not by hand.)
 
 The four checks above are exactly what CI enforces on every push and PR. Two further tools exist
 for lab authors and are **not** part of CI:
@@ -95,7 +112,7 @@ a pull request:
 2. **Branch** off `main` with one change on it. `main` is the only active branch; `legacy-orphan-tree`
    is preserved history from the old public tree and is not the place for new work.
 3. **Run the four checks** in *Before you push* above. Paste the real output into the PR's
-   *How it was verified* section — a summary is not evidence.
+   *How it was verified* section — a summary is not evidence. For step 4, zero output is the result.
 4. **Open the pull request** using
    [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md). CI runs on the PR.
 5. **Expect a conversation, not an auto-merge.** Small, honest, single-purpose changes land fastest;

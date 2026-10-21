@@ -20,6 +20,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   behaviour change.
 
 ### Changed
+- **`CONTRIBUTING.md`: the four checks a contributor is told to run are now three commands and one
+  pattern.** "Run the same checks CI runs" listed steps 1–3 as copy-paste commands and step 4 as a
+  comment — the secret scan is a shell `grep` that lives inline in `.github/workflows/ci.yml`, so a
+  contributor had nothing to run for it and no way to know what the pass looked like. The grep is now
+  written out, and it says to use `grep`, not `git grep`: `git grep` reads only tracked files, so it
+  misses a secret in an untracked file — measured, a seeded `ghp_…` token in an unstaged file is
+  *missed* by `git grep` and *found* by the CI `grep -rInE` form. The section also no longer implies
+  step 3 can catch a deleted or never-added file: `check_self_contained.py` runs inside a clone and
+  checks only what is present, and resolves its root from its own path. Documentation only.
 - **README: how a lab guide actually opens.** The "Lab Guide" button points at
   `/api/labs/{id}/guide`, and `backend/main.py` answers that route with
   `PlainTextResponse(..., media_type="text/markdown")` — verified by calling the route against the

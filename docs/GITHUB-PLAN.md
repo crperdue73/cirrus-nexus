@@ -19,6 +19,24 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **`CONTRIBUTING.md`: "the same checks CI runs" handed the contributor three commands and a
+      comment** (2026-10-21 19:00). The section promises *run the same checks CI runs (all four)*, then
+      lists steps 1–3 as copy-pasteable commands and step 4 as `# 4. no obvious secrets committed — CI
+      greps the tree for token/key patterns`. Step 4 is not a script and the grep lived only inside
+      `.github/workflows/ci.yml`, so the reader had nothing to run and no definition of the pass. Worse,
+      the obvious substitute (`git grep`) is the wrong tool: measured in a scratch clone with a seeded
+      `ghp_…`-shaped token in an untracked `docs/accidental-secret.md`, `git grep -- '*.md'` **missed** it
+      and the CI `grep -rInE --include='*.md' .` form **found** it (`git grep` reads only tracked files).
+      Also corrected the step-3 gloss: `check_self_contained.py` resolves `ROOT` from its own path and
+      iterates only files that exist, so it cannot catch a file that was never added or was deleted
+      before commit — the text implied it could. Now: the exact CI grep is written out; the `grep` vs
+      `git grep` difference is stated with the reason; the step-3 and step-4 coverage limits are stated;
+      the PR instruction says zero output is the step-4 result. Docs only, no product or CI change.
+      Verified: four checks re-run green (`py_compile`, `bash -n install.sh`,
+      `check_self_contained.py` rc=0 — 15 required files; secret scan clean by the new hand command);
+      `lint_lab_pack.py` → `UNAVAILABLE`, rc=2 (PyYAML absent — the run-22a8d10 behaviour, not a
+      failure); `check_bundle_fresh.sh` no-ops. Backup via `scripts/safe-backup.sh` →
+      `.nexus/bundle-archive/CONTRIBUTING.md.bak-2026-10-21-1902-contrib-checks-2026-10-21`.
 - [x] **README + `architecture.md` listed the internal worklog (`docs/GITHUB-PLAN.md`) as public
       documentation** (2026-10-21 11:00). `README.md:261` and `docs/architecture.md:167` both carried it
       in their "See also / Documentation" tables as "repo-hardening backlog". Measured what that file
