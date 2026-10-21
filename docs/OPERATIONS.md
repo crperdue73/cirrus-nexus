@@ -138,6 +138,32 @@ cannot be read off the running containers at all returns `""` — a hard refusal
 
 ---
 
+## Stopping a session
+
+What a failed stop actually means, read off `backend/main.py` and `scripts/clab-reaper.sh`:
+
+- **A failed stop leaves the session listed, on purpose.** `stop` tears the lab down *first* and only
+  then removes the session and frees its `ttyd` ports (RUN 209, `POST /api/sessions/{id}/stop`). A
+  teardown error surfaces as HTTP `500` with "the session is still listed and its containers may still
+  be running — press End Lab again." So **press End Lab again**: that is the retry the code is asking
+  for. Earlier versions popped the session first and swallowed the error, which reported
+  `{"status": "destroyed"}` over containers that were still running.
+- **`404` means the session id is unknown**, not that the lab is still up: the route looks up the
+  session before touching anything, so a second stop on an already-forgotten id is a `404`. Check
+  `GET /api/sessions` to see what is actually live.
+- **The stop takes the deploy lock; a concurrent `start` waits on it.** Teardown and port release run
+  inside the same lock `start` allocates ports under, so a start cannot grab a port a stop is about to
+  free. Grading is deliberately *not* under that lock (a grade takes tens of seconds).
+- **Sessions are in memory; the containers are the record.** On startup `reconcile_sessions()` rebuilds
+  the session view from the `aegis.session.id` label the deployer stamps on every node, so a restart
+  does not orphan a lab that carries its label. A `clab-*` container with **no** label can never be
+  matched back to a session — `stop` cannot find it. That is what `scripts/clab-reaper.sh` is for: its
+  default `--orphans` mode reaps only labs the running app does not claim, and it refuses to reap
+  anything when `/api/sessions` cannot be read (exit 3) or when any `clab-*` container is unlabelled
+  (exit 4) — "could not ask" is not "nothing is owned."
+
+---
+
 ## Concurrent sessions
 
 **More than one session of the SAME lab may run at once, and they are fully isolated** (verified

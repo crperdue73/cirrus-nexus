@@ -150,6 +150,41 @@ unverifiable claims, no screenshots of a build that isn't here.
       numbers that actually trace to a shipped file (`lab-guides/lab-03-lock-it-down.md` — 100 pts,
       70 = pass) and labelled it curriculum context, not a shipped lab — 2026-10-11
 
+## Run 2026-10-21 13:00 UTC — OPERATIONS had no "what a failed stop means" section
+
+Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run. The two long-standing
+blocked items are unchanged (Screenshots needs a session on the host where AEGIS runs; the explicit
+`ci.yml` grader step needs a `workflow`-scoped token and is cosmetic since the compile already runs).
+So I swept the docs for a reader-facing gap instead of inventing work.
+
+Found one, in the operation an operator is most likely to get wrong. `docs/OPERATIONS.md` documented
+starting the server, reloading labs, digests, concurrency, drift and the archive — and said nothing
+about **stopping** a session, which is where the failure is worst: a stop that reports failure while
+the lab is still up, and a `clab-*` container no session can claim. Read the behaviour off the code
+rather than from memory: `POST /api/sessions/{id}/stop` (backend/main.py) raises `404` on an unknown
+id before touching anything, raises `500` with "the session is still listed … press End Lab again"
+when the teardown throws, and pops the session + releases ttyd ports only after the teardown returns —
+all of it inside `_DEPLOY_LOCK`, which `start` also takes. `reconcile_sessions()` adopts only
+containers carrying `aegis.session.id` (`_stamp_session_labels`), and `scripts/clab-reaper.sh` in its
+default `--orphans` mode exits 3 when `/api/sessions` cannot be read and 4 when any `clab-*` container
+is unlabelled.
+
+Wrote a **Stopping a session** section from exactly those facts, added it to the README's
+Documentation row for OPERATIONS, and recorded it in the CHANGELOG.
+
+Honest correction about my own first draft, since the log is worth more if it records the miss: the
+section I first wrote claimed a `409` on stop could mean "already destroyed" and that a stop is
+"often right the first time, and a second immediate retry is not." Neither is true of this tree —
+`destroy_lab` does not check containerlab's return code and the stop route neither reads it nor raises
+`409` (the 409s live on `start`/`submit`). Both sentences were deleted before commit; what shipped is
+only what the code shows. The lesson is the same one the README repeats: measure the code you are
+about to describe, including when you are describing a thing you "already know."
+
+Docs only, no behaviour change. Backed up `docs/OPERATIONS.md` and `CHANGELOG.md` via
+`~/scripts/safe-backup.sh` (label `ops-session-stop-2026-10-21`, written out of the served tree).
+
+---
+
 ## Run 2026-10-21 01:00 UTC — the lab-pack lint gate reported "could not run" as a per-lab result
 
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; all four CI checks pass

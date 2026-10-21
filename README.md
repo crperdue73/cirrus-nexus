@@ -254,7 +254,7 @@ labs; it is not a finished product. What that means concretely:
 | doc | contents |
 |-----|----------|
 | [`docs/architecture.md`](docs/architecture.md) | components, diagrams, the lab lifecycle, the grading path, substrates, scope boundaries |
-| [`docs/OPERATIONS.md`](docs/OPERATIONS.md) | bundle rebuild, runtime digests, concurrency, running without the service, substrate details, known drift |
+| [`docs/OPERATIONS.md`](docs/OPERATIONS.md) | stopping a session (what a failed stop means), bundle rebuild, runtime digests, concurrency, running without the service, substrate details, known drift |
 | [`docs/ADDING-A-LAB.md`](docs/ADDING-A-LAB.md) | what a lab is, the metadata schema, the load-time validation the loader refuses by name, the grader interface |
 | [`docs/GRADING-MODEL.md`](docs/GRADING-MODEL.md) | pass / fail / refused, per-node vs lab verdict, the digest gate, the refusal vocabulary |
 | [`docs/SELF-CONTAINED.md`](docs/SELF-CONTAINED.md) | what "self-contained" means here, the CI check that enforces it, and exactly what a cold install pulls |

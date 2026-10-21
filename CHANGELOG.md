@@ -7,6 +7,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased] — honesty sweep, week of 2026-10-20
 
+### Added
+- **`docs/OPERATIONS.md`: a "Stopping a session" section.** The failure mode with the worst
+  operator-facing consequences — a stop that reports failure while the lab is still up, and a
+  `clab-*` container that no session can claim — was documented nowhere, so the only way to learn it
+  was to hit it. The section states, from the code: a failed teardown is HTTP `500` and leaves the
+  session listed (`POST /api/sessions/{id}/stop`, RUN 209) so **End Lab again** is the retry; a stop on
+  an unknown id is `404`, not a live lab; teardown and ttyd-port release happen inside the deploy lock
+  a `start` also takes; and `reconcile_sessions()` adopts only containers carrying the
+  `aegis.session.id` label, which is why `scripts/clab-reaper.sh`'s default `--orphans` mode refuses
+  (exit 3 unreadable app / exit 4 unlabelled containers) instead of guessing. Documentation only; no
+  behaviour change.
+
 ### Changed
 - **README: how a lab guide actually opens.** The "Lab Guide" button points at
   `/api/labs/{id}/guide`, and `backend/main.py` answers that route with
