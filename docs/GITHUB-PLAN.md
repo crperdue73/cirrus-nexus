@@ -1,4 +1,14 @@
-# GITHUB-PLAN — making `crperdue73/cirrus-nexus` professional
+# GITHUB-PLAN — internal worklog for `crperdue73/cirrus-nexus`
+
+> **Internal document — this is not product documentation and it is not a reader's guide to the repo.**
+> It is the maintainer's dated worklog of polish runs: what was measured, what was found, what was
+> changed, and what is waiting on a decision. It names internal hosts, addresses and people, and it
+> records run-specific evidence that makes sense only alongside the per-run proof files. The rest of
+> the documentation in this tree is written to be *true of the tree* for an outside reader; this file
+> is written to be *true to the history of the work*. It is kept in the repo so the trail is not lost.
+> It was previously listed in the README's Documentation table as "repo-hardening backlog"; that link
+> was removed on 2026-10-21 because the table promises reader-facing docs (see the Documentation
+> section of `README.md`), and this is not one.
 
 **Source of truth:** this tree (`projects/aegis`). `origin` = `github.com/crperdue73/cirrus-nexus`.
 The old public history is preserved on branch `legacy-orphan-tree` (the deprecated `aegis-public` fork).
@@ -9,6 +19,25 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **README + `architecture.md` listed the internal worklog (`docs/GITHUB-PLAN.md`) as public
+      documentation** (2026-10-21 11:00). `README.md:261` and `docs/architecture.md:167` both carried it
+      in their "See also / Documentation" tables as "repo-hardening backlog". Measured what that file
+      actually is: 119 lines matching `dad|192\.168|dept-dragon-tech|/home/selina` — internal hostnames
+      and addresses, blocker notes naming an individual, run-by-run evidence prose. The two tables are
+      reader-facing (every other row is a doc that is *true of the tree* for an outsider), so pointing a
+      stranger at this file was the opposite of the honesty rule: it advertises an internal log as
+      product documentation. Fix, docs only: both table rows removed; the file gained an internal-document
+      banner saying what it is (maintainer worklog), what it is not (product docs), why it is kept, and
+      that the link was removed. NOT fixed by deleting the file — whether the worklog ships publicly at
+      all is Dad's call, recorded as an open item below. Verified: `git grep GITHUB-PLAN.md` in the
+      reader-facing docs now returns nothing; CI green (py_compile, `bash -n install.sh`,
+      `check_self_contained.py`); `lint_lab_pack.py` → `UNAVAILABLE`, rc=2 (PyYAML absent on this box,
+      which is the run-22a8d10 behaviour working, not a failure). Backup via
+      `workspace-selina/scripts/safe-backup.sh` → `.nexus/bundle-archive/GITHUB-PLAN.md.bak-2026-10-21-1101-README.md`.
+- [ ] **DECISION (Dad):** should `docs/GITHUB-PLAN.md` ship publicly with the repo at all? It is tracked
+      and on `origin/main`, and it names internal hosts/addresses and a person. Options: keep as-is with
+      the internal banner, move it out of the served tree (e.g. into git-ignored `.nexus/`), or stop
+      tracking it. Not mine to choose — same class as the `.nexus/` shipping-policy call.
 - [x] **`tools/lint_lab_pack.py`: "could not run" was reported as a per-lab verdict** (2026-10-21).
       The PR template and `.github/ISSUE_TEMPLATE/lab_request.md` both gate on
       `python3 tools/lint_lab_pack.py`, but the `import yaml` lived inside the per-lab path, so on a box

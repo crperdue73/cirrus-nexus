@@ -164,4 +164,3 @@ registry fails early instead of at first deploy.
 | [`OPERATIONS.md`](OPERATIONS.md) | bundle rebuild, runtime digests, concurrency, running without the service, known drift |
 | [`ADDING-A-LAB.md`](ADDING-A-LAB.md) | the metadata schema, load-time validation, the grader interface |
 | [`GRADING-MODEL.md`](GRADING-MODEL.md) | pass / fail / refused, lab verdict, the digest gate |
-| [`GITHUB-PLAN.md`](GITHUB-PLAN.md) | repo-hardening backlog |
