@@ -24,8 +24,22 @@ when deciding "solved".
   PARTIAL — some PC/router addresses pre-applied, some left to the student
   UNSOLVED— no PC/router addresses pre-applied (the student does the work)
 
+Non-verdicts (nothing was actually examined — never read these as a pass):
+  NO-GRADER   — the lab names a grader module that does not exist
+  NO-EXPECTED — grader exposes no EXPECTED/literal node->IP map to read
+  UNAVAILABLE — PyYAML is missing, so the topology could not be parsed at all
+
+UNAVAILABLE is a hard stop, not a per-lab finding: it is checked once, up
+front, and exits 2 with one message on stderr. Before 2026-10-21 the missing
+import surfaced inside the per-lab loop instead, so a box without PyYAML got
+one `ERROR` row per lab under a header called STATUS and never saw the
+NOT CHECKED line below — a worker following the PR-template checklist could
+read that as a completed run. Exit 2 distinguishes "could not run" from the
+red-flag exit 1 and the clean exit 0.
+
 Usage:  python3 tools/lint_lab_pack.py [--json]
-Exit code 1 if any lab is SOLVED (a lab-pack red flag), else 0.
+Exit code 1 if any lab is SOLVED (a lab-pack red flag), 2 if it could not run
+(PyYAML missing), else 0. This is NOT a CI step; run it by hand.
 """
 
 import argparse
@@ -37,6 +51,28 @@ from pathlib import Path
 
 BASE = Path(__file__).resolve().parent.parent
 LABS_DIR = BASE / "lab-definitions"
+
+
+def _require_yaml() -> bool:
+    """Fail once, loudly, if PyYAML is absent — before any lab is classified.
+
+    The topology parse is the whole method, so without yaml there is no partial
+    result worth printing. Checked up front so the message names the real
+    problem instead of surfacing as a per-lab ERROR row.
+    """
+    try:
+        import yaml  # noqa: F401
+    except ImportError:
+        print(
+            "UNAVAILABLE: PyYAML is not installed, so no lab was examined "
+            "(this is not a pass).\n"
+            "Install it, then re-run:\n"
+            "    python3 -m pip install pyyaml\n"
+            "(pyyaml is already declared in requirements.txt.)",
+            file=sys.stderr,
+        )
+        return False
+    return True
 
 
 def load_grader(module_name: str):
@@ -277,6 +313,9 @@ def main() -> int:
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
 
+    if not _require_yaml():
+        return 2
+
     results = []
     for yml in discover_labs():
         try:
@@ -293,7 +332,8 @@ def main() -> int:
             if r["status"] in ("SOLVED", "PARTIAL", "UNSOLVED"):
                 print(f"{r['status']:<9} {r.get('seeded_ratio',''):<8} {r['lab']}")
             else:
-                print(f"{r['status']:<9} {'-':<8} {r['lab']}  ({r.get('error', r['status'])})")
+                why = r.get("error") or r["status"]
+                print(f"{r['status']:<9} {'-':<8} {r['lab']}  ({why})")
         solved = [r for r in results if r["status"] == "SOLVED"]
         fake = [r for r in results if (r.get("switch_auth") or {}).get("fake_switches")]
         unchecked = [r for r in results if r["status"] == "NO-EXPECTED"]

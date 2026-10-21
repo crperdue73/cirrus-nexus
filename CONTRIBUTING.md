@@ -27,16 +27,20 @@ The four checks above are exactly what CI enforces on every push and PR. Two fur
 for lab authors and are **not** part of CI:
 
 ```bash
-sudo pip install pyyaml                   # lint_lab_pack.py reads YAML (CI does not install deps)
-python3 tools/lint_lab_pack.py            # flags a lab that ships PRE-SOLVED (the answer key)
-bash tools/check_bundle_fresh.sh          # served bundle vs. source (no-ops if no bundle present)
+python3 -m pip install -r requirements.txt   # pyyaml is already declared there; CI installs no deps
+python3 tools/lint_lab_pack.py               # flags a lab that ships PRE-SOLVED (the answer key)
+bash tools/check_bundle_fresh.sh             # served bundle vs. source (no-ops if no bundle present)
 ```
 
 `lint_lab_pack.py` guards the one failure that has bitten this repo before — a lab whose grader
 passes with **zero** student work because the expected values were baked into the topology. It is
-not wired into CI (it needs `pyyaml`, which CI does not install, and CI cannot be changed from a
-token without `workflow` scope), so **run it by hand when you add or edit a lab.** Both are also
-listed in the pull-request checklist.
+not wired into CI (CI installs no dependencies, and CI cannot be changed from a token without
+`workflow` scope), so **run it by hand when you add or edit a lab.** Both are also listed in the
+pull-request checklist.
+
+`pyyaml` is declared in `requirements.txt` alongside the backend's own deps, so no separate install
+step is needed. If it is missing anyway, the tool exits **2** and says so — that is "could not run",
+not a clean pass.
 
 ## Adding or editing a lab
 
@@ -70,6 +74,11 @@ If you run it (see above), read the output as **green means "no pre-solved lab w
 "this lab is correct". It flags exactly one class of failure: a lab whose expected values are already
 present in the topology, so the grader would pass with zero student work. Exit status is `0` when nothing
 was flagged and `1` when at least one lab was — its final line is the verdict, not the per-lab rows.
+
+Exit **2** means the tool never ran (PyYAML missing). Treat that as no result at all, and do not
+check the box on the checklist. Rows marked `NO-EXPECTED` mean the grader exposed no address map to
+read, so that lab's pre-solved status is **unknown** — the tool prints a `NOT CHECKED` line for
+these and deliberately does not count them as a pass.
 
 ## Commits
 
