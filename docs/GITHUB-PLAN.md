@@ -19,6 +19,37 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **Demo 2's declared prerequisite named a lab that does not exist in this tree**
+      (2026-10-22 19:00). Found by sweeping every reader-facing doc for inbound links and then
+      checking the shipping labs' own cross-references. `demo-02-two-switches-one-router-unsolved.yml`
+      carried `prerequisites: [demo-01-two-pcs-and-a-real-switch]` — but this tree's Demo 1 id is
+      `demo-01-two-pcs-and-a-real-switch-unsolved` (read off `metadata.id`), and the unsuffixed id
+      exists only in the **quarantine** copy (`lab-definitions-quarantine-2026-09-30/srl-demo/`), which
+      the loader never reads. So the one lab a student can actually start pointed at a predecessor that
+      is not served — the same-shape error as the withdrawn `lab-04-two-as-peering` reference, surviving
+      because the field is inert.
+      **Scope stated honestly: this was NOT a runtime bug.** `grep` for `prerequisites`/'prereq' over
+      `backend/main.py`, `frontend/index.html` and `tools/` returns **nothing** — no code reads the field,
+      so no student was ever mis-served by it. It is a broken cross-reference in shipped metadata: wrong
+      for anyone reading the YAML, a lab-pack author, or a future feature that starts honouring it.
+      Fix: one token, `-unsolved` appended, making it resolve to the shipped id.
+      Measured: enumerated `metadata.id` for every `*.yml` under `lab-definitions/` → exactly the two
+      expected ids; resolved both labs' `grader:` fields → both `.py` files exist; checked every
+      `prerequisites` entry against the live id set → 1 entry, **0 dangling** after the fix (it was the
+      only one; Demo 1's is `[]`). `git diff` = 1 insertion / 1 deletion, nothing else touched.
+      A real YAML parse was **not** available and is not claimed: this box has no PyYAML and no pip, so
+      `tools/lint_lab_pack.py` answers `UNAVAILABLE`, rc=2 (the run-22a8d10 behaviour working, not a
+      pass). Instead of inferring "looks fine" I proved it differentially: byte-diff against the backup
+      shows exactly line 61 changed, 1-for-1; a structural sweep of all 95 lines found no tabs, no
+      unbalanced brackets/braces, no trailing whitespace. The one "odd single-quote" flag it raised is
+      an apostrophe in `# Dad's spec` on **line 4** — a comment, pre-existing, not introduced here.
+      CI checks re-run green after the edit: `py_compile`, `bash -n install.sh`,
+      `check_self_contained.py` → "16 required files present", secret scan clean (rc=1 = no matches).
+      No grader, topology, backend or CI change. Backup via `scripts/safe-backup.sh` →
+      `.nexus/bundle-archive/demo-02-two-switches-one-router-unsolved.yml.bak-2026-10-22-1901-prereq-fix-2026-10-22`
+      (git-ignored, do not ship).
+      NOT COMPLETE — Dad's word alone. | proof=diff + id/prereq resolution sweep |
+      next=in-scope honesty item; the standing blocks below are unchanged.
 - [x] **`CONTRIBUTING.md` step 4's pass condition and its coverage claim were both wrong**
       (2026-10-22 13:00). Two separate claims in the same paragraph, both checked against the tree:
       (1) *"No output is the pass"* and (2) *"CI also reads `*.txt` and `*.cfg` via its wider include

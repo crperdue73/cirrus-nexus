@@ -58,7 +58,7 @@ metadata:
     - Router interface addressing and IP forwarding
     - Static routing to a remote subnet
     - End-to-end ping and traceroute verification
-  prerequisites: [demo-01-two-pcs-and-a-real-switch]
+  prerequisites: [demo-01-two-pcs-and-a-real-switch-unsolved]
 name: aegis-demo-02-srl-two-switch-router
 topology:
   nodes:
