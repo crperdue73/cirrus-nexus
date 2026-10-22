@@ -54,6 +54,14 @@ flowchart TB
 
 ---
 
+The rendered version of this exact `mermaid` block is committed at
+`docs/assets/architecture-components.png` (rendered with `@mermaid-js/mermaid-cli`, theme `neutral`,
+white background; the source above is authoritative — if the two disagree, the source wins and the
+PNG needs re-rendering). The README embeds that PNG so the diagram shows up where people actually
+land first.
+
+---
+
 ## Components
 
 | Path | Role |

@@ -58,7 +58,14 @@ does not see them). That is a different place from `10-archive/` — see the Arc
 ## How it works
 
 The full component breakdown and the lab lifecycle are in
-[`docs/architecture.md`](docs/architecture.md); the sketch below is the essential shape.
+[`docs/architecture.md`](docs/architecture.md). The diagram below is the component diagram from that
+document, rendered straight out of its `mermaid` block — it is a build of the source diagram, not a
+mock-up:
+
+![AEGIS component diagram: student browser → FastAPI backend → containerlab, ttyd, and live lab
+containers](docs/assets/architecture-components.png)
+
+The same shape in text, for terminals and diffs:
 
 ```
         student browser

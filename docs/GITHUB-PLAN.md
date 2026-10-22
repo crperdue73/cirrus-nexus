@@ -111,6 +111,9 @@ unverifiable claims, no screenshots of a build that isn't here.
 - [x] `CITATION.cff` (2026-10-07)
 - [x] `.github/ISSUE_TEMPLATE/` (`bug_report.md`, `lab_request.md`) + `PULL_REQUEST_TEMPLATE.md` (2026-10-07)
 - [x] `docs/architecture.md` + diagrams committed as source (mermaid component + lifecycle) (2026-10-07)
+- [x] README showed a hand-typed ASCII sketch instead of the diagram that already existed as source.
+      Rendered the mermaid component block to `docs/assets/architecture-components.png`, embedded it
+      above the text sketch, and added it to the `check_self_contained.py` required list (2026-10-22)
 - [x] CI: GitHub Actions (backend compile, `bash -n install.sh`, self-contained check, secret scan)
 - [x] CI hardening: byte-compile the shipped lab graders (`lab-definitions/grader_*.py`). **CLOSED via an
       unblocked route 2026-10-10:** `backend/main.py` is the only file CI compiles today, so a syntax
@@ -1437,3 +1440,49 @@ the `v0.1.0` tag re-point/re-cut decision, whether `main`'s `check_self_containe
 pulled into the release, and — new — whether a real security contact address should exist at all
 (`SECURITY.md` currently points at the maintainer's GitHub profile, the same route `CONTRIBUTING.md`
 already offered, because no other contact is published anywhere in this tree).
+
+## Run 2026-10-22 01:00 UTC — README's "sketch below" is now the real diagram, not ASCII art
+
+Measured live before acting: `git status` clean, `HEAD...origin/main = 0 0` at `4d5155b`, all four CI
+checks green. Token scopes unchanged → still no `workflow` scope; Screenshots still blocked (live
+AEGIS host unreachable from this box).
+
+`README.md` already linked `docs/architecture.md` — which has carried a `mermaid` component diagram as
+source since 2026-10-07 — and then said *"the sketch below is the essential shape"* and showed a
+hand-typed box drawing. The diagram existed; the README just showed an approximation of it. Anyone
+landing on the repo saw ASCII, not a diagram, which is exactly the difference between "a project" and
+"a project that looks like a project".
+
+What changed:
+
+- Rendered the `mermaid` `flowchart TB` block from `docs/architecture.md` to
+  `docs/assets/architecture-components.png` with `@mermaid-js/mermaid-cli` 12.0.0 (theme `neutral`,
+  white background). This is a build of the source diagram — verified by extracting the text back out
+  of the rendered PDF with `pdftotext` and confirming every node and edge label in the block appears
+  in the output. Nothing was redrawn, relabelled, or added.
+- `README.md`: the PNG is embedded above the existing text sketch, with alt text. **The ASCII sketch
+  was kept** rather than deleted — it still works in terminals, in diffs, and on clients that do not
+  load images, and rewording it would have meant asserting the picture instead of the source.
+- `docs/architecture.md`: states that the rendered PNG is a build of the block above it, which file is
+  authoritative (the source), and what to do when they disagree.
+- `docs/assets/README.md`: how the PNG was produced and how to re-render it, plus — explicitly — why
+  there is still no screenshot of the live UI (no reachable lab host from this editing box; a render
+  of the real code paths is true, a mocked UI would not be).
+- `tools/check_self_contained.py`: added `docs/assets/architecture-components.png` to `REQUIRED`, so a
+  clone whose README points at a missing image fails CI instead of showing a broken-image icon. 16
+  required files now, up from 15.
+
+Docs + one binary asset + one line in the completeness checker. No product code, no behaviour change.
+Backed up `README.md` to `.nexus/bundle-archive/README.md.bak-2026-10-22-0100-diagram` (git-ignored,
+does not ship). All four CI checks re-run green after the edit (`py_compile`, `bash -n install.sh`,
+`check_self_contained.py` → "16 required files present", secret scan clean).
+
+Not done, on purpose: no screenshot of a running lab was invented, and no UI mock-up was drawn. The
+Screenshots item stays blocked until there is a real host to capture.
+
+NOT COMPLETE — Dad's word alone. | proof=none (docs + asset) |
+next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
+cosmetic `ci.yml` step (needs workflow-scoped token), the `.nexus/` public policy call,
+DELETE-OR-KEEP `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` / `10-archive/`,
+the `v0.1.0` tag re-point/re-cut decision, whether `main`'s `check_self_contained.py` guard should be
+pulled into the release, and whether a published security contact address should exist.

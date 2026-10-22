@@ -28,6 +28,7 @@ REQUIRED = [
     "backend/main.py",
     "frontend/index.html",
     "assets/frr-image.pin",
+    "docs/assets/architecture-components.png",
     "lab-definitions/grader_demo_01_srl.py",
     "lab-definitions/grader_demo_02.py",
     "lab-definitions/srl-demo-unsolved/demo-01-two-pcs-and-a-real-switch-unsolved.yml",
