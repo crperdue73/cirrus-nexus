@@ -35,10 +35,25 @@ grep -rInE 'gho_[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|BEGIN 
   --include='*.html' --include='*.md' .
 ```
 
-No output is the pass. Use `grep`, not `git grep`: `git grep` only reads tracked files, so it misses
-a secret in a file you have not staged yet — which is exactly when a secret gets committed. (Both forms
-read `*.py *.sh *.yml *.json *.html *.md`; CI also reads `*.txt` and `*.cfg` via its wider include
-list, so a token in one of those is caught there and not by hand.)
+No output is the pass. Measured on a clean tree, this command prints nothing and exits 1. Two limits
+you should know before you rely on it:
+
+First, **the suffix list is a sample, not the whole of CI.** These six suffixes (`*.py *.sh *.yml
+*.json *.html *.md`) are exactly the ones the CI step reads — CI is not wider here — and that is the
+limit worth knowing: the scan is a **suffix allow-list**, so a credential in a `*.cfg`, `*.txt`,
+`*.env`, or an extension-less file (a `Dockerfile`, a bare config) is invisible to it, and so is a file
+you have not staged (seed a fake token into a `.cfg` at the repo root and this command reports
+nothing — measured). For a whole-tree answer with no suffix filter:
+
+```bash
+git grep -nE 'gho_[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|BEGIN [A-Z ]*PRIVATE KEY'
+```
+
+Use `grep` (not only `git grep`) for the pre-commit check specifically: `git grep` reads only tracked
+files, so it misses a secret in a file you have not staged yet — which is exactly when a secret gets
+committed. The two commands answer different questions: the `grep` form is "is my working tree clean
+right now, in the suffixes we ship most of", the `git grep` form is "is the whole tracked tree clean,
+no suffix filter". Zero output from each is the pass.
 
 The four checks above are exactly what CI enforces on every push and PR. Two further tools exist
 for lab authors and are **not** part of CI:

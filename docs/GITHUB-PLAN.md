@@ -19,6 +19,44 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **`CONTRIBUTING.md` step 4's pass condition and its coverage claim were both wrong**
+      (2026-10-22 13:00). Two separate claims in the same paragraph, both checked against the tree:
+      (1) *"No output is the pass"* and (2) *"CI also reads `*.txt` and `*.cfg` via its wider include
+      list"*.
+      Re-read `ci.yml` line by line: its include list is exactly `*.py *.sh *.yml *.json *.html *.md`
+      — **no `*.txt`, no `*.cfg`** — so the sentence told the reader a credential in a `.cfg` would be
+      "caught there and not by hand" when nothing catches it. That is a claim about CI that was false
+      about CI.
+      Measured the pass condition with the six-suffix command **exactly as CI runs it** on a clean
+      tree: no output, rc=1. So (1) held — *after* I corrected a false start of my own: a first draft
+      of this entry claimed the command self-matches `CONTRIBUTING.md` and fails; re-run with the
+      pattern's backslashes intact and the alternation quoted, it does not match at all (the pattern
+      text in the file has `[A-Za-z0-9]{20,}`, and the shell-quoted literal reproduces it). That
+      premise-failed paragraph was deleted, not shipped. `git grep` over all tracked files with the same
+      pattern: rc=1, no matches. A second false start in this same entry — a first-draft `CONTRIBUTING.md`
+      paragraph claiming the command self-matches the file — was also measured false and removed before
+      commit. Both are recorded here because the point of this file is that the worklog not read cleaner
+      than the work. A wider grep also lists `CHANGELOG.md` / `GITHUB-PLAN.md`, where the
+      text is `ghp_…` with a real ellipsis, short of `{20,}` — not hits.
+      Measured the coverage limit by seeding, not by inference: a `ghp_` + 36-char token written to an
+      untracked `probe.cfg` at repo root → the CI-form command rc=1 with **no output** (missed); the
+      same grep without `--include` matched it on line 1. Probe deleted; `git status` shows only the two
+      intended files. This also confirms the 2026-10-21 note's `ghp_` miss was a *`git grep` vs `grep`*
+      problem (the seeded file there was a `.md`, inside the covered set) and did **not** establish that
+      the suffix list is complete — it is not.
+      Now `CONTRIBUTING.md` says: the six suffixes are exactly CI's, the scan is a **suffix allow-list**
+      (so `*.cfg`, `*.txt`, `*.env`, extension-less files and unstaged files are invisible to the
+      include form), and gives the full-tree cross-check `git grep -nE '<pattern>'` with no `--include`
+      list — the command used here to measure "the tree is clean", not inherited from the prior note.
+      Docs only. No change to `ci.yml`, no product code. CI checks re-run green after the edit
+      (`py_compile`, `bash -n install.sh`, `check_self_contained.py` → "16 required files present",
+      secret scan clean by both forms). Backups: `.nexus/bundle-archive/{CONTRIBUTING.md,GITHUB-PLAN.md}.bak-2026-10-22-1300-relative-path`
+      (git-ignored, do not ship).
+      NOT COMPLETE — Dad's word alone. | proof=none (docs) |
+      next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
+      cosmetic `ci.yml` step (needs workflow-scoped token), the `.nexus/` public policy call,
+      DELETE-OR-KEEP `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` / `10-archive/`,
+      the `v0.1.0` tag re-point/re-cut decision.
 - [x] **`CONTRIBUTING.md`: "the same checks CI runs" handed the contributor three commands and a
       comment** (2026-10-21 19:00). The section promises *run the same checks CI runs (all four)*, then
       lists steps 1–3 as copy-pasteable commands and step 4 as `# 4. no obvious secrets committed — CI
