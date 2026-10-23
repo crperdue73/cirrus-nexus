@@ -19,6 +19,38 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **The quickstart told a reader that `install.sh` gives them a working install; a fresh install
+      serves an empty lab catalog** (2026-10-23 13:00). Found by *testing* Step 6 instead of reading
+      it: I built a tree by hand exactly as `install.sh` Step 6 copies it (`backend/`, `frontend/`,
+      `lab-definitions/`, `Dockerfile.frr`, `README.md`, `start_server.py`, top-level `assets/`) — note
+      what is not in that list — then removed the per-lab `assets/` dirs from the copy to match, and
+      ran the backend against it. Result: `GET /api/labs` → `{"labs": []}`; server log →
+      `[labs] REFUSED malformed lab definition 'demo-01-…': startup-config for sw1 names a file that
+      does not exist: assets/sw1.cfg` — and the same for Demo 2. `[labs] 2 definition(s) skipped;
+      serving 0`.
+      Cause, read off `install.sh` lines 170–173: it copies `lab-definitions/` **as a whole**, but
+      both shipped YAMLs point at `assets/sw1.cfg` / `assets/sw2.cfg` *relative to the lab
+      directory*, and Step 6 has no per-lab asset copy. So the files are in the clone and not in
+      `/opt/aegis`. This is a real install-path break, not a doc nit — but it is **not** a runtime
+      regression I introduced, and it is **not** reproduced on this box's own install (which has the
+      files); it is a statement about a cold install.
+      Scope of this run, stated honestly: **docs only.** Fixing `install.sh` means the installer needs
+      root, Docker and network to verify, and none of that is available here — shipping an untested
+      installer edit to the file that builds the teaching host is worse than documenting the gap. So
+      `README.md` Quick start now carries a **Known gap** box with the exact failure text, the exact
+      cause, a copy-paste `sudo cp -r …` workaround, and the note that `check_self_contained.py`
+      cannot catch this (it proves the *repo* is complete, not that the installer carries it). Also
+      added one bullet to *Known limitations* so the front-page limitations list does not read as
+      exhaustive when it is not. `docs/SELF-CONTAINED.md` got the same boundary statement, since that
+      doc is where the CI check's limits belong.
+      Measured after the edit: CI secret scan run **exactly as `ci.yml` runs it** (six `--include`
+      suffixes, both alternation forms of the pattern are non-self-matching — checked the descriptions
+      against the pattern in Python: no match) → rc=1, no output. `py_compile`, `bash -n install.sh`,
+      `check_self_contained.py` → "16 required files present…". `git diff --stat` = 2 files, +29/−0.
+      NOT COMPLETE — Dad's word alone. | proof=simulated Step 6 copy + live `GET /api/labs` on it |
+      next=FIX IT PROPERLY (Dad's call): add the per-lab `assets/` copy to `install.sh` Step 6 and
+      verify on a clean host, then retract the Known-gap box; until then the standing blocks below
+      are unchanged.
 - [x] **README's Documentation table labelled nine files as reader docs and hid a tenth that is
       not one — and the API card's `version` was shown as a bare key** (2026-10-23 01:00). Two small
       reader-facing facts in `README.md`, both measured against the tree, neither a code change.

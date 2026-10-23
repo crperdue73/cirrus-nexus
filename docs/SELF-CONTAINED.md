@@ -13,6 +13,13 @@ depend on a developer's machine, a private path, or an out-of-band file that isn
 - a developer's absolute path (`/home/<user>/.openclaw`, `/Users/<user>/.openclaw`) appears in any
   shipped source file.
 
+**What it does not check: the install step.** It proves the *repository* is complete; it does not
+prove that `install.sh` carries those files to `/opt/aegis`. It could not: the installer needs root,
+Docker and network, and CI runs none of it. The check also cannot notice a file that was deleted
+before commit. See the *Known gap* note in the README's Quick start for the one place where this
+boundary is currently visible — the per-lab `assets/` folders are in the repo but are not copied by
+the installer, so a fresh install serves an empty catalog until they are copied by hand.
+
 ## What a cold install pulls from the network
 
 Only third-party images the two labs (`demo-01-two-pcs-and-a-real-switch-unsolved`,

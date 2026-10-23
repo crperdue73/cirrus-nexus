@@ -115,6 +115,26 @@ sudo ./install.sh
 `Dockerfile.frr` (this tree ships no prebuilt FRR tarball), pre-pulls the switch image, and installs a
 systemd service.
 
+> **Known gap: the installer does not copy each lab's `assets/` directory.** `install.sh` copies
+> `backend/`, `frontend/`, `lab-definitions/` and the top-level `assets/` to `/opt/aegis`, but not the
+> per-lab `lab-definitions/<lab>/assets/` folders. Both shipped labs reference
+> `startup-config: assets/sw1.cfg` (and Demo 2 also `sw2.cfg`), i.e. a path *inside* the lab's own
+> directory. Measured on a tree built by simulating the Step 6 copy block: `GET /api/labs` returns
+> `{"labs": []}` and the server logs
+> `REFUSED malformed lab definition … startup-config for sw1 names a file that does not exist: assets/sw1.cfg`
+> for **both** labs. The loader refuses rather than deploying a switch with no config — the right
+> failure — but the result on a fresh install is a UI with no labs. Until this is fixed, copy the lab
+> assets by hand after installing:
+>
+> ```bash
+> sudo cp -r lab-definitions/srl-demo-unsolved/assets  /opt/aegis/lab-definitions/srl-demo-unsolved/
+> sudo cp -r lab-definitions/srl-demo2-unsolved/assets /opt/aegis/lab-definitions/srl-demo2-unsolved/
+> sudo systemctl restart aegis
+> ```
+>
+> `tools/check_self_contained.py` does **not** catch this: it checks that the repo contains the files,
+> not that the installer carries them to the install directory.
+
 ```bash
 sudo systemctl start aegis     # start the server
 sudo systemctl enable aegis    # start on boot
@@ -240,6 +260,8 @@ labs; it is not a finished product. What that means concretely:
 
 - **Static routing only** — see "what this is not," above.
 - **A host reboot loses running labs.** Student containers are not restored on boot.
+- **A fresh `install.sh` starts with an empty lab catalog** until the per-lab `assets/` folders are
+  copied into `/opt/aegis` by hand — see *Known gap* in Quick start.
 - **Binds to every interface, with no authentication.** The server listens on `0.0.0.0:8000`
   (`AEGIS_HOST` / `AEGIS_PORT` override that, and `install.sh` prints the LAN URL), and every route —
   including `start`, `stop`, and `/docs` — is unauthenticated. That is deliberate for a classroom's
