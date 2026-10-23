@@ -19,6 +19,34 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **README's Documentation table labelled nine files as reader docs and hid a tenth that is
+      not one — and the API card's `version` was shown as a bare key** (2026-10-23 01:00). Two small
+      reader-facing facts in `README.md`, both measured against the tree, neither a code change.
+      (1) **`docs/GITHUB-PLAN.md` was unlisted.** It is tracked, public, and 1.5k lines of internal
+      worklog — the header written into it on 2026-10-21 says in as many words that it is not product
+      documentation and not a reader's guide, and that its earlier Documentation-table listing was
+      removed for that reason. The effect of removing the listing was that the file became invisible
+      from the front page while staying public: a reader browsing `docs/` found no statement of what it
+      is. Fixed by re-listing it **as what it is** — labelled "internal, dated maintainer worklog … not
+      product documentation and not a reader's guide" — plus one paragraph in the `.nexus/`-style
+      reading rule below the table. Measured before writing the label: `grep -rn GITHUB-PLAN` over
+      tracked files returns **only `README.md`'s own two new references** (all other hits are the file
+      itself, git-ignored `.nexus/bundle-archive/*.bak` copies, and the untracked `logs/nexus-forward.log`),
+      so the claim "nothing in the install, lab, grading or operations path points into it" is true as
+      of this commit, not an inference.
+      (2) **The service card was printed as `{"service": "NEXUS", "version", "labs_count"}`** — i.e.
+      a bare `"version"` key, which reads as an object with no value. `backend/main.py:1783` returns
+      `version` as a **constant string `"0.3.0"`**, so the card now shows it verbatim. I added, and
+      measured, the sentence a reader needs to not confuse it with the release: the `0.3.0` is the
+      API's own version constant, while the README's release status and the `v0.1.0` tag are the
+      *release* line — two different numbers in one repo, now said out loud instead of implied.
+      Scope: `README.md` only, +8/−1. CI checks re-run green after the edit: `py_compile
+      backend/main.py`, `bash -n install.sh`, `check_self_contained.py` → "16 required files present",
+      secret scan with **CI's exact six suffixes** → rc=1, no output (clean). Backup of both files →
+      `.nexus/bundle-archive/README.md.bak-2026-10-23-0100-badge-truth` and
+      `…/GITHUB-PLAN.md.bak-2026-10-23-0100-badge-truth` (git-ignored, do not ship).
+      NOT COMPLETE — Dad's word alone. | proof=route-claim read off `main.py:1783` + `grep GITHUB-PLAN` sweep |
+      next=in-scope honesty item; the standing blocks below are unchanged.
 - [x] **Demo 2's declared prerequisite named a lab that does not exist in this tree**
       (2026-10-22 19:00). Found by sweeping every reader-facing doc for inbound links and then
       checking the shipping labs' own cross-references. `demo-02-two-switches-one-router-unsolved.yml`

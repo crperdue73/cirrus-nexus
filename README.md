@@ -150,7 +150,7 @@ exactly how the shipped UI calls them.
 
 | Method | Route | Parameters | Purpose |
 |--------|-------|------------|---------|
-| `GET` | `/api` | — | service card: `{"service": "NEXUS", "version", "labs_count"}` |
+| `GET` | `/api` | — | service card: `{"service": "NEXUS", "version": "0.3.0", "labs_count"}` (the version is the API's own, not the release tag's — see [Release status](#release-status)) |
 | `GET` | `/api/labs` | — | the served lab catalog |
 | `GET` | `/api/labs/{id}` | — | one lab's definition |
 | `GET` | `/api/labs/{id}/guide` | — | the lab's Markdown student guide (served raw) |
@@ -274,6 +274,7 @@ labs; it is not a finished product. What that means concretely:
 | [`10-archive/SUMMARY-for-Dad.md`](10-archive/SUMMARY-for-Dad.md) | dated 2026-06-09 topology audit — **historical**, describes a pre-release layout (see `docs/OPERATIONS.md` → Archive) |
 | [`lab-guides/lab-03-lock-it-down.md`](lab-guides/lab-03-lock-it-down.md) | a single student guide for `lab-03-lock-it-down` — **historical / not a shipping lab** (the only file in `lab-guides/`; its lab definition is quarantined); cited by `docs/OPERATIONS.md` as the in-tree source for the capstone's point numbers |
 | [`10-archive/`](10-archive/) | an older archive (not the rest of it): `tier-03-bgp-simplified.yml` (an older BGP topology — **not shipped, not deployable here**, since BGP is disabled in the substrate), the two FRR configs it binds under `frr-configs/`, and `SUMMARY-for-Dad.md` (provenance, below) |
+| [`docs/GITHUB-PLAN.md`](docs/GITHUB-PLAN.md) | internal, dated maintainer worklog of the repo's documentation-hardening passes — **not product documentation and not a reader's guide** (see below) |
 | [`.nexus/`](.nexus/) | internal engineering audit trail — **not required to install or run AEGIS**, and not product documentation (see below) |
 
 ### About `.nexus/`
@@ -291,6 +292,12 @@ installs and runs from `install.sh` and the shipped source alone. Its contents a
 
 Read it as a lab notebook: entries are dated, some are superseded, and a stale entry is not a claim
 about today. Where a `.nexus/` note and the shipped code disagree, **the code and the docs above win.**
+
+The same reading rule applies to [`docs/GITHUB-PLAN.md`](docs/GITHUB-PLAN.md): it is the maintainer's
+run-by-run record of what each documentation pass measured and changed. It sits in `docs/` because
+that is where the trail lives, not because it describes how to use the product — nothing in the
+install, lab, grading or operations path points into it, and it names internal hosts and dated
+evidence that only make sense next to the proof files. Start from this README, not from that file.
 
 ---
 
