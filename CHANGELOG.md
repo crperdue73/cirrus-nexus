@@ -5,6 +5,40 @@ All notable changes to AEGIS are recorded here. This project ships two labs
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — week of 2026-10-17 → 2026-10-23
+
+Thirty commits. Unlike the two preceding weeks, **this window contains shipped behaviour**: three fixes
+to tooling/scripts and one fix to a shipped lab definition. The rest is the ongoing documentation sweep.
+
+### Fixed
+- **`scripts/clab-reaper.sh` destroyed labs a learner was still holding.** The reaper decided by age
+  alone: any `clab-*` container older than the threshold was torn down, with no check for a live AEGIS
+  session, and that is precisely the container an active learner is sitting in. The reaper now consults
+  the app (`aegis.session.id` label / session record) before removing anything, and its `--orphans`
+  default refuses rather than guesses — exit 3 on an unreadable app, exit 4 on containers it cannot
+  attribute. A cron file (`scripts/clab-reaper.cron`) ships alongside it. The file did not exist in the
+  `v0.1.0` tag; this window is where it arrived.
+- **`scripts/clab-reaper.sh` then reaped nothing at all.** The `python -c` one-liner that reads the app's
+  session list parsed its input as a filename, so it took the first line of stdin as a path and failed;
+  the reaper treated that failure as "no sessions" and, depending on the guard, either skipped every
+  candidate or removed by age. Fixed by feeding the request body through stdin correctly.
+- **`tools/lint_lab_pack.py` printed `ERROR` for labs it had never checked.** When the tool could not run
+  (missing dependency / unparseable input) it emitted one `ERROR` line per lab, which reads as "this lab
+  failed" when the truth is "the check did not execute". It now reports the check itself as not-run.
+  `CONTRIBUTING.md` was updated to match the real output.
+- **`lab-definitions/srl-demo2-unsolved/demo-02-two-switches-one-router-unsolved.yml`: the prerequisite
+  pointed at a Demo 1 id that does not ship.** A learner following the prerequisite link landed on
+  nothing. It now names the id that is actually in the tree
+  (`demo-01-two-pcs-and-a-real-switch-unsolved`). One line.
+
+### Changed
+- **Documentation sweep, continued** (the bulk of the window): README corrections for the lab-guide
+  button's real response type, the API card's real version string, the install script's refusal to copy
+  per-lab assets, and a rendered component diagram in place of the ASCII sketch; a `SECURITY.md`; a
+  `CONTRIBUTING.md` that states the CI secret-scan grep instead of naming it; `.gitattributes` pinning
+  YAML/source text to LF and images to binary; and the internal worklog relabelled as internal wherever
+  it was being advertised as public documentation.
+
 ## [Unreleased] — honesty sweep, week of 2026-10-20
 
 ### Added
