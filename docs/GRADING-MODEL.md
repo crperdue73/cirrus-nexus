@@ -63,6 +63,27 @@ Before trusting `grade_all()["passed"]`, the backend checks:
 1. **Coverage** — the verdict's `nodes` map must include every node the lab
    declares in `gradeable_nodes`. A grader that grades *fewer* nodes than the lab
    claims cannot pass the lab (`RUN 226`).
+
+   > **Measured 2026-10-23: this rule does not fire on a real shortfall — not even
+   > for the two shipped graders, which both violate it.** The backend only checks
+   > coverage when the grader's returned dict has `passed: true`
+   > (`backend/main.py`, `_lab_verdict_passed`). When a node *should* have passed and
+   > the grader left it out — the only case where the shortfall can change the
+   > verdict — the grader's own `passed` is `false`, so the check is skipped and the
+   > mismatch is reported as an ordinary fail. Demo 2 ships exactly that: it declares
+   > five `gradeable_nodes` but computes its verdict from four (`pc-a`, `pc-b`, `sw1`,
+   > `sw2`) and returns `"nodes": results`, which also holds `r1` — so its map is a
+   > **superset** here and the visible check never involved it at all. Reading the
+   > code, the check catches a lab that declares *no* nodes (nothing to be short of)
+   > or a grader that omits a declared node **and** still reports pass — and no
+   > shipped grader does either.
+   >
+   > What this means for a contributor: **`grade_all()` is where a lab's pass
+   > condition is expressed, and nothing below it will catch an omission you make
+   > there.** `docs/ADDING-A-LAB.md` therefore states the rule for the grader you
+   > write, and this page states the rule the backend actually enforces; they are not
+   > the same guarantee. Do not read this section as "the backend has verified your
+   > coverage."
 2. **Identity** — each result's `node` field must equal the key it is filed under.
    A mislabelled result makes the verdict uncomputable (`RUN 227`).
 

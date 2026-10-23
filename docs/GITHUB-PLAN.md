@@ -19,6 +19,34 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **`GRADING-MODEL.md` told contributors a rule the backend does not enforce — "a
+      grader that grades *fewer* nodes than the lab claims cannot pass the lab"** (2026-10-23 19:00).
+      Read `backend/main.py::_lab_verdict_passed` end to end instead of trusting the doc: the coverage
+      comparison (`_declared - _graded`) sits **inside** `if isinstance(verdict, dict)` and only runs on
+      the pass path — the function already has the dict in hand, but the shortfall is only *reported*
+      when the grader's own `passed` is true. So the case where an omission can flip a verdict (a node
+      that should have passed, left out) returns `passed=false` and the check never fires; the mismatch
+      is scored as an ordinary fail. Measured the claim rather than argued it: loaded both shipped graders
+      by path, stubbed `_exec`/`_container_kind` so every node was unexaminable → `grade_all()["passed"]`
+      `false` / `false` (no crash); stubbed `grade` to return a passing result for every node → `true` /
+      `true`. So Demo 2's five declared `gradeable_nodes` against a verdict computed from four
+      (`pc-a`, `pc-b`, `sw1`, `sw2`) cannot be caught by anything in that path — and its `"nodes": results`
+      is a superset, so `r1` never surfaces. Demo 1 returns all three declared nodes but gates on two.
+      Scope of this run, stated honestly: **docs only.** The fix is a code change to grading (make coverage
+      a refusal instead of a conditional check, and make both shipped graders compute over their declared
+      list), and grading is the product's core invariant — it needs a live lab to re-verify, not an
+      untested edit pushed from a cron. So `docs/GRADING-MODEL.md` now carries the measured note under
+      *Consistency checks on a lab verdict* (what the check catches, what it does not, and that no shipped
+      grader exercises it), and `docs/ADDING-A-LAB.md` marks the rule as unenforced in practice, names both
+      shipped graders as failing it as written, and tells a contributor not to rely on it. Both docs now
+      say plainly: `grade_all()` is where the pass condition lives and nothing below it catches an omission.
+      Measured after the edit: `py_compile backend/main.py` ok; `bash -n install.sh` ok;
+      `check_self_contained.py` → "16 required files present, lab assets + graders resolve, no developer
+      paths leak" rc=0; secret scan run exactly as `ci.yml` runs it → no hits (re-checked against
+      `git ls-files` in Python with the same pattern: 0 files match). `git diff --stat` = 2 files, +33/−3.
+      NOT COMPLETE — Dad's word alone. | proof=code read + both graders executed with stubbed I/O |
+      next=**code item, needs a call:** make coverage a refusal (or drop the claim from both docs and
+      state the limit once), and reconcile Demo 1/2 `grade_all` with their declared `gradeable_nodes`.
 - [x] **The quickstart told a reader that `install.sh` gives them a working install; a fresh install
       serves an empty lab catalog** (2026-10-23 13:00). Found by *testing* Step 6 instead of reading
       it: I built a tree by hand exactly as `install.sh` Step 6 copies it (`backend/`, `frontend/`,
