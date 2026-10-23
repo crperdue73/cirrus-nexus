@@ -1583,3 +1583,61 @@ cosmetic `ci.yml` step (needs workflow-scoped token), the `.nexus/` public polic
 DELETE-OR-KEEP `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` / `10-archive/`,
 the `v0.1.0` tag re-point/re-cut decision, whether `main`'s `check_self_contained.py` guard should be
 pulled into the release, and whether a published security contact address should exist.
+
+---
+
+## 2026-10-23 11:00 — `10-archive/tier-03-bgp-simplified.yml` binds configs that are not where it says
+
+One in-scope honesty item, measured then fixed without behaviour change (this box is 192.168.111.40/16;
+no route to the live host, `nexus.service` is not a unit here — tree/docs lane only).
+
+**Measured before.** `git status` clean, HEAD==origin/main (0/0), CI green (`py_compile`,
+`bash -n install.sh`, `check_self_contained.py` → "16 required files present", secret scan clean;
+`lint_lab_pack.py` is UNAVAILABLE rc=2 on this box because PyYAML is not installed and there is no `pip`
+— that is the 2026-10-21 `22a8d10` behaviour working, not a regression). Both Dad-gated items
+re-confirmed blocked (token has no `workflow` scope; no live-host session for Screenshots).
+
+A backticked-path sweep of every tracked `.md` turned up the five runs since the 10-21 pass added nothing
+new, so the gap was in a *claim about runnability* rather than a broken link.
+
+**Found.** `README.md:276` and `docs/OPERATIONS.md:227-228` both describe `10-archive/` as holding
+"an older BGP topology" **and** "the two FRR configs it binds under `frr-configs/`" — i.e. a reader is
+told this is a topology that binds those two files. It does not, from this tree. The YAML binds
+`frr-configs/r1-frr.conf` and `frr-configs/r2-frr.conf`, relative paths resolved against the working
+directory containerlab is invoked from (the repo root), so they resolve to `<repo>/frr-configs/` — the
+2026-06-09 location, which does not exist here (`ls frr-configs` → no such directory; `git ls-files
+'frr-configs/*'` → nothing). The configs survive one level down, at `10-archive/frr-configs/`. A deploy
+from a clean clone therefore dies on a missing bind source *after* `containerlab deploy` has already
+created the lab. The README row also said only "not deployable here, since BGP is disabled in the
+substrate", which names a different reason and still reads as though the file would otherwise run.
+
+**Fixed (docs/comments only; no code, no behaviour change).**
+
+- `10-archive/tier-03-bgp-simplified.yml`: banner at the top naming the exact resolution
+  (`frr-configs/r1-frr.conf` → `<repo>/frr-configs/…` → absent), the consequence (deploy aborts on a
+  missing bind source after the lab is created), the second reason (its `aegis/frr` routers would need
+  the BGP daemon the pinned substrate does not enable), and — explicitly — **why the bind paths were
+  not rewritten**: it is a 2026-06-09 artifact, and editing it would make an archived record disagree
+  with what was actually run then.
+- `10-archive/SUMMARY-for-Dad.md`: one paragraph in the existing "Files Changed" caveat saying the
+  surviving YAML is history, not a runnable lab, and where the configs actually live.
+
+Deliberately **not** done: not moved, not fixed-up, not deleted. Whether `10-archive/` ships at all is
+already Dad's open DELETE-OR-KEEP call.
+
+**Verified.** `py_compile`, `bash -n install.sh`, `check_self_contained.py` → rc 0, secret scan → no
+hits; `git grep frr-configs/` outside the archive/`.nexus`/this file → only the two README/OPERATIONS
+rows, which are true as written once the archive is labelled history. Backups via
+`scripts/safe-backup.sh` (label `archive-bgp-binds`) → `.nexus/bundle-archive/`, git-ignored, does not
+ship. NOT COMPLETE — Dad's word alone.
+
+MY ERRORS: none in the item itself. One process note: the first attempt to *demonstrate* the bind failure
+via `lint_lab_pack.py` proved nothing — the tool reports UNAVAILABLE on this box before it parses
+anything — so the finding rests on path resolution measured directly (`ls`, `git ls-files`, `git grep`),
+not on a linter. A tool that cannot run is not evidence.
+
+next=run: next in-scope honesty item; STILL BLOCKED ON DAD: Screenshots (needs live-host session),
+cosmetic `ci.yml` step (needs workflow-scoped token), the `.nexus/` public policy call, DELETE-OR-KEEP
+`Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` / `10-archive/`, the `v0.1.0` tag
+re-point/re-cut decision, whether `main`'s `check_self_contained.py` guard should be pulled into the
+release, and whether a published security contact address should exist.

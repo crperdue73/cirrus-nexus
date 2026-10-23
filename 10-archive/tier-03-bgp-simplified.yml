@@ -1,4 +1,15 @@
 # =============================================================================
+# HISTORICAL ARCHIVE — NOT DEPLOYABLE FROM THIS TREE (banner added 2026-10-23).
+# README.md and docs/OPERATIONS.md describe this file as an older BGP topology that binds the two FRR
+# configs in `10-archive/frr-configs/`. Those binds are written RELATIVE to the working directory the
+# deploy runs in, which is the repo root, so they resolve to `<repo>/frr-configs/r1-frr.conf` — a path
+# that does NOT exist in this repository (the configs live in `10-archive/frr-configs/`). A deploy from
+# a clean clone therefore aborts on a missing bind source after containerlab has created the lab. The
+# file is retained as history for its node/link shape; it is not a runnable lab in this release, and
+# its `aegis/frr` routers would also need the BGP daemon that the pinned substrate does not enable.
+# The bind paths below are deliberately NOT rewritten: this is a 2026-06-09 artifact and correcting
+# them would make an archived record disagree with what was actually run then. Do not deploy it.
+# =============================================================================
 # AEGIS — Tier 3: BGP Fundamentals
 # Lab: Two Routers, One Conversation 🌐
 #

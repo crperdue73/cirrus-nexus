@@ -48,6 +48,11 @@ We inventoried every YAML, FRR config, grader script, and Dockerfile. The origin
 > YAMLs) were the 2026-06-09 layout and are **not present in this tree**; the only two artifacts from
 > this list that survive here are `10-archive/tier-03-bgp-simplified.yml` and
 > `10-archive/frr-configs/`.
+>
+> **The surviving YAML is not runnable here** (added 2026-10-23): its binds are written as
+> `frr-configs/r1-frr.conf`, relative to the repo root, so from a clean clone they point at
+> `<repo>/frr-configs/` — which is the 2026-06-09 location and does not exist in this release. The
+> configs survive one level down, in `10-archive/frr-configs/`. It is kept as history, not as a lab.
 
 All files were in `aegis-topologies/` and `frr-configs/`:
 
