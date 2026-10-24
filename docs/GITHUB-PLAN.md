@@ -19,6 +19,39 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **The `python-3.x` badge said a thing the repo never states, and the Prerequisites line read like a
+      tested matrix when the tree pins no version anywhere** (2026-10-24 13:00). Swept the README's
+      badges and its Quick start against the tree instead of re-reading them as prose. Two findings, both
+      fixed, both measured.
+      (1) **`![Python 3](…/badge/python-3.x-blue.svg)` has no source in the repo.** There is no
+      `setup.py`, no `pyproject.toml`, no `python_requires` / `requires-python` anywhere in the tree
+      (`grep` for both → no hits), so the badge's `3.x` was a decorative string, not a statement of
+      anything. Measured what the backend actually needs: `ast.parse(open('backend/main.py').read(),
+      feature_version=N)` succeeds for N = (3,8), (3,9), (3,10), (3,11) — so the file's **syntax** is
+      valid Python 3.8+. The badge is now `python-3.8+`, which is exactly that measurement and nothing
+      more. It is *not* a claim that the platform runs on every 3.8 host: the images, `ttyd`, fastapi and
+      containerlab are not covered by a syntax parse, and I did not run the app on a 3.8 interpreter
+      (none is installed on this box — checked, only 3.13.5 is present).
+      (2) **"Prerequisites: a clean Debian/Ubuntu host"** is the one line in the README a reader plans
+      from, and it named no version while implying the project had one in mind. It does not:
+      `install.sh` is "Portable one-shot setup for a fresh Debian/Ubuntu machine" (its own line 4) with
+      no version check, and **CI pins nothing either** — `.github/workflows/ci.yml` requests
+      `python-version: "3.x"`, so every run gets whatever the newest 3.x on the runner is. That is worth
+      saying out loud, because it means the badge's claim can never be disproven by a green CI run.
+      The Quick start now says Ubuntu 22.04/24.04 are known to provide `python3` via `apt` (true of those
+      distros generally), states the 3.8+ floor and what it does and does not mean, and states plainly
+      that these are stated requirements rather than a tested matrix. No distro or Python version is
+      pinned in this commit — pinning would be a product decision, not a docs one.
+      Scope: `README.md` only, +11/−4. Public doc about public claims; no code, no CI, no lab touched.
+      Measured after the edit: `py_compile backend/main.py` ok; `bash -n install.sh` ok;
+      `tools/check_self_contained.py` → "16 required files present, lab assets + graders resolve, no
+      developer paths leak" rc=0; CI's exact secret-scan grep (six `--include` suffixes) → clean, no
+      hits. Backups: `.nexus/bundle-archive/README.md.bak-2026-10-24-1300-badges` and
+      `…/GITHUB-PLAN.md.bak-2026-10-24-1300-badges` (git-ignored, not shipped).
+      NOT COMPLETE — Dad's word alone. | proof=ast.parse feature_version sweep + grep for pinned version |
+      next=see the open items below; standing blocks unchanged (Screenshots, the grading-coverage code
+      call, the `v0.1.0` tag decision, DELETE-OR-KEEP for `Dockerfile.frr-bgp` / quarantine /
+      `10-archive/`, and whether `GITHUB-PLAN.md` ships at all).
 - [x] **The known-gap I documented last run was half wrong about its own cause, and is now a fix
       rather than a box** (2026-10-24 01:00). Accurate last run: the README box said `install.sh` Step 6
       fails to carry `lab-definitions/<lab>/assets/`. Inaccurate: I wrote the cause as *"`install.sh`

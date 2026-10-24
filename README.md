@@ -2,7 +2,7 @@
 
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![status: v0.1.0 — early release](https://img.shields.io/badge/status-v0.1.0%20early%20release-yellow.svg)](#release-status)
-![Python 3](https://img.shields.io/badge/python-3.x-blue.svg)
+![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)
 ![Powered by ContainerLab](https://img.shields.io/badge/powered%20by-containerlab-orange.svg)
 ![API: FastAPI](https://img.shields.io/badge/API-FastAPI-009688.svg)
 [![CI](https://github.com/crperdue73/cirrus-nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/crperdue73/cirrus-nexus/actions/workflows/ci.yml)
@@ -100,9 +100,16 @@ The same shape in text, for terminals and diffs:
 
 ## Quick start
 
-**Prerequisites:** a clean Debian/Ubuntu host, `sudo`, internet access (to pull the SR Linux image),
-and ~3 GB free disk. **No image ships in the repo:** the router image (`aegis/frr:latest`) is built
-locally from `Dockerfile.frr`, and the switch image is pulled at install.
+**Prerequisites:** a clean Debian/Ubuntu host (a distro whose `apt` provides `python3` — Ubuntu 22.04
+and 24.04 both do), `sudo`, internet access (to pull the SR Linux image), and ~3 GB free disk. **No image
+ships in the repo:** the router image (`aegis/frr:latest`) is built locally from `Dockerfile.frr`, and
+the switch image is pulled at install.
+
+Those are the stated requirements, not a tested matrix. The Python the backend needs is **3.8 or newer**
+(that is what the `python-3.8+` badge above means — the whole file parses under 3.8's grammar, which is a
+check on syntax only, not a test run). **CI does not pin a version:** `.github/workflows/ci.yml` asks
+`actions/setup-python` for `python-version: "3.x"`, so each CI run uses whatever the newest 3.x on the
+runner is. No Ubuntu version is pinned in `install.sh` either — it installs what `apt` offers.
 
 ```bash
 git clone https://github.com/crperdue73/cirrus-nexus.git aegis
