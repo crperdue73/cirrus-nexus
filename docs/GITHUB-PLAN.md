@@ -1739,3 +1739,39 @@ cosmetic `ci.yml` step (needs workflow-scoped token), the `.nexus/` public polic
 `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` / `10-archive/`, the `v0.1.0` tag
 re-point/re-cut decision, whether `main`'s `check_self_contained.py` guard should be pulled into the
 release, and whether a published security contact address should exist.
+
+## Run 2026-10-24 11:00 UTC — cross-reference sweep: clean, no fix manufactured
+
+Lane: tree/docs honesty (this box is 192.168.111.40/16; `nexus.service` is not a unit here). Measured
+before: `git status` clean, `HEAD...origin/main = 0 0`, `py_compile backend/main.py` OK, `bash -n
+install.sh` OK. (`lint_lab_pack` still UNAVAILABLE rc=2 — PyYAML absent, the 2026-10-21 `22a8d10`
+behaviour, not a regression; no linter result is cited below.)
+
+Swept the two SHIPPING lab packs and everything a reader-facing doc says about them:
+- every `metadata.id` under `lab-definitions/` → exactly the two expected ids; the 2026-10-22
+  `prerequisites` fix still resolves (1 entry, 0 dangling);
+- every `grader:` value in the two shipping YAMLs → `grader_demo_01_srl.py` / `grader_demo_02.py`,
+  both present, and both listed by `git ls-files`;
+- every `startup-config:` bind (`assets/sw1.cfg`, `assets/sw2.cfg`) → all three files tracked and
+  present — the class of break found in the archive YAML (2026-10-23 run) does NOT recur in the
+  shipping set;
+- `_guide_path_for` resolution (backend/main.py:580) → both shipping labs resolve to their own `.md`
+  via the topology-relative branch; neither guide mentions a path, so nothing in them can go stale;
+- the dirs `lab-definitions/srl-demo/`, `srl-demo2/`, `cumulus-demo/` are EMPTY and have **0 tracked
+  files** (`git ls-files` → 0 each). They are leftovers of the 2026-09-30 quarantine `git mv`, are
+  invisible to the loader (`iterdir` + `glob('*.yml')` skips empty dirs), and are already stated
+  accurately in this worklog (line ~654). No shipped doc claims otherwise.
+
+**Finding: no false claim in the shipped docs this pass.** Nothing edited in the product tree, nothing
+committed. Recorded rather than manufactured — the in-scope docs lane has produced no genuine defect
+two mornings running, so the honest next step is not another sweep of the same surface.
+
+NOT COMPLETE — Dad's word alone.
+
+next=run: the only unblocked work left is Dad-gated, so the morning plan should stop sweeping and pick
+from this list: DELETE-OR-KEEP the three empty `lab-definitions/` dirs (`srl-demo/`, `srl-demo2/`,
+`cumulus-demo/` — empty, untracked-in-content, harmless), plus the standing blocks: Screenshots (needs
+live-host session), cosmetic `ci.yml` step (needs workflow-scoped token), `.nexus/` public policy,
+DELETE-OR-KEEP `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` / `10-archive/`, the
+`v0.1.0` tag re-cut, pulling `check_self_contained.py` into the release, and a published security
+contact address.
