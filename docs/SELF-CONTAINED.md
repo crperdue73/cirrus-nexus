@@ -16,9 +16,11 @@ depend on a developer's machine, a private path, or an out-of-band file that isn
 **What it does not check: the install step.** It proves the *repository* is complete; it does not
 prove that `install.sh` carries those files to `/opt/aegis`. It could not: the installer needs root,
 Docker and network, and CI runs none of it. The check also cannot notice a file that was deleted
-before commit. See the *Known gap* note in the README's Quick start for the one place where this
-boundary is currently visible — the per-lab `assets/` folders are in the repo but are not copied by
-the installer, so a fresh install serves an empty catalog until they are copied by hand.
+before commit. This boundary was real, not theoretical: until 2026-10-24 the installer did not copy the
+per-lab `assets/` folders, so a cold install served an empty lab catalog. `install.sh` now copies them
+explicitly and verifies every `startup-config:` a shipped topology names exists under `/opt/aegis`,
+warn-ing by name if one does not — the verification the CI check cannot perform lives in the installer
+instead.
 
 ## What a cold install pulls from the network
 

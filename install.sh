@@ -200,6 +200,48 @@ else
     warn "No assets/ dir found — FRR image must be built from source instead"
 fi
 
+# Per-lab assets (added 2026-10-24). `lab-definitions/` is copied above as a whole,
+# but the copy is only as complete as the checkout: an untracked or git-ignored
+# `lab-definitions/<lab>/assets/` never reaches the source tree, so it never reached
+# ${AEGIS_DIR} either. Both shipped labs name a switch startup config at a path INSIDE
+# their own directory (`startup-config: assets/sw1.cfg`), and the backend's loader
+# REFUSES a lab whose startup-config does not exist -- correct, but it means one missing
+# folder serves zero labs. So: copy each lab's assets/ explicitly, then verify every
+# `startup-config:` a shipped topology names actually landed in ${AEGIS_DIR}.
+copy_lab_assets() {
+    local labdir lab rel src dst
+    for labdir in "${SCRIPT_DIR}"/lab-definitions/*/; do
+        [[ -d "${labdir}" ]] || continue
+        [[ -d "${labdir}assets" ]] || continue
+        rel="$(basename "${labdir}")"
+        src="${labdir}assets"
+        dst="${AEGIS_DIR}/lab-definitions/${rel}/assets"
+        mkdir -p "${dst}"
+        cp -r "${src}/." "${dst}/"
+    done
+}
+
+copy_lab_assets || warn "per-lab asset copy failed — labs may refuse to load at startup"
+
+# Verify, rather than assume, that the configs the shipped topologies name are present.
+# Reads `startup-config:` lines directly instead of parsing YAML, so this needs nothing
+# but grep -- the installer must not depend on a library it may not have installed yet.
+missing_assets=0
+for _topo in "${AEGIS_DIR}"/lab-definitions/*/*.yml; do
+    [[ -f "${_topo}" ]] || continue
+    _topo_dir="$(dirname "${_topo}")"
+    while read -r _cfg; do
+        [[ -n "${_cfg}" ]] || continue
+        if [[ ! -f "${_topo_dir}/${_cfg}" ]]; then
+            warn "lab asset missing after install: ${_topo_dir}/${_cfg} (topology $(basename "${_topo}")) — that lab will be refused at startup"
+            missing_assets=$((missing_assets + 1))
+        fi
+    done < <(sed -n 's/^[[:space:]]*startup-config:[[:space:]]*\([^[:space:]]*\).*/\1/p' "${_topo}")
+done
+if [[ ${missing_assets} -eq 0 ]]; then
+    log "Lab startup-configs verified present in ${AEGIS_DIR}"
+fi
+
 # start_server.py resolves its own path (Path(__file__).parent), so no path fix-up is
 # needed. The old sed that rewrote a hard-coded development path was removed 2026-10-06
 # so the installer carries no reference to any developer's working directory.

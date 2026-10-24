@@ -19,6 +19,42 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **The known-gap I documented last run was half wrong about its own cause, and is now a fix
+      rather than a box** (2026-10-24 01:00). Accurate last run: the README box said `install.sh` Step 6
+      fails to carry `lab-definitions/<lab>/assets/`. Inaccurate: I wrote the cause as *"`install.sh`
+      copies `lab-definitions/` but not the per-lab assets"*. Re-read Step 6 line by line — line 172 is
+      `cp -r "${SCRIPT_DIR}/lab-definitions" "${AEGIS_DIR}/lab-definitions"`, which copies the directory
+      **as a whole and recursively**, per-lab `assets/` included. So that sentence was simply wrong, and
+      the `{"labs": []}` simulation behind it had been built by *me* stripping those dirs from the copy —
+      it proved the loader's refusal, not an installer defect. Checked the other premise properly this
+      time: `git ls-files lab-definitions` lists all three cfg files, and `git check-ignore` on each
+      returns rc=1 (none ignored). Honest conclusion: on a clean clone of `main` today the installer
+      **does** carry the assets; the gap only bites a checkout where they are absent (sparse/partial
+      copy, or added after an install). Narrower than the box implied.
+      Fixed anyway — the fix is cheap and the failure mode is total (one missing folder → zero labs,
+      empty UI). Step 6 now (1) copies each `lab-definitions/*/assets/` explicitly instead of relying on
+      the wholesale copy, and (2) **verifies** that every `startup-config:` named by a shipped topology
+      exists under `${AEGIS_DIR}`, warning by name and path when one does not. The verification `sed`s the
+      YAML rather than importing PyYAML, so it cannot fail for want of a module the installer only
+      installs two steps earlier. The README Known-gap box is **retracted** and replaced with what the
+      installer now does; the Known-limitations bullet is rewritten to the true shape of the risk; and
+      `docs/SELF-CONTAINED.md` records that this boundary was real rather than hypothetical, and that the
+      install-step verification now lives in the installer because CI cannot run it.
+      Measured, not asserted: extracted the 33 new lines verbatim and ran them against three simulated
+      `/opt/aegis` trees. (A) complete clone → `Lab startup-configs verified present`, rc=0. (B) clone
+      with the per-lab `assets/` removed → three named warnings (`sw1.cfg` both labs, `sw2.cfg` Demo 2),
+      rc=0, no crash. (C) the case the README actually claimed — complete clone, `/opt` missing them →
+      the copy step **restored all three files** and verification passed. (C) is simultaneously the fix
+      working and the measurement showing the original box described the wrong layer.
+      Ship checks: `bash -n install.sh` ok; `py_compile backend/main.py` ok;
+      `tools/check_self_contained.py` → "16 required files present…" rc=0; CI's exact secret scan → rc=1,
+      no output; full-tree `git grep` with no `--include` → rc=1. `git diff --stat` = 3 files, +57/−24.
+      Not verified here and not claimed: a real `sudo ./install.sh` on a clean host (needs root, Docker,
+      network). Script-level logic is measured; the end-to-end install is not.
+      NOT COMPLETE — Dad's word alone. | proof=installer code extracted + executed on 3 simulated trees |
+      next=**needs a clean host to close the loop**: one real `sudo ./install.sh`, then `GET /api/labs`
+      returning both labs. Standing blocks unchanged (Screenshots, the grading-coverage code call, the
+      `v0.1.0` tag decision, DELETE-OR-KEEP for `Dockerfile.frr-bgp` / quarantine / `10-archive/`).
 - [x] **`GRADING-MODEL.md` told contributors a rule the backend does not enforce — "a
       grader that grades *fewer* nodes than the lab claims cannot pass the lab"** (2026-10-23 19:00).
       Read `backend/main.py::_lab_verdict_passed` end to end instead of trusting the doc: the coverage
@@ -67,7 +103,9 @@ unverifiable claims, no screenshots of a build that isn't here.
       installer edit to the file that builds the teaching host is worse than documenting the gap. So
       `README.md` Quick start now carries a **Known gap** box with the exact failure text, the exact
       cause, a copy-paste `sudo cp -r …` workaround, and the note that `check_self_contained.py`
-      cannot catch this (it proves the *repo* is complete, not that the installer carries it). Also
+      cannot catch this (it proves the *repo* is complete, not that the installer carries it). [CORRECTED
+      2026-10-24: that "exact cause" was wrong — see the next entry. The box was retracted and the
+      installer fixed; the `sudo cp -r` workaround was never needed on a clean clone.] Also
       added one bullet to *Known limitations* so the front-page limitations list does not read as
       exhaustive when it is not. `docs/SELF-CONTAINED.md` got the same boundary statement, since that
       doc is where the CI check's limits belong.
