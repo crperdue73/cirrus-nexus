@@ -19,6 +19,49 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **The Prerequisites block said "no image ships in the repo" and stopped there — while three
+      floating `:latest` tags and an unpinned dependency list are exactly what a reader needs to know
+      before committing a host** (2026-10-24 19:00). Picked this over another honesty sweep because the
+      morning run (`2026-10-24 11:00`) already found the docs surface clean, and the standing blocks are
+      all Dad-gated. So: read the install path as a reader would and state the two things this tree
+      genuinely does not pin. Both claims are `git grep`-able, neither is a guess.
+      (1) **Every base image is a tag, not a digest.** `Dockerfile.frr:5` is `FROM alpine:latest`; both
+      shipping topologies bind `ghcr.io/nokia/srlinux:latest` for the switches and `alpine:latest` for the
+      PCs (`srl-demo-unsolved` lines 45/50/55, `srl-demo2-unsolved` lines 67/72/77/82); `install.sh:450`
+      pre-pulls those same two names. Nothing in the tree pins any of them. Worth saying because "build
+      today ≠ build next month" is a real property of this repo, not a caveat borrowed from elsewhere.
+      (2) **`requirements.txt` has no version constraints** — three bare names — and `install.sh:161-162`
+      installs those exact names by hand (`pip3 install --break-system-packages fastapi uvicorn pyyaml`,
+      plain fallback), *not* via `-r requirements.txt`. Also: the backend imports `pydantic` for two
+      `BaseModel` subclasses (main.py:115 `LabDef`, main.py:155 `GraderResult`; zero `validator`/`Field`
+      uses — counted, 0 hits) and `pydantic` appears in neither file, arriving only transitively through
+      FastAPI. FastAPI's own floor is `pydantic>=1.7.4`, so it works — but it is a dependency no manifest
+      states, and now the README says so instead of leaving it to be discovered.
+      **Corrected my own first draft before committing:** I had written that `Dockerfile.frr` "hashes
+      differently from" the pin. Measured: `sha256sum Dockerfile.frr` = `b3046a70…`, pin
+      `dockerfile_sha256` = `cce15a86…` — so yes, they differ, but that is **not** a live drift signal,
+      because the pin's key is the *image label* stamped at build (`install.sh:407`,
+      `--label aegis.frr.dockerfile.sha256=${FRR_SRC_SHA}`), and Step 6 rebuilds whenever the on-disk
+      Dockerfile hash and that label disagree (`install.sh:328`). I had also repeated the existing
+      "pin records a digest" phrasing; the file records `image_id`, `layers_sha256` and
+      `dockerfile_sha256`, and its own header says the image id is *not* the verification key. Both
+      sentences were rewritten to what the code does. The older Known-limitations bullet about pin drift
+      was left untouched — it is a separate claim and out of scope for this run.
+      Scope: `README.md` only, +16/−0, inside Quick start. Public doc about public facts; no code, no CI,
+      no lab, no build flag changed. Pinning anything would be a product decision, not a docs one.
+      Measured after the edit: `py_compile backend/main.py` ok; `bash -n install.sh` ok;
+      `tools/check_self_contained.py` → "16 required files present, lab assets + graders resolve, no
+      developer paths leak" rc=0; CI's exact secret-scan grep → rc=1, no output. Backups:
+      `.nexus/bundle-archive/README.md.bak-2026-10-24-1900-prereqs` and
+      `…/GITHUB-PLAN.md.bak-2026-10-24-1900-prereqs` (git-ignored, not shipped).
+      NOT COMPLETE — Dad's word alone. | proof=git grep of every image ref + sha256sum vs pin + BaseModel count |
+      next=**item worth a real call:** pin the three base images to digests (that changes what every
+      install builds, so it is Dad's product decision) and decide whether `requirements.txt` should carry
+      floors at all — right now it is a manifest of names, and the README says so plainly rather than
+      pretending otherwise. Standing blocks unchanged: Screenshots (needs a live-host session), the
+      grading-coverage code call, the `v0.1.0` tag re-cut, `.nexus/` public policy, DELETE-OR-KEEP for
+      the three empty `lab-definitions/` dirs / `Dockerfile.frr-bgp` / quarantine / `10-archive/`, the
+      `ci.yml` cosmetic step (workflow-scoped token), and a published security contact address.
 - [x] **The `python-3.x` badge said a thing the repo never states, and the Prerequisites line read like a
       tested matrix when the tree pins no version anywhere** (2026-10-24 13:00). Swept the README's
       badges and its Quick start against the tree instead of re-reading them as prose. Two findings, both
@@ -1772,6 +1815,31 @@ cosmetic `ci.yml` step (needs workflow-scoped token), the `.nexus/` public polic
 `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` / `10-archive/`, the `v0.1.0` tag
 re-point/re-cut decision, whether `main`'s `check_self_contained.py` guard should be pulled into the
 release, and whether a published security contact address should exist.
+
+## Run 2026-10-24 19:00 UTC — Prerequisites named no floating tag and no unpinned dep
+
+Measured before: `git status` clean, `HEAD...origin/main = 0 0` after `git fetch`, `py_compile` OK,
+`bash -n install.sh` OK. Morning run (11:00) had already swept the docs surface and found it clean, so
+this run did not re-sweep — it read the install path the way a first-time reader does.
+
+The one thing a reader plans a host around is the Prerequisites block, and it was silent on this tree's
+two most consequential unpinned inputs: three `:latest` base images and a three-name
+`requirements.txt` with no versions (plus a `pydantic` import no manifest names, which arrives
+transitively via FastAPI). Both are now stated in `README.md`, with the sources named.
+
+Two sentences in my own first draft were wrong about the FRR pin and were rewritten before commit:
+"`Dockerfile.frr` hashes differently from the pin" is true but meaningless as a drift signal, because
+the pin's key is the build-time image *label* (`install.sh:407`), and Step 6 rebuilds on any
+label/on-disk mismatch (`install.sh:328`). Details in the backlog entry.
+
+Shipped: `README.md` +16/−0. No code, no CI, no lab touched. Post-edit: `check_self_contained.py` rc=0
+("16 required files present…"), secret scan rc=1 with no output.
+
+NOT COMPLETE — Dad's word alone.
+
+next=pin-or-not is a product call (base-image digests, dependency floors). Everything else standing is
+Dad-gated: Screenshots, grading-coverage code fix, `v0.1.0` tag, `.nexus/` policy, DELETE-OR-KEEP list,
+`ci.yml` workflow-token step, security contact address.
 
 ## Run 2026-10-24 11:00 UTC — cross-reference sweep: clean, no fix manufactured
 

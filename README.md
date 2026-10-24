@@ -105,6 +105,22 @@ and 24.04 both do), `sudo`, internet access (to pull the SR Linux image), and ~3
 ships in the repo:** the router image (`aegis/frr:latest`) is built locally from `Dockerfile.frr`, and
 the switch image is pulled at install.
 
+Two more things you should know before you start, because they are **not pinned in this tree**:
+
+- **The base images are tags, not digests.** `Dockerfile.frr` is `FROM alpine:latest`; both shipped
+  topologies bind `ghcr.io/nokia/srlinux:latest` for the switches and `alpine:latest` for the PCs;
+  `install.sh` pre-pulls those same two names. All three are `git grep`-able in this tree, and none of
+  them is pinned to a digest here — so a build today and a build next month are not guaranteed to be
+  the same bits. "Latest" of a third-party image is a moving target; pin it if you need reproducibility.
+  (The locally built router image *is* tracked: `assets/frr-image.pin` records a Dockerfile fingerprint
+  and a rootfs layer-chain hash, and `install.sh` verifies both — see [Known
+  limitations](#known-limitations-read-these-before-you-rely-on-it).)
+- **`requirements.txt` ships no version constraints.** It lists three packages — `fastapi`, `uvicorn`,
+  `pyyaml` — and `install.sh` installs exactly those, unpinned (`pip3 install --break-system-packages
+  fastapi uvicorn pyyaml`, with a plain `pip3 install` fallback) — not `pip install -r requirements.txt`.
+  The backend also imports `pydantic`, but only for two `BaseModel` subclasses (no validators, no
+  `Field`), and it is not named in either file. Nothing here fixes *which* FastAPI you get.
+
 Those are the stated requirements, not a tested matrix. The Python the backend needs is **3.8 or newer**
 (that is what the `python-3.8+` badge above means — the whole file parses under 3.8's grammar, which is a
 check on syntax only, not a test run). **CI does not pin a version:** `.github/workflows/ci.yml` asks
