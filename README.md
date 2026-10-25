@@ -268,9 +268,11 @@ bundle; that path is kept there as *historical* because a `nexus-release.tar.gz`
 labs; it is not a finished product. What that means concretely:
 
 - **No published release.** A `v0.1.0` git tag exists, but it points at an older commit than the tip
-  of `main` — every commit since the tag is documentation or CI, with no change to how a lab runs
-  (see the sweep in [`CHANGELOG.md`](CHANGELOG.md)) — and **no GitHub Release has been published**
-  for it. Tag position is deliberately not given as a commit count here: a count goes stale with every
+  of `main`, and **no GitHub Release has been published** for it. The tag is 73 commits behind the
+  tip as of 2026-10-25, and those commits are *not* all documentation: four of them change how a lab
+  or its install behaves (`scripts/clab-reaper.sh` twice, `tools/lint_lab_pack.py`, `install.sh`, plus
+  Demo 2's prerequisite id in its lab definition) — see [`CHANGELOG.md`](CHANGELOG.md). Anyone
+  installing from the tag gets the older behaviour; installing from `main` gets the fixes. Tag position is deliberately not given as a commit count here: a count goes stale with every
   push. Measure it yourself with `git describe --tags` — see
   [`docs/RELEASE-NOTES-v0.1.0-draft.md`](docs/RELEASE-NOTES-v0.1.0-draft.md) for the tag's full
   history.
