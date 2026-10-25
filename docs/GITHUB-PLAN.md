@@ -52,17 +52,31 @@ unverifiable claims, no screenshots of a build that isn't here.
       (the Documentation table, line 330, and the *About `.nexus/`* reading rule, line 349), both
       already marking the file internal — adding a third mention would advertise the worklog more,
       not less. Next item below.
-- [ ] **CONTRIBUTING and the PR template disagree about install location**: the PR checklist says
-      "a clean host installs straight from the git clone + `install.sh`", but `install.sh` copies to
-      `/opt/aegis` and creates the `aegis` service user; nothing in either doc says whether a
-      contributor should develop in the clone or against `/opt/aegis`. The only place the manual path
-      is spelled out is `docs/OPERATIONS.md` → *Running the server* → *Running without the service*
-      (line 22: `cd /opt/aegis && python3 start_server.py`), and that section carries a live-verified
-      warning that the script's `pkill -f "aegis.*main.py"` also matches the systemd service. Reconcile
-      by pointing `CONTRIBUTING.md` (*Before you push* / a new "where to develop" line) and the PR
-      template at that section, and state plainly which copy a dev edits (the served tree is
-      `/opt/aegis`, not the clone) — measure first: read `install.sh` Steps 6–8 against that section
-      so the claim is about the real copy step, not an assumption.
+- [x] **CONTRIBUTING and the PR template disagreed about install location — both now say which copy a
+      contributor edits** (2026-10-25 19:00). Measured first, against `install.sh`, not assumed:
+      (1) **`install.sh` copies a fixed list, not the repo.** Step 6 (lines 166–215) `cp -r`s `backend/`,
+      `frontend/`, `lab-definitions/` (+ per-lab `assets/`), `assets/`, and single files
+      `Dockerfile.frr`, `README.md`, `start_server.py`. Source is `SCRIPT_DIR` = the installer's own
+      directory (line 22), so the installer installs *the checkout it lives in*. Docs, `tools/` and
+      tests are never copied.
+      (2) **The service runs the copy, not the clone.** Step 8's written unit is `User=aegis`,
+      `WorkingDirectory=/opt/aegis`, `ExecStart=/usr/bin/python3 /opt/aegis/backend/main.py` (lines
+      492–495). Nothing in the tree re-syncs `/opt/aegis` from git, and git is not initialised in it, so
+      an edit made there is untracked and replaced on the next install run.
+      (3) **Fixed:** `CONTRIBUTING.md` gained *Where to develop (the clone is not the tree that gets
+      served)* — clone = edit + `check_self_contained.py`, `/opt/aegis` = deployment target, installer
+      copies its own checkout, and a pointer to OPERATIONS → *Running without the service* **with** that
+      section's live-verified `pkill -f "aegis.*main.py"` warning (the script kills the service). Step 3
+      of *How a change gets in* now says the checks run in your clone.
+      (4) **Fixed:** the PR template's install sentence was the disagreement itself — "installs
+      straight from the git clone + `install.sh` (see `docs/OPERATIONS.md`)" implied the clone is what
+      runs. It now states the copy to `/opt/aegis` and *edit your clone; `/opt/aegis` is the deployed
+      copy, not a workspace.*
+      (5) **Verified unchanged:** `docker exec`/`containerlab` group membership (Step 6, lines 251+)
+      already covers both the service user and the sudo caller, so nothing here narrows the manual path.
+      Checks: `python3 -m py_compile backend/main.py`, `bash -n install.sh`, `tools/check_self_contained.py`
+      → *self-contained OK*; no code or installer change, docs + template only.
+      Remaining open: the `DECISION (Dad)` on shipping this worklog, and BLOCKED screenshots.
 - [x] **The README's Prerequisites named every unpinned *tag* and no unpinned *architecture*; the
       topologies ask for a floating multi-arch image with no platform override** (2026-10-25 01:00).
       Last run closed the tag/deps gap by reading the install path; this run asked the next question a

@@ -39,8 +39,9 @@ The same checks CI runs:
   ```
 
 There is **no shippable bundle** in this tree: `frontend/nexus-release.tar.gz` does not ship, and a
-clean host installs straight from the git clone + `install.sh` (see `docs/OPERATIONS.md`). You do not
-rebuild or commit a `nexus-release.tar.gz`. `tools/check_bundle_fresh.sh` still exists and is safe to
+clean host installs straight from the git clone + `install.sh` — which copies the project to
+`/opt/aegis` and runs that copy as the `aegis` service. **Edit your clone; `/opt/aegis` is the deployed
+copy, not a workspace.** You do not rebuild or commit a `nexus-release.tar.gz`. `tools/check_bundle_fresh.sh` still exists and is safe to
 run, but it no-ops when no bundle is present — as it is here — so it is not a required check on this
 repo.
 

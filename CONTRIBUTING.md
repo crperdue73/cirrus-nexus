@@ -75,6 +75,28 @@ pull-request checklist.
 step is needed. If it is missing anyway, the tool exits **2** and says so — that is "could not run",
 not a clean pass.
 
+## Where to develop (the clone is not the tree that gets served)
+
+`install.sh` **copies** the project into `/opt/aegis` (Step 6) and the systemd unit runs *that* copy:
+`WorkingDirectory=/opt/aegis`, `ExecStart=/usr/bin/python3 /opt/aegis/backend/main.py`, `User=aegis`
+(Step 8). So the two trees answer different questions:
+
+- **The clone is where you edit.** Your fork/clone is the source of truth for a change; that is the copy
+you commit from and the copy `tools/check_self_contained.py` inspects (it resolves its root from its own
+path, so run it in the checkout you mean to test).
+- **`/opt/aegis` is what actually serves students** once installed. An edit made there is invisible to
+git and is overwritten the next time the installer runs — it is a deployment target, not a workspace.
+- **`install.sh` copies the checkout it lives in.** `SCRIPT_DIR` is the installer's own directory, so
+running `sudo ./install.sh` from `<clone>` installs `<clone>`. It copies `backend/`, `frontend/`,
+`lab-definitions/` (plus each lab's `assets/`), `assets/`, `Dockerfile.frr`, `README.md`, and
+`start_server.py` — not the repo root wholesale. Docs, tools and tests stay in the clone only.
+
+To test a change against the real service, re-run `sudo ./install.sh` from the clone and
+`systemctl restart aegis`. For a quick foreground run without touching the service, see
+[`docs/OPERATIONS.md`](docs/OPERATIONS.md) → *Running without the service* — and read the warning there
+first: `start_server.py` runs `pkill -f "aegis.*main.py"`, which **matches the systemd service**, so stop
+the service before you use it.
+
 ## Reading the maintainer's backlog
 
 [`docs/GITHUB-PLAN.md`](docs/GITHUB-PLAN.md) is the maintainer's dated worklog, not product
@@ -145,7 +167,7 @@ a pull request:
    Direct pushes to `main` here are the maintainer's, not a contributor's.
 2. **Branch** off `main` with one change on it. `main` is the only active branch; `legacy-orphan-tree`
    is preserved history from the old public tree and is not the place for new work.
-3. **Run the four checks** in *Before you push* above. Paste the real output into the PR's
+3. **Run the four checks** in *Before you push* above, in your clone (see *Where to develop*). Paste the real output into the PR's
    *How it was verified* section — a summary is not evidence. For step 4, zero output is the result.
 4. **Open the pull request** using
    [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md). CI runs on the PR.
