@@ -1,7 +1,11 @@
 # Release notes — AEGIS NEXT (draft)
 
-**Status: DRAFT — not published, and no tag has been cut.** Per standing rule, no GitHub Release and no
-version bump happen without Dad's explicit OK. Nothing in this file has been pushed beyond `main`.
+> **SUPERSEDED on 2026-10-25.** The release was cut and published as **`v0.2.0`**; the shipped notes
+> are [`RELEASE-NOTES-v0.2.0.md`](RELEASE-NOTES-v0.2.0.md). This file is kept as the drafting record,
+> including the decision it asked for. Where the two disagree, the published notes win.
+
+**Status: DRAFT — superseded.** Published as `v0.2.0` on 2026-10-25 after the operator approved the
+cut. `v0.2.0` was the recommended option below (behaviour changed, nothing removed).
 
 - **Drafted:** 2026-10-23, Friday release run.
 - **Window:** 2026-10-17 → 2026-10-23 (`git log --since="7 days ago"`), 30 non-merge commits.

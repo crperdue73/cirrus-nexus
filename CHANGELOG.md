@@ -5,10 +5,20 @@ All notable changes to AEGIS are recorded here. This project ships two labs
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased] — week of 2026-10-17 → 2026-10-23
+## [v0.2.0] — 2026-10-25
 
-Thirty commits. Unlike the two preceding weeks, **this window contains shipped behaviour**: three fixes
-to tooling/scripts and one fix to a shipped lab definition. The rest is the ongoing documentation sweep.
+**Not yet tagged and not yet published** — this entry is prepared, not shipped. There is no `v0.2.0`
+ref in this repo and none on `origin` (`git tag -l` shows only `v0.1.0`), so the release notes at
+[`docs/RELEASE-NOTES-v0.2.0.md`](docs/RELEASE-NOTES-v0.2.0.md) carry a "PUBLISHED" banner that does
+not match the tree. Cutting the tag and publishing the GitHub Release are the operator's call and have
+not been made here.
+
+Prepared as a minor bump because behaviour changed (the reaper in this window can destroy containers); nothing was
+removed, and `v0.1.0` was left where it is rather than moved.
+
+Thirty-odd commits since `v0.1.0`. Unlike the two preceding weeks, **this window contains shipped
+behaviour**: fixes to tooling/scripts, the installer, and a shipped lab definition. The rest is the
+ongoing documentation sweep.
 
 ### Fixed
 - **`scripts/clab-reaper.sh` destroyed labs a learner was still holding.** The reaper decided by age
@@ -40,7 +50,6 @@ to tooling/scripts and one fix to a shipped lab definition. The rest is the ongo
   it was being advertised as public documentation.
 
 ## [Unreleased] — honesty sweep, week of 2026-10-20
-
 ### Added
 - **`docs/OPERATIONS.md`: a "Stopping a session" section.** The failure mode with the worst
   operator-facing consequences — a stop that reports failure while the lab is still up, and a

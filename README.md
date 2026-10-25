@@ -1,7 +1,7 @@
 # AEGIS — Networking Labs for the Classroom
 
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![status: v0.1.0 — early release](https://img.shields.io/badge/status-v0.1.0%20early%20release-yellow.svg)](#release-status)
+[![status: v0.2.0 — early release](https://img.shields.io/badge/status-v0.2.0%20early%20release-yellow.svg)](#release-status)
 ![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)
 ![Powered by ContainerLab](https://img.shields.io/badge/powered%20by-containerlab-orange.svg)
 ![API: FastAPI](https://img.shields.io/badge/API-FastAPI-009688.svg)
@@ -264,18 +264,18 @@ bundle; that path is kept there as *historical* because a `nexus-release.tar.gz`
 
 ## Release status
 
-**v0.1.0 — early release.** The tree is a working, installable teaching platform for its two shipped
+**v0.2.0 — early release.** The tree is a working, installable teaching platform for its two shipped
 labs; it is not a finished product. What that means concretely:
 
-- **No published release.** A `v0.1.0` git tag exists, but it points at an older commit than the tip
-  of `main`, and **no GitHub Release has been published** for it. The tag is 73 commits behind the
-  tip as of 2026-10-25, and those commits are *not* all documentation: four of them change how a lab
-  or its install behaves (`scripts/clab-reaper.sh` twice, `tools/lint_lab_pack.py`, `install.sh`, plus
-  Demo 2's prerequisite id in its lab definition) — see [`CHANGELOG.md`](CHANGELOG.md). Anyone
-  installing from the tag gets the older behaviour; installing from `main` gets the fixes. Tag position is deliberately not given as a commit count here: a count goes stale with every
-  push. Measure it yourself with `git describe --tags` — see
-  [`docs/RELEASE-NOTES-v0.1.0-draft.md`](docs/RELEASE-NOTES-v0.1.0-draft.md) for the tag's full
-  history.
+- **`v0.2.0` is the release to install.** Tagged 2026-10-25 and published as a GitHub Release; see
+  [`docs/RELEASE-NOTES-v0.2.0.md`](docs/RELEASE-NOTES-v0.2.0.md). `git checkout v0.2.0` before
+  `./install.sh` — installing from `main` gives you whatever landed after the tag.
+- **`v0.1.0` is not moved.** It was cut 2026-10-09 and is now behind the tip; it is left in place as
+  a record of what shipped then rather than force-pushed forward. Four behaviour fixes landed
+  between it and `v0.2.0` (`scripts/clab-reaper.sh` twice, `tools/lint_lab_pack.py`, `install.sh`,
+  plus Demo 2's prerequisite id), so anyone installing from `v0.1.0` gets the older behaviour. Tag
+  position is deliberately not given as a commit count here — a count goes stale with every push.
+  Measure it with `git describe --tags`.
 - **No screenshots in this README.** Every capture would have to come from a live install; none has
   been taken yet, and none is faked here.
 - **Two labs only, static routing only** (see below).
@@ -317,7 +317,8 @@ labs; it is not a finished product. What that means concretely:
 | [`docs/ADDING-A-LAB.md`](docs/ADDING-A-LAB.md) | what a lab is, the metadata schema, the load-time validation the loader refuses by name, the grader interface |
 | [`docs/GRADING-MODEL.md`](docs/GRADING-MODEL.md) | pass / fail / refused, per-node vs lab verdict, the digest gate, the refusal vocabulary |
 | [`docs/SELF-CONTAINED.md`](docs/SELF-CONTAINED.md) | what "self-contained" means here, the CI check that enforces it, and exactly what a cold install pulls |
-| [`docs/RELEASE-NOTES-v0.1.0-draft.md`](docs/RELEASE-NOTES-v0.1.0-draft.md) | staged release notes for v0.1.0 — **draft, not published** (no GitHub Release exists yet) |
+| [`docs/RELEASE-NOTES-v0.2.0.md`](docs/RELEASE-NOTES-v0.2.0.md) | release notes for the current release, `v0.2.0` — **published** |
+| [`docs/RELEASE-NOTES-v0.1.0-draft.md`](docs/RELEASE-NOTES-v0.1.0-draft.md) | release notes for `v0.1.0` — **historical draft**; the tag exists, its GitHub Release was never published (see `v0.2.0`) |
 | [`CONFERENCE.md`](CONFERENCE.md) | booth-operator cheat sheet (install, ports, troubleshooting, reset) — **draft / not maintained**; install & lab-catalog sections corrected to this tree |
 | [`HANDOFF-2026-09-22.md`](HANDOFF-2026-09-22.md) | dated handoff note from a 2026-09-22 demo drive — **historical / not maintained**; counts and lab names in it describe a wider tree than this release (see the banner in the file) |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | the ground rules, and the checks to run before pushing (the same four CI runs) |

@@ -65,9 +65,9 @@ fuzzing**. Don't assume those exist.
 
 ## Supported versions
 
-There is one line of development, `main`. This is an early release (`v0.1.0`, no GitHub Release
-published yet — see the README's *Release status*), so fixes land on `main` and nowhere else.
-Older commits do not get backported patches.
+There is one line of development, `main`. This is an early release (`v0.2.0`, published 2026-10-25 —
+see the README's *Release status*), so fixes land on `main` and nowhere else.
+Older commits do not get backported patches. `v0.1.0` is superseded and receives nothing.
 
 ## Disclosure
 
