@@ -19,6 +19,50 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **The backlog was 40 checkboxes nobody could count — `tools/plan_status.py` now counts them,
+      and `CONTRIBUTING.md` says what a tick means** (2026-10-25 13:00).
+      Last run finished the README's accuracy pass (prerequisites, tags, architecture); this run looked
+      at the file those runs write *into*. `docs/GITHUB-PLAN.md` is ~40 dated entries, each `[x]`/`[ ]`,
+      and **nothing in the tree ever counted them** — the one number a reader wants (how much is open)
+      required scrolling a 100 KB worklog. Measured, not assumed:
+      (1) **New `tools/plan_status.py`** (stdlib only, no deps) counts top-level `- [ ]`/`- [x]` lines
+      between `## Backlog` and the next `## ` heading, **skips fenced code blocks**, and reports
+      indented sub-checkboxes separately so a partly-checked entry reads as neither done nor
+      not-started. `--json` for machine reading. Exit `0` always — it reports, it does not gate CI —
+      and `2` if the plan file is missing (which is *not* an empty backlog).
+      (2) **Measured on this tree right now:** `python3 tools/plan_status.py` → *40 backlog item(s) —
+      38 ticked, 2 open*, the open ones being the `DECISION (Dad)` on whether this file should ship
+      publicly at all, and the BLOCKED screenshots item. Those two stay open; this run does not
+      decide either.
+      (3) **Parser checked against a fixture, not just against the real file** (`/tmp` tree with a
+      fenced `- [ ]` example, a sub-checkbox pair, and an item *outside* the region): counted 2 items,
+      1 done, the fenced line and the outside line both ignored, `sub_open_total: 1`. So the count is
+      the region's count, not a grep of the whole file.
+      (4) **`CONTRIBUTING.md` gained a "Reading the maintainer's backlog" section** — it is the only
+      place a reader is told the worklog exists, so it now says plainly: not product documentation;
+      here is the count command; *a tick means the maintainer ticked it*, not that the project is
+      ready (that is the operator's call, per *Commits*). The new tool is listed with the other
+      hand-run, non-CI tools.
+      (5) **Not added to CI on purpose.** CI installs no dependencies and the four checks there are
+      the ones `CONTRIBUTING.md` promises; a backlog count is not a pass/fail gate, and adding a fifth
+      step would make the documented "four checks" wrong. Verified unchanged: `py_compile` on
+      `backend/main.py` and the new tool, `bash -n install.sh`, `check_self_contained.py` → *self-contained
+      OK: 16 required files present…*.
+      (6) **No README change this run.** README already carries the two GITHUB-PLAN rows it needs
+      (the Documentation table, line 330, and the *About `.nexus/`* reading rule, line 349), both
+      already marking the file internal — adding a third mention would advertise the worklog more,
+      not less. Next item below.
+- [ ] **CONTRIBUTING and the PR template disagree about install location**: the PR checklist says
+      "a clean host installs straight from the git clone + `install.sh`", but `install.sh` copies to
+      `/opt/aegis` and creates the `aegis` service user; nothing in either doc says whether a
+      contributor should develop in the clone or against `/opt/aegis`. The only place the manual path
+      is spelled out is `docs/OPERATIONS.md` → *Running the server* → *Running without the service*
+      (line 22: `cd /opt/aegis && python3 start_server.py`), and that section carries a live-verified
+      warning that the script's `pkill -f "aegis.*main.py"` also matches the systemd service. Reconcile
+      by pointing `CONTRIBUTING.md` (*Before you push* / a new "where to develop" line) and the PR
+      template at that section, and state plainly which copy a dev edits (the served tree is
+      `/opt/aegis`, not the clone) — measure first: read `install.sh` Steps 6–8 against that section
+      so the claim is about the real copy step, not an assumption.
 - [x] **The README's Prerequisites named every unpinned *tag* and no unpinned *architecture*; the
       topologies ask for a floating multi-arch image with no platform override** (2026-10-25 01:00).
       Last run closed the tag/deps gap by reading the install path; this run asked the next question a

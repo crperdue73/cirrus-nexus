@@ -62,6 +62,7 @@ for lab authors and are **not** part of CI:
 python3 -m pip install -r requirements.txt   # pyyaml is already declared there; CI installs no deps
 python3 tools/lint_lab_pack.py               # flags a lab that ships PRE-SOLVED (the answer key)
 bash tools/check_bundle_fresh.sh             # served bundle vs. source (no-ops if no bundle present)
+python3 tools/plan_status.py                 # counts the backlog in docs/GITHUB-PLAN.md
 ```
 
 `lint_lab_pack.py` guards the one failure that has bitten this repo before — a lab whose grader
@@ -73,6 +74,24 @@ pull-request checklist.
 `pyyaml` is declared in `requirements.txt` alongside the backend's own deps, so no separate install
 step is needed. If it is missing anyway, the tool exits **2** and says so — that is "could not run",
 not a clean pass.
+
+## Reading the maintainer's backlog
+
+[`docs/GITHUB-PLAN.md`](docs/GITHUB-PLAN.md) is the maintainer's dated worklog, not product
+documentation — it is written to the history of the work, not to a reader trying to install or run
+AEGIS (see the README, *About `.nexus/`*, for how to read it). If you do open it, the checkboxes are
+countable without scrolling the file:
+
+```bash
+python3 tools/plan_status.py          # ticked / open counts + the open titles
+python3 tools/plan_status.py --json   # same, machine-readable
+```
+
+It counts top-level `- [ ]` / `- [x]` lines between `## Backlog` and the next `## ` heading, skips
+fenced examples, and reports indented sub-checkboxes separately so a partly-checked entry does not
+read as finished or as not-started. It is not a CI step and its exit code is always `0` (missing plan
+file → `2`): a tick means the maintainer ticked it, and it says nothing about whether the project is
+ready. That call is the maintainer's, per *Commits* above.
 
 ## Adding or editing a lab
 
