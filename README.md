@@ -105,7 +105,7 @@ and 24.04 both do), `sudo`, internet access (to pull the SR Linux image), and ~3
 ships in the repo:** the router image (`aegis/frr:latest`) is built locally from `Dockerfile.frr`, and
 the switch image is pulled at install.
 
-Two more things you should know before you start, because they are **not pinned in this tree**:
+Three things you should know before you start, because they are **not pinned or checked in this tree**:
 
 - **The base images are tags, not digests.** `Dockerfile.frr` is `FROM alpine:latest`; both shipped
   topologies bind `ghcr.io/nokia/srlinux:latest` for the switches and `alpine:latest` for the PCs;
@@ -115,6 +115,18 @@ Two more things you should know before you start, because they are **not pinned 
   (The locally built router image *is* tracked: `assets/frr-image.pin` records a Dockerfile fingerprint
   and a rootfs layer-chain hash, and `install.sh` verifies both — see [Known
   limitations](#known-limitations-read-these-before-you-rely-on-it).)
+- **The host architecture is assumed, not checked.** Nothing in `install.sh` tests the CPU architecture
+  for the labs themselves. It *reads* `uname -m` for `ttyd` (Step 4: `x86_64`/`aarch64`/`armv7l` get a
+  prebuilt binary, anything else builds a 4th package from source via `cmake`), and `Dockerfile.frr` is a
+  plain `FROM alpine:latest` with no `--platform`, so Docker picks whatever the host is. But the switch
+  nodes are `kind: nokia_srlinux` with **`ghcr.io/nokia/srlinux:latest`** and no architecture override in
+  the topology. Nokia's own docs describe the SR Linux container image as ARM64-native *in preview* and
+  unqualified, and upstream containerlab says arm64 gets selected automatically only from SR Linux 24.10.1
+  onward — which a floating `:latest` does not guarantee. The FRR/Alpine images are multi-arch and fine
+  either way. So: **x86-64 is the architecture this tree is built and checked on; on arm64 hosts, treat
+  the switch nodes as untested here** (that is a statement about this repo's testing, not a claim about
+  Nokia's image). See [Known
+  limitations](#known-limitations-read-these-before-you-rely-on-it).
 - **`requirements.txt` ships no version constraints.** It lists three packages — `fastapi`, `uvicorn`,
   `pyyaml` — and `install.sh` installs exactly those, unpinned (`pip3 install --break-system-packages
   fastapi uvicorn pyyaml`, with a plain `pip3 install` fallback) — not `pip install -r requirements.txt`.
@@ -281,6 +293,10 @@ labs; it is not a finished product. What that means concretely:
   `8765`–`9765`) are similarly open, which is why those ports ship bound to all interfaces too.
 - **The SR Linux image is a ~2.35 GB pull**; each switch node runs a full instance of it. Keep to
   **one session per student per lab**; use *Reconnect* for a returning student rather than Start.
+- **Architecture is not tested beyond x86-64.** The topologies request
+  `ghcr.io/nokia/srlinux:latest` with no `--platform` override and `install.sh` never checks
+  `uname -m` for the labs (it reads it only to choose a prebuilt `ttyd` binary). x86-64 is what this
+  tree is built and checked on; arm64 switch nodes are untested here.
 - **A known image-pin drift:** `Dockerfile.frr` hashes differently from `assets/frr-image.pin`. No
   pinned FRR image tarball ships in this tree (`assets/` tracks only `frr-image.pin`;
   `installed-image-id.txt` exists locally but is git-ignored, so it does not ship), so `install.sh`

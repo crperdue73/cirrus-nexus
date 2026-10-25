@@ -19,6 +19,46 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **The README's Prerequisites named every unpinned *tag* and no unpinned *architecture*; the
+      topologies ask for a floating multi-arch image with no platform override** (2026-10-25 01:00).
+      Last run closed the tag/deps gap by reading the install path; this run asked the next question a
+      reader planning a host asks — *does this run on the box I have?* — and the tree had no answer.
+      Measured, not assumed:
+      (1) **Nothing checks the CPU architecture for the labs.** `uname -m` appears in `install.sh` exactly
+      once, in Step 4 (line 127), and only to pick a prebuilt `ttyd` binary (`x86_64`/`aarch64`/`armv7l`;
+      any other arch sets `BUILD_TTYD=1` and builds ttyd 1.7.4 from source with `cmake`). There is no arch
+      gate anywhere else in the installer — `grep -n "uname -m"` → 1 hit, total.
+      (2) **`Dockerfile.frr` has no `--platform`** (`FROM alpine:latest`, line 5; `Dockerfile.frr-bgp:18` is
+      `FROM aegis/frr:latest`), so the router image simply inherits the host arch. Alpine is multi-arch, so
+      that is fine either way — stated as fine, not as tested.
+      (3) **The switch nodes are the open edge.** Both shipping topologies bind
+      `ghcr.io/nokia/srlinux:latest` (`srl-demo-unsolved` line 55; `srl-demo2-unsolved` lines 77/82) with
+      no architecture override, and `install.sh:450` pre-pulls that same floating name. Vendor docs read
+      this run: Nokia's `learn.srlinux.dev` announces the ARM64 image "as a preview … ready to be used on
+      any ARM64 system" under a *separate* tag, and upstream containerlab (`docs/manual/kinds/srl.md`)
+      says the image "is also available as an ARM64-native container image in a preview mode … not yet
+      fully qualified" and that "starting with SR Linux 24.10.1 the container image is built using the
+      manifest list" — i.e. correct-arch selection is a property of *recent tags*, which a floating
+      `:latest` does not promise. Could NOT verify the manifest list from this box (`docker` is not
+      installed here — `command -v docker` → not found), so this entry does not claim what `:latest`
+      resolves to today. That is exactly why the README now says "x86-64 is what this tree is built and
+      checked on; arm64 switch nodes are untested **here**" — a statement about this repo's testing, which
+      I can stand behind, instead of a claim about a third party's registry, which I cannot.
+      Scope: `README.md` only, +17/−1 (one bullet in Quick start, one bullet in Known limitations, and
+      "Two more things" → "Three things"). No code, no CI, no lab, no image ref changed — pinning an arch
+      or a tag is a product decision, not a docs one.
+      Measured after the edit: `py_compile backend/main.py` ok; `bash -n install.sh` ok;
+      `tools/check_self_contained.py` → "16 required files present, lab assets + graders resolve, no
+      developer paths leak" rc=0; CI's exact secret-scan grep → no hits. Backup:
+      `.nexus/bundle-archive/README.md.bak-2026-10-25-0100-arch` (git-ignored, not shipped).
+      NOT COMPLETE — Dad's word alone. | proof=`grep -n "uname -m" install.sh` (1 hit) + image refs in both topologies + vendor/upstream docs read |
+      next=the arch answer and the **pin-or-not** decision are the same decision: pin the three base images
+      to digests *and* (if arm64 is meant to be supported) pin an SR Linux tag new enough to ship the
+      manifest list — both change what every install builds, so both are Dad's product call. Standing
+      blocks unchanged: Screenshots (needs a live-host session), the grading-coverage code call, the
+      `v0.1.0` tag re-cut, `.nexus/` public policy, DELETE-OR-KEEP for the three empty `lab-definitions/`
+      dirs / `Dockerfile.frr-bgp` / quarantine / `10-archive/`, the `ci.yml` cosmetic step
+      (workflow-scoped token), and a published security contact address.
 - [x] **The Prerequisites block said "no image ships in the repo" and stopped there — while three
       floating `:latest` tags and an unpinned dependency list are exactly what a reader needs to know
       before committing a host** (2026-10-24 19:00). Picked this over another honesty sweep because the
