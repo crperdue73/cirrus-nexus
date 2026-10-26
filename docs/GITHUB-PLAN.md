@@ -19,6 +19,42 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **`CHANGELOG.md` was the one file in the tree still saying v0.2.0 was never tagged — while the
+      README, `SECURITY.md` and the release notes all said published. The API agrees with them**
+      (2026-10-26 13:00).
+      Last run re-rendered the diagram; this run read the tree for claims that contradict each other.
+      Found one, and it was the embarrassing kind: the *changelog* — the file whose whole job is to say
+      what shipped — contained
+      > "**Not yet tagged and not yet published** … There is no `v0.2.0` ref in this repo and none on
+      > `origin` (`git tag -l` shows only `v0.1.0`) …… the release notes carry a \"PUBLISHED\" banner
+      > that does not match the tree."
+      That paragraph was written as a guard *before* the cut and then never refreshed, so it outlived its
+      own truth and started slandering the release notes. Measured against the remote, not the story:
+      (1) **Local:** `git tag -l` → `v0.1.0`, `v0.2.0`; `git describe --tags` → `v0.2.0-4-gf1ff325`;
+      `v0.2.0` peels to `cc0c1bf` (2026-10-25 12:30:30 +0000).
+      (2) **Remote:** `git ls-remote --tags origin` lists both `refs/tags/v0.2.0` (annotated object
+      `437d0d7`) and its peeled commit `cc0c1bf` — the same commit as local, so the push really happened.
+      (3) **GitHub itself:** `GET /repos/crperdue73/cirrus-nexus/releases` → one release, `tag_name
+      v0.2.0`, `"draft": false`, `"prerelease": false`, `"published_at": "2026-10-25T12:30:44Z"`.
+      And `GET /releases/tags/v0.1.0` → **404**, which independently confirms the other half of the
+      README's line: `v0.1.0` has a tag and no published Release. So README, `SECURITY.md` and
+      `RELEASE-NOTES-v0.2.0.md` were all correct, and this file was the only liar in the set.
+      (4) **Fixed in `CHANGELOG.md`:** the paragraph is now *Shipped* — tag on `main` and on `origin`,
+      Release published 2026-10-25 with a link to the notes — plus a quoted correction recording that the
+      old text stood here for a day, without retiring the entry's contents (the fixes below it are still
+      what went out). "Prepared as a minor bump" → "Cut as a minor bump", since it is no longer pending.
+      Kept as a labelled correction rather than a silent rewrite: a changelog that quietly edits its own
+      history is the one thing a changelog must not do.
+      (5) **Swept for the same rot elsewhere:** `grep -rn "not yet tagged\|Not yet tagged\|no v0.2.0\|
+      shows only .v0.1.0"` over every `*.md` outside the worklog and `.nexus/` → **one hit, the quotation
+      inside my own correction.** No other file still claims the release is unshipped.
+      Checks: `py_compile backend/main.py` ok; `bash -n install.sh` ok; `check_self_contained.py` →
+      *self-contained OK: 15 required files present, 1 linked doc asset(s) present…*; `plan_status.py`
+      → 43 items, 41 ticked, 2 open. Scope: `CHANGELOG.md` only, +9/−5. No README, code, CI, topology,
+      tag, or release change — nothing was re-tagged and no Release was created, edited, or deleted;
+      the tag situation was already correct and only the prose about it was wrong.
+      Backups: `.nexus/bundle-archive/CHANGELOG.md.bak-2026-10-26-1301-run-2026-10-26-1300` (git-ignored).
+
 - [x] **The README says the diagram is "rendered straight out of" the mermaid block; nothing in the
       tree could tell whether the committed PNG still *is* that block. Both claims now hold up, and
       the way to re-check is written down** (2026-10-26 01:00).

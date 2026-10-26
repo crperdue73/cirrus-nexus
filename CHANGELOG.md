@@ -7,13 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [v0.2.0] — 2026-10-25
 
-**Not yet tagged and not yet published** — this entry is prepared, not shipped. There is no `v0.2.0`
-ref in this repo and none on `origin` (`git tag -l` shows only `v0.1.0`), so the release notes at
-[`docs/RELEASE-NOTES-v0.2.0.md`](docs/RELEASE-NOTES-v0.2.0.md) carry a "PUBLISHED" banner that does
-not match the tree. Cutting the tag and publishing the GitHub Release are the operator's call and have
-not been made here.
+**Shipped.** The tag `v0.2.0` exists on `main` and on `origin`, and a GitHub Release was published from
+[`docs/RELEASE-NOTES-v0.2.0.md`](docs/RELEASE-NOTES-v0.2.0.md) on 2026-10-25.
 
-Prepared as a minor bump because behaviour changed (the reaper in this window can destroy containers); nothing was
+> Correction, recorded because the wrong text sat here for a day: until 2026-10-26 this entry said
+> "not yet tagged and not yet published" and claimed `git tag -l` showed only `v0.1.0`. That was
+> written before the cut and never refreshed afterwards. Re-measured against the remote rather than the
+> local clone — `git ls-remote --tags origin` lists `refs/tags/v0.2.0`, and the GitHub releases API returns it with
+> `"draft": false, "prerelease": false, "published_at": "2026-10-25T12:30:44Z"`. The claim in the
+> README, `SECURITY.md` and the release notes was right; this file was the one that had gone stale.
+
+Cut as a minor bump because behaviour changed (the reaper in this window can destroy containers); nothing was
 removed, and `v0.1.0` was left where it is rather than moved.
 
 Thirty-odd commits since `v0.1.0`. Unlike the two preceding weeks, **this window contains shipped
