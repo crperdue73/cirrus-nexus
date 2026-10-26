@@ -28,7 +28,6 @@ REQUIRED = [
     "backend/main.py",
     "frontend/index.html",
     "assets/frr-image.pin",
-    "docs/assets/architecture-components.png",
     "lab-definitions/grader_demo_01_srl.py",
     "lab-definitions/grader_demo_02.py",
     "lab-definitions/srl-demo-unsolved/demo-01-two-pcs-and-a-real-switch-unsolved.yml",
@@ -36,6 +35,11 @@ REQUIRED = [
     "lab-definitions/srl-demo2-unsolved/demo-02-two-switches-one-router-unsolved.yml",
     "lab-definitions/srl-demo2-unsolved/assets/sw1.cfg",
     "lab-definitions/srl-demo2-unsolved/assets/sw2.cfg",
+]
+
+# Files README.md / docs/ link to that must exist in the repo (docs-only; see main()).
+DOCS_READER_FACING = [
+    "docs/assets/architecture-components.png",
 ]
 
 # A developer's absolute path must never ship. (These records legitimately mention
@@ -55,6 +59,14 @@ def main() -> int:
     for rel in REQUIRED:
         if not (ROOT / rel).exists():
             problems.append(f"missing required file: {rel}")
+
+    # REQUIRED above is the INSTALL set: things install.sh must carry to /opt/aegis for a
+    # cold host to serve a lab. Repo-only docs (e.g. docs/assets/architecture-components.png,
+    # which README.md links) are a different claim: broken links, not broken installs. Kept
+    # separate so a missing diagram cannot masquerade as an install failure, and vice versa.
+    for rel in DOCS_READER_FACING:
+        if not (ROOT / rel).exists():
+            problems.append(f"missing README-linked doc asset: {rel}")
 
     # Every lab YAML's startup-config must exist beside it, and its grader must exist.
     for yml in (ROOT / "lab-definitions").rglob("*.yml"):
@@ -95,6 +107,7 @@ def main() -> int:
         print("repo is NOT self-contained:\n  " + "\n  ".join(problems))
         return 1
     print(f"self-contained OK: {len(REQUIRED)} required files present, "
+          f"{len(DOCS_READER_FACING)} linked doc asset(s) present, "
           f"lab assets + graders resolve, no developer paths leak.")
     return 0
 
