@@ -40,6 +40,7 @@ REQUIRED = [
 # Files README.md / docs/ link to that must exist in the repo (docs-only; see main()).
 DOCS_READER_FACING = [
     "docs/assets/architecture-components.png",
+    "docs/API.md",
 ]
 
 # A developer's absolute path must never ship. (These records legitimately mention

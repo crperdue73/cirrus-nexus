@@ -19,6 +19,48 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **The README's API table was the only route reference in the tree — 11 routes, no parameters
+      beyond two, no response fields, no status-code contract. There is now a `docs/API.md`, and its
+      route table is checked against the app's own OpenAPI document rather than typed from the README**
+      (2026-10-26 19:00).
+      The README table is a summary and says so; what a reader actually needs next — what each route
+      takes, what it returns, and why a `409` is not an error — existed only in the handler bodies.
+      This run wrote it down, and made the writing checkable:
+      (1) **Measured, not copied.** Imported `backend/main.py` in a throwaway venv
+      (`/tmp/aegisvenv`, fastapi 0.162.0 + uvicorn + pyyaml — this box had neither) and read
+      `main.app.openapi()`: **11 operations**, `parameters` with `in`/`required` per op, and
+      `requestBody` present for **zero** of them. Two facts fell out of that and are now stated in the
+      page: every input is a **path or query parameter** (no route takes a body, which is why the
+      examples are URL-only `curl`s), and `POST /api/sessions/start`'s `lab_id`/`student_name` are
+      **query** params, not path — the README's table put them under "Parameters" without saying which.
+      (2) **`docs/API.md`** — summary table, the two parameters people get wrong (`lab_id` is the
+      long directory-style id, not the title; `node` must come from the session's own node list), a
+      per-route section with the response shapes read out of the handler bodies (including
+      `runtime_digest` / `runtime_digest_live` / `runtime_digest_matches` on `GET /api/sessions/{id}`),
+      the status-code contract (200 / 404 / 409 refusal / 500 failed deploy), the three-call
+      walkthrough, and the exposure note (no auth on `/api`, `/docs` or the `8765–9765` ttyd range).
+      It links, rather than restates, `GRADING-MODEL.md` for why a refusal exists.
+      (3) **The check is in the page and was run here.** The *Re-checking this page* section prints the
+      11 `(method, path, params, body)` rows from the app's OpenAPI document; ran it, then compared the
+      page's own table rows to that output programmatically: `specset == docset` → **True**, 0 missing,
+      0 extra, 11 rows, `any requestBody: False`. So the table is not a transcription — a route added
+      without the page being updated shows up as a diff.
+      (4) **Wired in, not orphaned.** The new file is a row in the README's Documentation table (the
+      same failure this worklog keeps finding — a doc that exists but is reachable from nowhere), is
+      linked from the README's API section as the per-route detail, and is added to
+      `DOCS_READER_FACING` in `tools/check_self_contained.py` so a missing `docs/API.md` is reported as
+      a broken README-linked doc, not as an install failure (that split was the 13:00 run's fix; this
+      run is its first user).
+      Checks: `py_compile backend/main.py` ok; `bash -n install.sh` ok; `check_self_contained.py` →
+      *self-contained OK: 15 required files present, 2 linked doc asset(s) present…* (was 1);
+      `lint_lab_pack.py` → 2 labs UNSOLVED, 0 red flags, rc=0; `plan_status.py` → 44 items, 43 ticked,
+      2 open. Scope: `docs/API.md` (new, ~8.8 KB), `README.md` (+2 lines: one table row, one pointer),
+      `tools/check_self_contained.py` (+1 list entry). **No backend, installer, topology, grader, CI or
+      release change** — the API is documented as it already is, including where it is weak
+      (unauthenticated everywhere), which is stated rather than dressed up.
+      Backups: `.nexus/bundle-archive/{README.md,check_self_contained.py}.bak-2026-10-26-1900-run-2026-10-26-1900`
+      (git-ignored). The throwaway venv lives in `/tmp` and is not part of the tree.
+
 - [x] **`CHANGELOG.md` was the one file in the tree still saying v0.2.0 was never tagged — while the
       README, `SECURITY.md` and the release notes all said published. The API agrees with them**
       (2026-10-26 13:00).

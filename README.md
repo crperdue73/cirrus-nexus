@@ -204,7 +204,9 @@ exactly how the shipped UI calls them.
 | `POST` | `/api/sessions/{id}/submit` | `node` (required) | grade one node |
 | `POST` | `/api/sessions/{id}/stop` | — | tear down a session |
 
-Example — start, grade, stop (the same three calls the UI makes):
+Per-route detail — parameters, response fields, the digest fields on a session, and the status-code
+contract — is in [`docs/API.md`](docs/API.md). Example: start, grade, stop (the same three calls the UI
+makes):
 
 ```bash
 # 1. deploy a lab; the response carries session_id and a per-node ttyd URL
@@ -312,6 +314,7 @@ labs; it is not a finished product. What that means concretely:
 
 | doc | contents |
 |-----|----------|
+| [`docs/API.md`](docs/API.md) | all 11 routes with their parameters, the two ways people call them wrong, the status-code contract (`404` / `409` / `500`), a three-call walkthrough, exposure, and how to re-check the page against the app |
 | [`docs/architecture.md`](docs/architecture.md) | components, diagrams, the lab lifecycle, the grading path, substrates, scope boundaries |
 | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) | stopping a session (what a failed stop means), bundle rebuild, runtime digests, concurrency, running without the service, substrate details, known drift |
 | [`docs/ADDING-A-LAB.md`](docs/ADDING-A-LAB.md) | what a lab is, the metadata schema, the load-time validation the loader refuses by name, the grader interface |
