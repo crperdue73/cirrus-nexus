@@ -19,6 +19,38 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **The README says the diagram is "rendered straight out of" the mermaid block; nothing in the
+      tree could tell whether the committed PNG still *is* that block. Both claims now hold up, and
+      the way to re-check is written down** (2026-10-26 01:00).
+      The README (line 62) and `docs/assets/README.md` both promise the block is authoritative and the
+      PNG is its render. Measured this run rather than trusted:
+      (1) **Re-rendered the block from scratch and diffed.** Extracted the first `mermaid` fence from
+      `docs/architecture.md` (10 node ids, 10 edges, 3 subgraphs: `browser`{ui,iframe},
+      `server`{catalog,sessions,grader}, `defs`{yml,py} — parsed, not eyeballed), rendered with
+      `@mermaid-js/mermaid-cli@12`, theme `neutral`, `-b white -s 2`. Result: **byte-identical** to the
+      committed `docs/assets/architecture-components.png` —
+      `sha256 5b0d87e7…c5dacfe`, 1568×1646, 110243 bytes, `cmp` clean. So at this commit the image really
+      is that block, and the README sentence is true, not hopeful.
+      (2) **Why CI can't check it.** Walked the PNG's chunk list: `IHDR`, `IDAT`×28, `IEND` — no `tEXt`,
+      no `zTXt`, no `iTXt`. Mermaid embeds no source text, so a *stale* render and a fresh one are
+      indistinguishable by grep or by hash-without-rendering. A freshness gate would need Chromium in
+      CI, which the four documented checks deliberately don't install. Conclusion recorded instead of
+      a workflow that would break `CONTRIBUTING.md`'s promise of four dependency-free checks.
+      (3) **Fixed in `docs/assets/README.md`:** new section *Is the committed PNG still in sync with the
+      block?* — states that nothing automated proves it and why, gives the extract → re-render →
+      `sha256sum` procedure, says the PNG must be committed **in the same commit as the block change**,
+      and records this run's measurement *as a measurement of one commit*, not a standing guarantee.
+      (4) **Also documented, because it cost time here:** rendering as `root` fails
+      (`Running as root without --no-sandbox is not supported`) and `mermaid-cli` gives that only in
+      puppeteer's stderr tail. The fix is a puppeteer config `-p pp.json` with
+      `{"args":["--no-sandbox"]}`; noted inline for the next person, who would otherwise hit the same
+      wall. No `--no-sandbox` or config file is committed to the repo — it's a local render detail.
+      Checks after the edit: `py_compile backend/main.py` ok; `bash -n install.sh` ok;
+      `tools/check_self_contained.py` → *self-contained OK: 16 required files present*; the CI
+      secret-scan grep → no hits. Scope: `docs/assets/README.md` only, +34/−2. No README, code, CI,
+      topology, or image change — the PNG was already correct, so nothing was re-committed for show.
+      Backup: `.nexus/bundle-archive/assets-README.md.bak-2026-10-26-0100` (git-ignored).
+
 - [x] **The backlog was 40 checkboxes nobody could count — `tools/plan_status.py` now counts them,
       and `CONTRIBUTING.md` says what a tick means** (2026-10-25 13:00).
       Last run finished the README's accuracy pass (prerequisites, tags, architecture); this run looked
