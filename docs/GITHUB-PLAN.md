@@ -19,6 +19,52 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **`CONTRIBUTING.md` listed four "further tools" as one undifferentiated block; one of them cannot
+      fail on a fresh clone and only one of them needs a dependency — both measured before editing**
+      (2026-10-27 19:00).
+      Both open backlog items are Dad-gated (the `DECISION` on shipping this file, and the BLOCKED
+      screenshot capture), so this run picked no item from the list and looked at the tree instead. A
+      full relative-link sweep of all 20 reader-facing Markdown files was run first — fences and inline
+      code stripped so a badge URL in a worklog quotation is not counted as a link, the 21 lab
+      guide/spec Markdown files excluded because they are nested assets rather than repo docs — and it
+      returned **0 broken links** out of 72 relative links. Nothing to fix there.
+      What it did find was a *tool list* a contributor is told to run. `CONTRIBUTING.md` said "Two
+      further tools" over a four-command block, and presented all four as things to run before pushing.
+      Measured, not assumed:
+      (1) **`check_bundle_fresh.sh` cannot report anything on a clone.** Read the script: absent bundle
+      → prints `no bundle present at frontend/nexus-release.tar.gz — nothing to check` and `exit 0`.
+      The bundle is git-ignored (`*.tar.gz`, `.gitignore:16`) and `git ls-files '*.tar.gz'` is empty, so
+      in a fresh clone and in CI it *always* takes that branch. Ran it here: same message, rc=0. A
+      green line in a contributor's terminal that inspected nothing is exactly the shape this worklog
+      keeps fixing elsewhere.
+      (2) **Only `lint_lab_pack.py` imports `yaml`** (`grep` over `tools/*.py`: one hit). This box has no
+      `pyyaml` (`import yaml` → `ModuleNotFoundError`), which made the failure modes testable instead
+      of quotable: `lint_lab_pack.py` → `UNAVAILABLE: PyYAML is not installed, so no lab was examined
+      (this is not a pass)`, **rc=2**; `check_self_contained.py` → rc=0 with its normal OK line;
+      `plan_status.py` → rc=0. So the "exit 2 is not a pass" behaviour the docstring promises is real,
+      and the other tools genuinely don't need the dep. Also noted: the code block's first line is
+      `pip install -r requirements.txt`, which is a setup step sitting in a list of checkers, and it
+      already carried the "CI installs no deps" remark — left, corrected around.
+      (3) **Fixed in `CONTRIBUTING.md`, one section, +18 lines, no deletions:** "Two further tools" →
+      "Four further tools … for lab authors and maintainers"; a new sub-block states the bundle guard
+      only speaks when a bundle is present, and that only `lint_lab_pack.py` needs `pyyaml` — with the
+      exact UNAVAILABLE line, the exit code and its reason, and the fact that the other two run clean
+      without it (measured on this host). Closing line says which two can actually fail your change.
+      Two wording slips in my own first draft were caught against the tree before committing: the
+      "four checks above are exactly what CI enforces" sentence had been left sitting over a block that
+      listed five bullets, and "the other three" counted wrong when four commands were shown.
+      Checks after the edit: `py_compile backend/main.py` ok; `bash -n install.sh` ok;
+      `check_self_contained.py` → *self-contained OK: 15 required files present, 2 linked doc asset(s)*,
+      rc=0; `check_repo_metadata.py` → *27 claims hold*, rc=0; `plan_status.py` → 48 items, 46 ticked,
+      2 open. **Scope: `CONTRIBUTING.md` only. No README, code, installer, lab, topology, grader, CI,
+      workflow or dependency change; no file was made a CI check and no check was removed.**
+      Backup note, honestly: the file copied to
+      `.nexus/bundle-archive/CONTRIBUTING.md.bak-2026-10-27-1900-tool-list` (git-ignored) is a
+      snapshot of the **edited** file, taken after the change — it is not a pre-edit rollback. The
+      pre-edit text is in git (`git show HEAD:CONTRIBUTING.md`), and the change is additive (+18
+      lines, nothing removed), so the cheap rollback is to revert the commit, not to restore this copy.
+      STILL OPEN, both unchanged and both not mine: the `DECISION (Dad)` below on whether this file
+      ships publicly, and the BLOCKED screenshot capture.
 - [x] **`CONTRIBUTING.md` documents a fork-and-PR path and names `tools/plan_status.py` twice, but the
       tool read one hardcoded file name — the first fork that renamed the worklog got a crash looking
       like a verdict** (2026-10-27 13:00).

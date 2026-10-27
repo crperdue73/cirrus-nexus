@@ -55,8 +55,8 @@ committed. The two commands answer different questions: the `grep` form is "is m
 right now, in the suffixes we ship most of", the `git grep` form is "is the whole tracked tree clean,
 no suffix filter". Zero output from each is the pass.
 
-The four checks above are exactly what CI enforces on every push and PR. Two further tools exist
-for lab authors and are **not** part of CI:
+The four checks above are exactly what CI enforces on every push and PR. Four further tools exist
+for lab authors and maintainers, and are **not** part of CI:
 
 ```bash
 python3 -m pip install -r requirements.txt   # pyyaml is already declared there; CI installs no deps
@@ -70,6 +70,25 @@ passes with **zero** student work because the expected values were baked into th
 not wired into CI (CI installs no dependencies, and CI cannot be changed from a token without
 `workflow` scope), so **run it by hand when you add or edit a lab.** Both are also listed in the
 pull-request checklist.
+
+Two things in that list are worth knowing before you read a green run as agreement:
+
+- **`check_bundle_fresh.sh` is not a checker on your clone.** It compares a built
+  `frontend/nexus-release.tar.gz` against the source and, when there is no bundle, prints
+  `no bundle present … nothing to check` and **exits 0**. The bundle is git-ignored (`*.tar.gz` in
+  `.gitignore`; `git ls-files '*.tar.gz'` is empty), so on a fresh clone — and in CI — it always takes
+  that branch. It is a staleness guard for whoever has a bundle on disk, not a pass/fail check on your
+  change.
+- **Only `lint_lab_pack.py` needs `pyyaml`.** The other three (`check_bundle_fresh.sh`,
+  `check_self_contained.py`, `plan_status.py`) run on the standard library alone — `check_self_contained.py`
+  is also a CI check, and runs there with nothing installed. Without `pyyaml`,
+  `lint_lab_pack.py` prints `UNAVAILABLE: PyYAML is not installed, so no lab was examined (this is not a
+  pass)` and exits **2** — deliberately not 0, so a missing dependency cannot read as a clean lab pack.
+  `check_self_contained.py` and `plan_status.py` are unaffected and still exit 0 (or 1 / 2 for their own
+  reasons); measured on a host without `pyyaml`.
+
+So of the tools on this page, `lint_lab_pack.py` and `check_self_contained.py` are the two that can fail
+your change; the bundle guard only speaks when a bundle is present, and `plan_status.py` only reports.
 
 `pyyaml` is declared in `requirements.txt` alongside the backend's own deps, so no separate install
 step is needed. If it is missing anyway, the tool exits **2** and says so — that is "could not run",
