@@ -115,6 +115,12 @@ read as finished or as not-started. It is not a CI step and its exit code is alw
 file → `2`): a tick means the maintainer ticked it, and it says nothing about whether the project is
 ready. That call is the maintainer's, per *Commits* above.
 
+It finds the worklog by name — the newest `docs/GITHUB-PLAN*.md` — so a fork that renames it still
+counts, and `--plan PATH` points it at a specific file. What it will not do is invent a count from a
+tree that has no worklog: that is exit `2` naming the pattern it looked for, not `0` with zero items.
+If both this file and the worklog are dropped from a fork, drop the two references above with them —
+nothing else in the repo depends on either.
+
 ## Adding or editing a lab
 
 The full contract — file layout, the metadata schema, the load-time validation the

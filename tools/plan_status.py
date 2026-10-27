@@ -16,11 +16,21 @@ What it counts, exactly:
     indented `- [ ]` line that follows is a *sub*checkbox of it, reported apart
     so a partly-checked item does not read as done or as not-started.
 
+Follow-up (2026-10-27): CONTRIBUTING.md documents a *fork*-and-PR path, and this
+tool is named in it twice, but it read a single hardcoded file name. A fork that
+renamed the worklog, or any tree without it, got "no such file: ..." and exit 2
+from a tool whose own docs promise exit 0. The name is now looked up
+(`GITHUB-PLAN*.md` under `docs/`, newest by modification time) so the count still
+works; "not found" is still exit 2 with a message that lists what was looked for.
+A `--plan PATH` argument overrides the lookup. The *shipping* file name is
+untouched — whether the worklog ships publicly at all is still an open decision
+in the worklog itself, not something a docs tool gets to settle.
+
 What it does NOT do: judge whether an item is finished. `[x]` here means the
 maintainer ticked it; the last word on the project is the operator's, not a
 checkbox (see CONTRIBUTING.md, "Commits").
 
-Usage:  python3 tools/plan_status.py [--json]
+Usage:  python3 tools/plan_status.py [--json] [--plan PATH]
 Exit code 0 always — this reports, it does not gate CI. A missing plan file is
 an error (exit 2), not an empty backlog.
 """
@@ -31,10 +41,30 @@ import sys
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parent.parent
-PLAN = BASE / "docs" / "GITHUB-PLAN.md"
+DOCS = BASE / "docs"
+PLAN_GLOB = "GITHUB-PLAN*.md"
 
 TOP_ITEM = re.compile(r"^- \[( |x|X)\]\s")
 SUB_ITEM = re.compile(r"^[ \t]+- \[( |x|X)\]\s")
+
+
+def find_plan(explicit=None):
+    """Return (path_or_None, [what was searched]).
+
+    The worklog is the only file this tool reads, and its name is a convention,
+    not a contract — so a rename or a stripped-down fork should not turn a count
+    into a crash. Newest match wins if more than one is present.
+    """
+    if explicit:
+        path = Path(explicit)
+        return (path if path.is_file() else None), [str(path)]
+    searched = [str(DOCS / PLAN_GLOB)]
+    if not DOCS.is_dir():
+        return None, searched
+    hits = [p for p in DOCS.glob(PLAN_GLOB) if p.is_file()]
+    if not hits:
+        return None, searched
+    return max(hits, key=lambda p: p.stat().st_mtime), searched
 
 
 def backlog_lines(path: Path):
@@ -104,13 +134,26 @@ def _title(text: str) -> str:
 
 
 def main() -> int:
-    if not PLAN.exists():
-        print(f"NO PLAN FILE: {PLAN} does not exist (this is not an empty backlog).", file=sys.stderr)
+    args = sys.argv[1:]
+    explicit = None
+    if "--plan" in args:
+        i = args.index("--plan")
+        if i + 1 >= len(args):
+            print("USAGE: --plan needs a path", file=sys.stderr)
+            return 2
+        explicit = args[i + 1]
+    plan, searched = find_plan(explicit)
+    if plan is None:
+        print(
+            "NO PLAN FILE: none of " + ", ".join(searched) + " exists "
+            "(this is not an empty backlog).",
+            file=sys.stderr,
+        )
         return 2
-    if "--json" in sys.argv[1:]:
-        print(json.dumps(summarize(PLAN), indent=2))
+    if "--json" in args:
+        print(json.dumps(summarize(plan), indent=2))
         return 0
-    s = summarize(PLAN)
+    s = summarize(plan)
     print(f"{s['file']}: {s['items']} backlog item(s) — {s['done']} ticked, {s['open']} open")
     if s["sub_open_total"]:
         print(f"  ({s['sub_open_total']} open sub-checkbox(es) inside ticked items — read those entries, not the tick)")

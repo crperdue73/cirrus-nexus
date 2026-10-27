@@ -19,6 +19,43 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **`CONTRIBUTING.md` documents a fork-and-PR path and names `tools/plan_status.py` twice, but the
+      tool read one hardcoded file name — the first fork that renamed the worklog got a crash looking
+      like a verdict** (2026-10-27 13:00).
+      Last run checked a claim against the thing it describes (the FRR pin vs. its Dockerfile). This
+      run did the same for a *contributor instruction*: `CONTRIBUTING.md` opens its contribution path
+      with "Fork … push your branch to your fork" and then tells that contributor to count the backlog
+      with `python3 tools/plan_status.py`. Measured: the tool had `PLAN = BASE / "docs" /
+      "GITHUB-PLAN.md"` and returned **exit 2 / "NO PLAN FILE"** for anything else. That file is named
+      in exactly three places (`README.md` ×2, `CONTRIBUTING.md` ×2, the tool itself) and is the
+      subject of an **open decision** in this very worklog — so the two most likely futures (Dad moves
+      it out of the served tree, or a fork strips it) both turn a documented contributor command into
+      an error message that reads like a result. It was also a promise the docstring had already made
+      and the code had not: "Exit code 0 always."
+      FIX: `find_plan()` looks up the newest `docs/GITHUB-PLAN*.md` instead of one literal name, and
+      `--plan PATH` overrides it. "Not found" is still **exit 2** — deliberately not softened to 0, so
+      an absent worklog cannot masquerade as an empty backlog — but the message now names the pattern
+      it searched. Docstring records the follow-up and the reason the *shipping* file name was left
+      alone (that is Dad's decision, not a docs tool's).
+      VERIFIED against a scratch tree in `/tmp/ps-test` (copy of the tool + the real 47-item worklog),
+      both directions: renamed to `GITHUB-PLAN-renamed.md` → counts all 47, rc=0; no file → exit 2 with
+      the new pattern message; two candidates (`GITHUB-PLAN.md` 2 items, newer `GITHUB-PLAN-archive.md`
+      3 items) → picks the newer, rc=0; `--plan /nope.md` → rc=2; bare `--plan` → rc=2 USAGE. The
+      pre-fix version (`git show HEAD:tools/plan_status.py`) run on the same two-candidate tree counted
+      the *older* 2-item file — the old behaviour is now visible instead of assumed. In place: rc=0,
+      same 47 / 45 ticked / 2 open as before, so the counts did not move.
+      `CONTRIBUTING.md` gained one paragraph: how the file is found, that `--plan` exists, that a
+      missing worklog is exit 2 and not zero, and that a fork dropping both files should drop the two
+      references with them (nothing else in the repo depends on either).
+      Checks: `py_compile tools/plan_status.py` ok; `py_compile backend/main.py` ok; `bash -n install.sh`
+      ok; `check_self_contained.py` → *self-contained OK: 15 required files present, 2 linked doc
+      asset(s) present…* rc=0; `check_repo_metadata.py` → 27 claims hold, rc=0; the exact CI
+      secret-scan grep → zero hits. Scope: `tools/plan_status.py`, `CONTRIBUTING.md` (+1 paragraph),
+      this entry. **No README, backend, installer, lab, topology, grader, CI or release change; the
+      worklog was not moved, renamed, or untracked.**
+      Backups: `.nexus/bundle-archive/{CONTRIBUTING.md,plan_status.py}.bak-2026-10-27-1300-plan-status-glob-2026-10-27`
+      (git-ignored).
+      STILL DAD'S CALL: whether `docs/GITHUB-PLAN.md` ships publicly at all (unchanged open item below).
 - [x] **The FRR image pin could not verify the Dockerfile it names, and the installer stayed silent
       while falling back** (2026-10-27 11:00).
       Found by following the previous run's own suggestion: check whether a doc claim still matches the
