@@ -366,6 +366,39 @@ those checks on every push and pull request.
 
 ---
 
+## Repository metadata
+
+The description, the nine topics and the license shown on the repository's landing page are set in
+GitHub's UI or API — they are not files in this repo, so nothing here can contradict them and nothing in
+this repo could ever notice them going stale. They are written down in
+[`tools/check_repo_metadata.json`](tools/check_repo_metadata.json) with a stated reason per topic, and
+[`tools/check_repo_metadata.py`](tools/check_repo_metadata.py) reads this tree and reports every claim
+in that record that is no longer true of it (a topic the tree doesn't back, a verified topic the record
+has dropped, a description that re-adds OSPF/BGP/EVPN/VPNs the substrate disables, a description that
+calls the project finished or carries a count that goes stale, or a license that isn't the one in
+`LICENSE`):
+
+```bash
+python3 tools/check_repo_metadata.py    # 0 = every claim still holds, 1 = one is false, 2 = it couldn't run
+```
+
+The script checks the **record against the tree**, not what GitHub is serving today. To compare the
+live values (no token needed for a public repo):
+
+```bash
+curl -s https://api.github.com/repos/crperdue73/cirrus-nexus | jq -r '.description'
+curl -s -H 'Accept: application/vnd.github+json' \
+  https://api.github.com/repos/crperdue73/cirrus-nexus/topics | jq -r '.names | join(", ")'
+curl -s https://api.github.com/repos/crperdue73/cirrus-nexus | jq -r '.license.spdx_id'
+```
+
+Change a claim in the tree and change the JSON in the same commit. Like
+`tools/check_self_contained.py` this tool is **not** wired into CI (CI runs four checks, listed in
+[`CONTRIBUTING.md`](CONTRIBUTING.md) and [`SECURITY.md`](SECURITY.md)); it is a manual re-check for
+whoever next touches the repo's front page.
+
+---
+
 ## License
 
 [Apache-2.0](LICENSE).

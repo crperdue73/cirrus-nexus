@@ -19,6 +19,53 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **The repo's GitHub description + topics were the only claims nothing in the tree could
+      contradict — nothing recorded them, nothing checked them. There is now
+      `tools/check_repo_metadata.json` + `tools/check_repo_metadata.py`, and the README says what
+      they do and what they cannot check** (2026-10-27 01:00).
+      Found by asking a question no previous run asked: every polish pass so far checked a *file*.
+      The description, the nine topics and the license on the repo landing page are set in GitHub's
+      UI/API — they are not files, so nothing here could ever go stale loudly, and a lab leaving the
+      tree or the substrate changing would leave github.com advertising the old shape. This class of
+      claim also cannot be seen by CI, by `check_self_contained.py`, or by any doc sweep.
+      (1) **Measured first, before writing the record.** `GET /repos/…` → description (29 words, no
+      count, no protocol claim), `/topics` → 9 names, `.license.spdx_id` → `Apache-2.0`; and the four
+      publish-critical files (`README.md`, `CONTRIBUTING.md`, `docs/GITHUB-PLAN.md`, `docs/API.md`)
+      → the blob sha GitHub serves equals the local `git rev-parse HEAD:<path>` sha for all four, so
+      the record describes what readers are actually served, not what is in my working tree.
+      (2) **Record, with a reason per topic** (`tools/check_repo_metadata.json`) — a topic list is a
+      claim, and an unexplained tag is exactly the kind of thing that starts lying quietly.
+      (3) **Checker** (`tools/check_repo_metadata.py`, exit 0/1/2 like the other tools here): every
+      topic with a reason, every *software* topic backed by a file in the tree (`fastapi` →
+      `backend/main.py` imports it, `containerlab`/`docker` → `install.sh`, `frr` → `Dockerfile.frr`,
+      `srlinux` → a shipped lab YAML), the subject topics backed by the README's own scope language,
+      and topics checked **both ways** — one the tree no longer backs, *and* one the record dropped,
+      are both reported (a missing topic is the easier half to fix, so it should not be discovered by
+      a human noticing github.com under-claims). Plus: description must not mention OSPF/BGP/EVPN/VPN
+      without the static-only qualifier the README insists on, must not say complete/finished/
+      production-ready, must not carry a count that rots, and the named license must be the one in
+      `LICENSE`.
+      (4) **Verified in both directions, seven ways, not just the happy path.** In place → rc=0
+      (27 claims). Invented topic (`ansible`) → rc=1 naming it. Dropped topic (`srlinux`) → rc=1
+      naming it. `teaching` replacing `education` → rc=1 for both. Description re-grown with "Two
+      labs, with OSPF and BGP, complete." → rc=1, four separate problems. `Dockerfile.frr` reduced to
+      a bare `FROM` → rc=1 (`frr` unbacked). `LICENSE` retitled to MIT → rc=1. JSON removed → rc=2.
+      All restored; final run rc=0.
+      (5) **One finding, recorded not hidden:** mutating **both** shipped lab YAMLs to swap
+      `ghcr.io/nokia/srlinux` for another image still returned **rc=0** — the `srlinux` topic's
+      evidence check matches the *whole* `lab-definitions/` tree, and the quarantined/archived YAMLs
+      under it still contain the string. So that one check proves "an SR Linux topology exists
+      somewhere in the tree", **not** "a *shipping* lab uses it". Left as-is rather than silently
+      narrowed (the shipping set is the labs table's business, and the checker's own docstring says
+      what a text search can decide) — but it is why the tool's success line says "still match this
+      tree" and not "verified".
+      (6) **README** gained a "Repository metadata" section (before License): what the files are, the
+      one-line run, the three `curl`+`jq` commands that read the *live* values, and the plain
+      statement that this checks the record against the tree and **not** what GitHub is serving — plus
+      that it is not in CI (CI still runs four checks; `SECURITY.md`/`CONTRIBUTING.md` keep saying so).
+      No backend, installer, topology, grader or CI change. `README.md` backed up via
+      `scripts/safe-backup.sh` (label `repo-metadata-2026-10-27`). Four CI checks re-run green;
+      `check_self_contained.py` unaffected (15 required files).
 - [x] **The README's API table was the only route reference in the tree — 11 routes, no parameters
       beyond two, no response fields, no status-code contract. There is now a `docs/API.md`, and its
       route table is checked against the app's own OpenAPI document rather than typed from the README**
@@ -2086,5 +2133,7 @@ DELETE-OR-KEEP `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` /
 contact address.
 
 2026-10-25 11:00 | README | In-scope honesty item, measured then fixed (docs only, no code/behaviour; tree at projects/aegis, this box is 192.168.111.40/16, nexus.service not a unit here). MEASURED before: git clean, HEAD==origin/main 0/0, py_compile backend/main.py OK, bash -n install.sh OK, check_self_contained rc=0 (16 required files). FOUND: README.md "Release status" claimed the v0.1.0 tag is behind main because "every commit since the tag is documentation or CI, with no change to how a lab runs". False of the tree: git rev-list --count v0.1.0..HEAD = 73, and git log v0.1.0..HEAD over backend/frontend/install.sh/lab-definitions/tools/scripts returns 11 commits, of which the behaviour-changing ones are 6bfb293 + b06751e (clab-reaper: reaped live learners' labs by age alone, then reaped nothing), 22a8d10 (lint_lab_pack false ERROR), 9c66cef (Demo 2 prerequisite pointed at a non-shipping id) and 0c86d13 (installer now copies/verifies per-lab assets) - i.e. the tag ships known-broken destructive tooling, and the sentence told an installer the opposite. This is the class the standing rule forbids: a self-citing reassurance ("see the CHANGELOG sweep") that no longer matches the tree. FIXED (README only): the bullet now states the tag is 73 behind as of 2026-10-25, names the four behaviour changes, and says plainly that installing from the tag gets the older behaviour - tag position still given as a command, not a number that can drift silently. Backup via scripts/safe-backup.sh (label archive-tagstate-truth-2026-10-25). CI re-run green. NOT COMPLETE - Dad's word alone. | proof=none (docs) | next=run: the v0.1.0 re-cut is now the top unblocked-but-Dad-gated item (73 commits, five behaviour fixes, tag is actively misleading) - do NOT cut it myself; without a word from Dad, next run re-verifies tree+CI and re-states the blocker rather than sweeping this README again. STILL BLOCKED ON DAD: v0.1.0 re-cut / GitHub Release, Screenshots (live host), cosmetic ci.yml step (workflow token), .nexus/ public-shipping policy, DELETE-OR-KEEP Dockerfile.frr-bgp / quarantine / 10-archive / three empty lab-definitions dirs, check_self_contained.py into the release, published security contact.
+
+2026-10-27 01:00 | REPO-METADATA | In-scope honesty item (tooling + README; no product behaviour): the claims on github.com that no file in the repo can contradict now have a record and a checker. Measured first: git clean, HEAD 0f65ce9 == origin/main, py_compile backend/main.py OK, bash -n install.sh OK, check_self_contained rc=0 (15 required files), secret scan clean; live API reads gave description + 9 topics + Apache-2.0, and the blob sha GitHub serves for README/CONTRIBUTING/docs GITHUB-PLAN/docs API == local HEAD:<path> sha for all four. ADDED: tools/check_repo_metadata.json (description, 9 topics each with a stated reason, license) and tools/check_repo_metadata.py (0/1/2 exit contract; every software topic backed by a named file, subject topics backed by README scope language, topics checked BOTH ways so a dropped topic fails as loudly as an invented one, description rejected if it names OSPF/BGP/EVPN/VPN without the static-only qualifier, says complete/finished/production-ready, or carries a rotting count, license must match LICENSE). VERIFIED 7 ways, not just the happy path: in place rc=0 (27 claims); invented topic rc=1; dropped topic rc=1; teaching-instead-of-education rc=1; description regrown to "Two labs, with OSPF and BGP, complete." rc=1 (4 problems); Dockerfile.frr stripped rc=1; LICENSE retitled rc=1; JSON removed rc=2; all restored, final rc=0. LIMIT recorded, not papered over: swapping the SR Linux image out of BOTH shipping labs still returns rc=0 because the srlinux evidence check greps the whole lab-definitions/ tree (quarantine + archive still carry the string) - the check proves an SR Linux topology exists in the tree, not that a shipping lab uses it; shipping-set integrity stays the labs table's job. README: new "Repository metadata" section with the run line, the three curl+jq live-value commands, the record-vs-live distinction, and the not-in-CI note (CI is still four checks). No backend/installer/topology/grader/CI change. NOT COMPLETE - Dad's word alone. | proof=none (tool diff + the seven runs above) | next=run: another in-scope honesty item; the only backlog boxes left are the two non-executable ones (DECISION(Dad) on shipping docs/GITHUB-PLAN.md, Screenshots blocked on real captures), so pick a fresh defect rather than re-sweeping this tool - candidates worth checking next: whether docs/API.md's 11-route table still matches backend/main.py after any route change, and whether the issue templates' claims about the substrate still match install.sh's pinned containerlab 0.75.0. STILL BLOCKED ON DAD: v0.1.0 re-cut / GitHub Release, Screenshots (live host), cosmetic ci.yml step (no workflow-scoped token), .nexus/ public-shipping policy, DELETE-OR-KEEP Dockerfile.frr-bgp / quarantine / 10-archive / three empty lab-definitions dirs, check_self_contained.py into the release, published security contact.
 
 2026-10-26 11:00 | CI-GUARD | In-scope honesty item (tooling, no product behaviour): the self-contained guard over-claimed. Measured first: git clean, HEAD==origin/main 0/0, py_compile backend/main.py OK, bash -n install.sh OK, check_self_contained rc=0. FOUND: tools/check_self_contained.py put docs/assets/architecture-components.png in REQUIRED, the list its own docstring defines as "the installer and the running product require" - but install.sh copies backend/ frontend/ lab-definitions/ Dockerfile.frr README.md start_server.py assets/ and never docs/ (grep docs/ install.sh -> 0 hits). So the list mixed two claims (install completeness, README link integrity) and reported one number for both: the file, if missing, would have been reported as an install blocker it cannot cause. FIXED (tool only): split out DOCS_READER_FACING with its own message ("missing README-linked doc asset: ..."), REQUIRED now 15 install files, success line reports both counts. VERIFIED both directions, not just the happy path: rc=0 in place; moved the PNG to /tmp -> rc=1 naming that file and only that file; restored -> rc=0; bash -n OK; py_compile OK. NOTE: this does NOT make the guard run the installer - the boundary in docs/SELF-CONTAINED.md is unchanged and still true. NOT COMPLETE - Dad's word alone. | proof=none (tool diff + both-direction run above) | next=run: another in-scope honesty item, not a re-sweep of this guard; the Dad-gated list is unchanged (Screenshots/live host, ci.yml workflow-token step, .nexus/ public-shipping policy, DELETE-OR-KEEP Dockerfile.frr-bgp / quarantine / 10-archive / three empty lab-definitions dirs, check_self_contained.py pulled INTO v0.2.0 which is still a release decision, published security contact).

@@ -1,0 +1,26 @@
+{
+  "_comment": [
+    "Published GitHub metadata for this repo, recorded here so it can be checked against the tree.",
+    "GitHub's description and topics are set in the web UI / API, not in the repo, so nothing in the",
+    "product could ever contradict them: this file is the only place they are written down.",
+    "tools/check_repo_metadata.py re-reads this file and reports every claim about THIS tree that is",
+    "no longer true (a lab named in the description that isn't shipped, a topic for something the",
+    "README says is out of scope, a license that isn't the one in LICENSE).",
+    "Update this file in the same commit that changes a claim in it. It is not read by install.sh,",
+    "the backend, or the grader."
+  ],
+  "repo": "crperdue73/cirrus-nexus",
+  "license": "Apache-2.0",
+  "description": "AEGIS — hands-on networking labs for Cisco Net Eng I. Real Linux/ContainerLab switch fabric (FRR + Nokia SR Linux), browser terminals, an automated grader, and a one-shot installer.",
+  "topics": [
+    { "name": "containerlab", "why": "labs are containerlab topologies (lab-definitions/**/*.yml)" },
+    { "name": "docker", "why": "install.sh installs Docker; labs are Docker containers" },
+    { "name": "education", "why": "teaching bench for a Networking I class" },
+    { "name": "fastapi", "why": "backend/main.py is a FastAPI app" },
+    { "name": "frr", "why": "router substrate aegis/frr, built by install.sh from Dockerfile.frr" },
+    { "name": "labs", "why": "the product is a lab bench" },
+    { "name": "networking", "why": "the subject matter" },
+    { "name": "python", "why": "backend, graders and tools are Python" },
+    { "name": "srlinux", "why": "switch substrate, ghcr.io/nokia/srlinux, in both shipped labs" }
+  ]
+}
