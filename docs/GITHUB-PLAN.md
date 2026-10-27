@@ -19,6 +19,33 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **The FRR image pin could not verify the Dockerfile it names, and the installer stayed silent
+      while falling back** (2026-10-27 11:00).
+      Found by following the previous run's own suggestion: check whether a doc claim still matches the
+      thing it describes. `assets/frr-image.pin` records `dockerfile_sha256=cce15a86…`; the shipped
+      `Dockerfile.frr` hashes `b3046a70…`. `git show 2868142:Dockerfile.frr | sha256sum` returns the
+      pin's value exactly, so the pin is a *true record* of 2026-09-19 — it is simply pre-`0503bc5`,
+      the 2026-09-20 daemon-assert rewrite whose message said "Pin/image id unchanged." That sentence
+      was true of the *image id*, but the file it was built from changed, and the tarball the pin
+      names does not ship at all. Consequences measured, not inferred: the tarball branch
+      (`install.sh:347-362`) verifies the tarball against the pin but never against the on-disk
+      Dockerfile, so a tarball restore would install an image built from different source with no
+      noise; the fallback branch (build from source) is correct and is what runs here; and the
+      `LOADED_LABEL != dockerfile_sha256` check at `:387` compares the loaded image label to the
+      pin's own value, which in tarball mode is self-referential and in fallback mode is never
+      reached. So: **no path in this tree verified the shipped Dockerfile against the pin.**
+      FIX (warn, don't fail — the drift is already documented in README/OPERATIONS and choosing the
+      authoritative substrate is Dad's product call): Step 7 now compares `FRR_SRC_SHA` with the
+      pin's `dockerfile_sha256` right after sourcing it and prints a four-line warning when they
+      disagree, naming both values and stating that building from current source is correct and a
+      pinned-tarball restore would not be. README's known-drift bullet and the OPERATIONS “Known
+      drift” section say the install now states this itself. VERIFIED both directions with a harness
+      that sources the new block against a copy of the tree: real pin → four warnings with the exact
+      hashes; pin rewritten to the current sha → silent; `bash -n install.sh` OK. No Dockerfile, no
+      topology, no backend, no grader change; the pin itself is untouched (it is a historical record,
+      and re-pinning needs a rebuilt image).
+      STILL DAD'S CALL: whether the pin is re-cut against a freshly built image, or removed as a dead
+      record now that no tarball ships.
 - [x] **The repo's GitHub description + topics were the only claims nothing in the tree could
       contradict — nothing recorded them, nothing checked them. There is now
       `tools/check_repo_metadata.json` + `tools/check_repo_metadata.py`, and the README says what

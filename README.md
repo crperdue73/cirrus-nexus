@@ -306,7 +306,10 @@ labs; it is not a finished product. What that means concretely:
   `installed-image-id.txt` exists locally but is git-ignored, so it does not ship), so `install.sh`
   takes its build-from-source fallback and builds
   `aegis/frr:latest` locally from `Dockerfile.frr`. That build is self-consistent but will not match
-  the pin's `layers_sha256`. Details in [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
+  the pin's `layers_sha256`. Since 2026-10-27 `install.sh` also prints a warning whenever the pinned
+  `dockerfile_sha256` disagrees with the shipped `Dockerfile.frr`, so the drift is stated at install
+  time instead of being discovered later; it warns, it does not fail, because the build-from-source
+  path is the correct one here. Details in [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
 
 ---
 

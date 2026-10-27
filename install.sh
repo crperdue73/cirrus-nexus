@@ -349,6 +349,20 @@ if [[ "${NEED_FRR_BUILD}" -eq 1 ]]; then
         source "${PIN_FILE}"
         PIN_TARBALL="${ASSETS_DST}/${tarball:-}"
         PIN_IMAGE_ID="${image_id:-}"
+
+        # The pin records the Dockerfile the pinned image was BUILT from. If the
+        # shipped Dockerfile.frr has since changed, that record no longer
+        # describes this tree, and a later tarball restore would install an
+        # image built from different source -- silently. Say so out loud, in
+        # both paths. (Found 2026-10-27: the pin's fingerprint was cce15a86...,
+        # the file in this tree hashes b3046a70... after the 2026-09-20
+        # daemon-assert rewrite; the tarball it names does not ship at all.)
+        if [[ -n "${dockerfile_sha256:-}" && "${FRR_SRC_SHA}" != "${dockerfile_sha256}" ]]; then
+            warn "FRR pin does not describe the shipped Dockerfile — record is stale, not a failure"
+            warn "  pin.dockerfile_sha256: ${dockerfile_sha256}"
+            warn "  Dockerfile.frr now:     ${FRR_SRC_SHA}"
+            warn "  Building from the current source is correct; a pinned-tarball restore would not be."
+        fi
     fi
 
     if [[ -n "${PIN_TARBALL}" && -f "${PIN_TARBALL}" ]]; then

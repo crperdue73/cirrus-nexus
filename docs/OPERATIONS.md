@@ -195,6 +195,14 @@ Dockerfile disagree.**
 - **The fallback builds a different substrate.** With no tarball, `install.sh` runs
   `docker build` from `Dockerfile.frr` (`b3046a70…`), which installs and self-heals normally but does
   **not** reproduce the pin's `layers_sha256` (`bb7ef23a…`). That is expected, not a failure.
+- **The installer now says so itself (added 2026-10-27).** Step 7 reads the pin and compares its
+  `dockerfile_sha256` with the sha256 of the `Dockerfile.frr` it is about to build. On this tree they
+  disagree, so the install prints a four-line warning naming both values and stating that building
+  from the current source is the correct path and a pinned-tarball restore would not be. It **warns,
+  it does not fail**: the fallback is legitimate and a hard stop would turn a documented drift into a
+  broken install. When the pin is brought back in line with the Dockerfile the warning disappears
+  with no installer change. Verified both directions on 2026-10-27 (stale pin → four warnings;
+  pin rewritten to the current hash → silent).
 
 Not "fixed" on purpose: choosing which substrate is authoritative is a product decision, not a
 lab-local edit. Recorded so the next operator sees both values.
