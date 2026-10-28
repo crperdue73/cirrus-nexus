@@ -2,7 +2,7 @@
 
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![status: v0.2.0 — early release](https://img.shields.io/badge/status-v0.2.0%20early%20release-yellow.svg)](#release-status)
-![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)
+![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)
 ![Powered by ContainerLab](https://img.shields.io/badge/powered%20by-containerlab-orange.svg)
 ![API: FastAPI](https://img.shields.io/badge/API-FastAPI-009688.svg)
 [![CI](https://github.com/crperdue73/cirrus-nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/crperdue73/cirrus-nexus/actions/workflows/ci.yml)
@@ -100,12 +100,13 @@ The same shape in text, for terminals and diffs:
 
 ## Quick start
 
-**Prerequisites:** a clean Debian/Ubuntu host (a distro whose `apt` provides `python3` — Ubuntu 22.04
-and 24.04 both do), `sudo`, internet access (to pull the SR Linux image), and ~3 GB free disk. **No image
-ships in the repo:** the router image (`aegis/frr:latest`) is built locally from `Dockerfile.frr`, and
-the switch image is pulled at install.
+**Prerequisites:** a clean Debian/Ubuntu host (a distro whose `apt` provides a `python3` of **3.9 or newer**
+— Ubuntu 22.04 and 24.04 both do), `sudo`, internet access (to pull the SR Linux image), and ~3 GB free
+disk. `install.sh` does not check the Python version it gets from `apt`; the three notes below explain why
+3.9 is the floor. **No image ships in the repo:** the router image (`aegis/frr:latest`) is built locally
+from `Dockerfile.frr`, and the switch image is pulled at install.
 
-Three things you should know before you start, because they are **not pinned or checked in this tree**:
+Four things you should know before you start, because they are **not pinned or checked in this tree**:
 
 - **The base images are tags, not digests.** `Dockerfile.frr` is `FROM alpine:latest`; both shipped
   topologies bind `ghcr.io/nokia/srlinux:latest` for the switches and `alpine:latest` for the PCs;
@@ -132,10 +133,20 @@ Three things you should know before you start, because they are **not pinned or 
   fastapi uvicorn pyyaml`, with a plain `pip3 install` fallback) — not `pip install -r requirements.txt`.
   The backend also imports `pydantic`, but only for two `BaseModel` subclasses (no validators, no
   `Field`), and it is not named in either file. Nothing here fixes *which* FastAPI you get.
+- **The Python floor is 3.9, and nothing here enforces it.** The `python-3.9+` badge above states it;
+  `install.sh` installs whatever `python3` `apt` gives the host and never checks the version. The floor
+  comes from *runtime* behaviour, not grammar: `backend/main.py` writes its pydantic models with builtin
+  generics (`competencies: list[str]`) and return types like `dict | None`, and it does **not** start
+  with `from __future__ import annotations` — so FastAPI and pydantic evaluate those annotations at
+  import time, and on 3.8 the import dies with `TypeError: 'type' object is not subscriptable` before the
+  app serves a request. Grammar is not a sufficient test: `ast.parse(..., feature_version=(3, 8))`
+  accepts those same files, because builtin generics are valid *syntax* on 3.8 and fail only when
+  evaluated. This was established by reading the annotations, **not** by running the backend on a 3.8
+  interpreter — no 3.8 exists on the machine this was checked on, so 3.9 (Ubuntu 22.04's `python3`) is
+  the oldest version anyone has actually run here.
 
-Those are the stated requirements, not a tested matrix. The Python the backend needs is **3.8 or newer**
-(that is what the `python-3.8+` badge above means — the whole file parses under 3.8's grammar, which is a
-check on syntax only, not a test run). **CI does not pin a version:** `.github/workflows/ci.yml` asks
+Those are the requirements, not a tested matrix. **CI does not pin a Python version:**
+`.github/workflows/ci.yml` asks
 `actions/setup-python` for `python-version: "3.x"`, so each CI run uses whatever the newest 3.x on the
 runner is. No Ubuntu version is pinned in `install.sh` either — it installs what `apt` offers.
 
