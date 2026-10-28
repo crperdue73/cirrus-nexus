@@ -208,7 +208,14 @@ before the student does anything.
 A precise bug report is as useful as a patch. Use the issue templates (`.github/ISSUE_TEMPLATE/`):
 `bug_report.md` asks for the commit, host OS, Docker and containerlab versions, and the exact
 `POST /api/sessions/{id}/submit` response, because a grading problem is only diagnosable if we can see
-whether it was a pass, a fail, or a **refusal**. `lab_request.md` is for proposing a new lab.
+whether it was a pass, a fail, or a **refusal**. `lab_request.md` is for proposing a new lab: it asks
+for the topology, the gradeable outcomes, the substrate check, and the file layout per
+[`docs/ADDING-A-LAB.md`](docs/ADDING-A-LAB.md). Its checklist treats `lint_lab_pack.py` exit **2** as
+*no result* — that exit means PyYAML was missing and no lab was examined, so it cannot be ticked as a
+pass (same rule as *What `lint_lab_pack.py` answers* above). Neither template claims anything about
+the substrate that this tree does not contain: the pinned containerlab `0.75.0` lives in `install.sh`
+(with the reason in the comment above the pin), and the templates just ask a reporter for their
+version.
 
 Two things that will be closed as working-as-intended, not bugs: OSPF/BGP/EVPN/VPN being *missing* (the
 shipped substrate disables those daemons on purpose), and a lab refusing to grade (a refusal is the
