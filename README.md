@@ -2,7 +2,7 @@
 
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![status: v0.2.0 — early release](https://img.shields.io/badge/status-v0.2.0%20early%20release-yellow.svg)](#release-status)
-![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)
+![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)
 ![Powered by ContainerLab](https://img.shields.io/badge/powered%20by-containerlab-orange.svg)
 ![API: FastAPI](https://img.shields.io/badge/API-FastAPI-009688.svg)
 [![CI](https://github.com/crperdue73/cirrus-nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/crperdue73/cirrus-nexus/actions/workflows/ci.yml)
@@ -100,11 +100,12 @@ The same shape in text, for terminals and diffs:
 
 ## Quick start
 
-**Prerequisites:** a clean Debian/Ubuntu host (a distro whose `apt` provides a `python3` of **3.9 or newer**
-— Ubuntu 22.04 and 24.04 both do), `sudo`, internet access (to pull the SR Linux image), and ~3 GB free
-disk. `install.sh` does not check the Python version it gets from `apt`; the three notes below explain why
-3.9 is the floor. **No image ships in the repo:** the router image (`aegis/frr:latest`) is built locally
-from `Dockerfile.frr`, and the switch image is pulled at install.
+**Prerequisites:** a clean Debian/Ubuntu host (a distro whose `apt` provides a `python3` of **3.10 or newer**
+— Ubuntu 24.04 does; 22.04 ships 3.10 as well, and 25.04+ ship newer), `sudo`, internet access (to pull the
+SR Linux image), and ~3 GB free disk. `install.sh` does not check the Python version it gets from `apt`;
+the four notes below explain what is pinned and what is not, and the last one derives the 3.10 floor.
+**No image ships in the repo:** the router image (`aegis/frr:latest`) is built locally from
+`Dockerfile.frr`, and the switch image is pulled at install.
 
 Four things you should know before you start, because they are **not pinned or checked in this tree**:
 
@@ -133,17 +134,28 @@ Four things you should know before you start, because they are **not pinned or c
   fastapi uvicorn pyyaml`, with a plain `pip3 install` fallback) — not `pip install -r requirements.txt`.
   The backend also imports `pydantic`, but only for two `BaseModel` subclasses (no validators, no
   `Field`), and it is not named in either file. Nothing here fixes *which* FastAPI you get.
-- **The Python floor is 3.9, and nothing here enforces it.** The `python-3.9+` badge above states it;
+- **The Python floor is 3.10, and nothing here enforces it.** The `python-3.10+` badge above states it;
   `install.sh` installs whatever `python3` `apt` gives the host and never checks the version. The floor
-  comes from *runtime* behaviour, not grammar: `backend/main.py` writes its pydantic models with builtin
-  generics (`competencies: list[str]`) and return types like `dict | None`, and it does **not** start
-  with `from __future__ import annotations` — so FastAPI and pydantic evaluate those annotations at
-  import time, and on 3.8 the import dies with `TypeError: 'type' object is not subscriptable` before the
-  app serves a request. Grammar is not a sufficient test: `ast.parse(..., feature_version=(3, 8))`
-  accepts those same files, because builtin generics are valid *syntax* on 3.8 and fail only when
-  evaluated. This was established by reading the annotations, **not** by running the backend on a 3.8
-  interpreter — no 3.8 exists on the machine this was checked on, so 3.9 (Ubuntu 22.04's `python3`) is
-  the oldest version anyone has actually run here.
+  comes from *runtime* behaviour, not grammar: `backend/main.py` does **not** start with
+  `from __future__ import annotations`, so CPython evaluates every function signature and class-body
+  annotation at definition time, and FastAPI and pydantic then evaluate the pydantic model fields. Two
+  forms in that file break on older interpreters, in that order:
+  - **builtin generics (3.9+).** The pydantic models use `competencies: list[str]`, and there are return
+    types like `list[tuple[str, str, str]]`, `set[str]` and `dict[str, bool]`. On 3.8 these raise
+    `TypeError: 'type' object is not subscriptable` (PEP 585 landed in 3.9).
+  - **`X | None` unions (3.10+).** Six annotations are written that way — `dict | None` (line 396),
+    `LabDef | None` (674), `str | None` (822), `str | None` and `dict[str, bool] | None` (1243), and
+    `str | None` (1288) — and PEP 604 landed in **3.10**. On 3.9 the import dies with
+    `TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'`, before the app serves a request.
+
+  Grammar is not a sufficient test: `ast.parse(..., feature_version=(3, 8))` accepts this file, and so
+  does an `ast.parse(..., feature_version=(3, 9))`, because both forms are valid *syntax* there and fail
+  only when evaluated. **How this was established:** by reading the annotations with `ast` and counting
+  the sites above, and by evaluating each distinct annotation form against the versions that define it —
+  **not** by running the backend on a 3.9 interpreter. No 3.9 or 3.8 interpreter exists on the machine
+  this was checked on (it has 3.13), so 3.13 is the only version actually executed here, and 3.10 is
+  stated as the floor those annotations require, not as a **tested** runtime — treat any specific 3.10
+  patch release as unverified until someone runs the install on one.
 
 Those are the requirements, not a tested matrix. **CI does not pin a Python version:**
 `.github/workflows/ci.yml` asks
