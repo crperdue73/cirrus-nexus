@@ -19,6 +19,34 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+- [x] **The README said CI pins no Python version but not what that means for the floor it preaches;
+      121 lines below the badge there was a silent gap** (2026-10-29 01:00).
+      Picked up the open thread the previous run left itself. Measured first, at `db0a864`
+      (`git status` clean, HEAD == origin/main): `py_compile backend/main.py` rc=0, `bash -n install.sh`
+      rc=0, `check_self_contained.py` rc=0, `check_repo_metadata.py` rc=0. Read
+      `.github/workflows/ci.yml` rather than the README's summary of it: one job, `ubuntu-latest`,
+      `actions/setup-python@v5` with `python-version: "3.x"`, then four steps (`py_compile`, `bash -n`,
+      `check_self_contained.py`, secret grep). No matrix, no 3.10.
+      **The claim that was missing.** The README (line ~160) said CI does not *pin* a version, and the
+      badge and Prerequisites say the floor is 3.10 — both true, and together they hide the consequence:
+      `"3.x"` resolves to the newest release, so CI has never compiled this file under 3.10, the only
+      version the README tells a host it must have. A regression that breaks 3.10 while staying green on
+      the newest interpreter would pass all four checks. Stated now, plainly, right under the existing
+      CI paragraph — what the job proves (compiles under that run's newest 3.x) and what it does not
+      (anything about 3.10/3.11), with the fix named as a `3.10` + `3.x` matrix.
+      **Not attempted, and not silently skipped:** editing `ci.yml` needs the `workflow` scope this push
+      token does not have, so the matrix is recorded as maintainer-queued here and in the README rather
+      than half-done or faked with a docs-only "resolved".
+      Scope: `README.md` only (one paragraph, +7 lines, replacing nothing — the earlier CI text stays
+      because "does not pin" and "does not test the floor" are different facts). No workflow, code,
+      installer, topology or grader change. Backups in `.nexus/bundle-archive/` (git-ignored).
+      Verified after: `check_self_contained.py` rc=0 (15 + 2), `check_repo_metadata.py` rc=0 (27 claims),
+      `py_compile` rc=0, link/render check of the edited block.
+      NOT COMPLETE — Dad's word alone. | proof=none (docs) |
+      next=the CI matrix is the only reader-facing gap left that a `3.x`-pinning workflow can close; it
+      stays Dad-gated (workflow scope). Otherwise hold — the two standing blocks (worklog shipping
+      decision, screenshots) are unchanged.
+
 - [x] **`CONTRIBUTING.md` listed four "further tools" as one undifferentiated block; one of them cannot
       fail on a fresh clone and only one of them needs a dependency — both measured before editing**
       (2026-10-27 19:00).
