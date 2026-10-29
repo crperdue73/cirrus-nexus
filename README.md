@@ -275,9 +275,19 @@ auth) if that is not what you want.
 **Responses.** A grade returns `{session_id, node, grade}` where `grade` carries `passed`, `score`,
 `feedback`, `competencies`, the in-band `status` (`graded` / `error` / `refused`) and the
 `runtime_digest` it was taken against. A **refusal** is HTTP `409` with the reason in `detail` — the
-same three-outcome rule as the grading model above. An unknown lab, session or node is `404` (a node
-that the *lab* does not have is a `409` refusal with the node list, since that is a question, not a
-missing record); a failed deploy is `500`.
+same three-outcome rule as the grading model above. Status codes, measured against this tree:
+
+| code | when |
+|------|------|
+| `200` | the request was answered truthfully |
+| `404` | an unknown lab, session, or **session record** — including `submit` on a session id that does not exist |
+| `409` | a **refusal**: the system could not make a truthful statement. Covers a node the *lab* does not have (the detail carries the node list), a node that is not running, a substrate that changed since start, and no grader module |
+| `422` | a required query parameter is missing (`lab_id` on `start`, `node` on `submit`). FastAPI's own validation, returned before any handler runs |
+| `500` | a deploy failed, or a teardown could not complete (a failed teardown leaves the session listed and retryable, and says so in `detail`) |
+
+The distinction that matters: a node the *lab* does not have is a `409`, not a `404`. You asked a
+well-formed question and the answer is "that node isn't here" — which is a refusal, not a missing
+record. A session id that does not exist *is* a `404`.
 
 ---
 

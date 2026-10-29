@@ -106,7 +106,9 @@ terminal per container, on a port allocated from **8765–9765**.
 
 Deploy is serialized (concurrent starts queue) and its failure modes are separated on purpose:
 an unknown lab is `404`, a **failed deploy is `500`** — a start that could not complete never
-reports a session it does not have.
+reports a session it does not have. A start can also be refused with `409` (a `CapabilityRefusal`: the
+system will not deploy a lab it cannot later attribute) and in both failure paths the containers the
+attempt already created are torn down rather than leaked.
 
 ### `GET /api/sessions` — live sessions
 
@@ -150,12 +152,21 @@ a stop was about to release.
 | code | when |
 |------|------|
 | `200` | the request was answered truthfully |
-| `404` | unknown lab, session **or** node **record** |
+| `404` | unknown lab, or a session record that does not exist (`GET`/`submit`/`stop` on an unknown session id) |
 | `409` | **refusal**: the system could not make a truthful statement (node down, substrate changed since start, no grader, or a node the lab does not have) — never a silent pass |
-| `500` | a deploy failed |
+| `422` | a required query parameter is missing (`lab_id` on `start`, `node` on `submit`) — FastAPI validation, returned before the handler runs |
+| `500` | a deploy failed, **or** a teardown could not complete |
 
 The `409` distinction is the point of the grading model: *"nobody looked"* must never be rendered as
 *"wrong"*. A refusal's reason is the string in `detail`.
+
+A node the lab does not have is a `409`, **not** a `404`: the request was understood, and the answer is
+"that node isn't here" (`detail` carries the node list). A `404` means the lab or the session record
+itself does not exist.
+
+A failed `stop` is `500` and is **retryable**: the session stays listed until the lab is really gone, so
+the same `stop` call can be issued again. That is deliberate — reporting `destroyed` while containers
+still run is the one outcome teardown must never produce.
 
 ---
 
