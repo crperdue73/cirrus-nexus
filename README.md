@@ -166,9 +166,11 @@ runner is. No Ubuntu version is pinned in `install.sh` either — it installs wh
 run the `py_compile` check on 3.10 — the version this README calls the minimum. What the job actually
 proves is that the file compiles under whatever 3.x was newest on that run, nothing about 3.10 or 3.11. A regression
 that broke a 3.10 host while staying fine on the newest interpreter would pass all four checks. The
-fix is a version matrix (`3.10` alongside `3.x`), which is a workflow change queued for the
-maintainer; until then, treat 3.10 support as derived from the annotations (above) rather than
-exercised by CI.
+fix is a matrix (`3.10` alongside `3.x`) **written and ready to land but not yet pushed**: the
+maintainer's automation token can write any other file in this repo and is refused on workflow paths,
+so the change needs someone with `workflow` scope to apply it (see
+[`CONTRIBUTING.md`](CONTRIBUTING.md#changing-ci)). Until that lands, treat 3.10 support as derived
+from the annotations above rather than exercised by CI.
 
 ```bash
 git clone https://github.com/crperdue73/cirrus-nexus.git aegis

@@ -55,7 +55,10 @@ committed. The two commands answer different questions: the `grep` form is "is m
 right now, in the suffixes we ship most of", the `git grep` form is "is the whole tracked tree clean,
 no suffix filter". Zero output from each is the pass.
 
-The four checks above are exactly what CI enforces on every push and PR. Four further tools exist
+The four checks above are exactly what CI enforces on every push and PR — on **one** interpreter, the
+newest `3.x` the runner offers, because `ci.yml` asks for `python-version: "3.x"`. The 3.10 floor the
+README states is therefore not exercised by CI (see *Changing CI* below for why the matrix that would
+fix this is not in place). Four further tools exist
 for lab authors and maintainers, and are **not** part of CI:
 
 ```bash
@@ -198,6 +201,16 @@ a pull request:
    [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md). CI runs on the PR.
 5. **Expect a conversation, not an auto-merge.** Small, honest, single-purpose changes land fastest;
    a PR that changes behaviour *and* rewrites the README is hard to check and will usually be split.
+
+### Changing CI
+
+`.github/workflows/ci.yml` is not editable by this repo's automation token: it holds `repo` scope, which
+GitHub refuses for workflow paths (measured 2026-10-29 — the same token can commit any other file, and
+the Contents API answers `404` for a write under `.github/workflows/`; `git push` says so outright:
+*refusing to allow a Personal Access Token to create or update workflow … without `workflow` scope*).
+A workflow change therefore has to be applied by a human whose token has `workflow` scope, or through
+a PR from a fork. Any proposed workflow diff is reviewed like any other change, with the same rule: it
+is not "done" until a run shows it doing what the diff says.
 
 If your change is a **new lab**, it is much more likely to be reviewable if it says up front which node
 the grader examines, what the exact expected output is, and how you confirmed the lab does **not** pass

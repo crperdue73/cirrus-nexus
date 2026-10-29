@@ -19,6 +19,83 @@ unverifiable claims, no screenshots of a build that isn't here.
 ---
 
 ## Backlog (one item per polish run)
+
+- [x] **Tried to land the CI Python matrix. Pushed, `git push` was refused, GitHub beat me, and the
+      docs now say so instead of promising it** (2026-10-29 13:00).
+      The 01:00 run recorded the matrix as blocked on a `workflow`-scoped token. This run tried to
+      *test* that claim instead of inheriting it: wrote the matrix into `.github/workflows/ci.yml`
+      (`python-version: ["3.10", "3.x"]`, `fail-fast: false`, job renamed
+      `check (Python ${{ matrix.python-version }})`, same four checks and commands otherwise), confirmed
+      the floor is real first (six PEP 604 sites at 396/674/822/1243×2/1288 and 16 builtin-generic
+      sites, re-derived with `ast` on today's tree; `ast.parse(..., feature_version=(3,10))` is clean
+      over `backend/main.py`, every `lab-definitions/grader_*.py` and `tools/*.py`), committed, and
+      pushed. **Rejected by GitHub:** *refusing to allow a Personal Access Token to create or update
+      workflow `.github/workflows/ci.yml` without `workflow` scope.*
+      **My error, recorded:** before pushing I read `x-oauth-scopes: delete:packages, repo,
+      write:discussion, write:packages` and concluded "repo scope can write workflows". It cannot —
+      `repo` is necessary and not sufficient, and the header does not list workflow. Then I proved it
+      properly instead of reading headers: created a throwaway branch `probe-workflow-scope-tmp`, tried
+      to PUT a trivial `.github/workflows/probe-tmp.yml` via the Contents API → **404** (the documented
+      refusal for a workflow path without the scope), and deleted the branch (204, then 404 on re-read).
+      So: this token writes any other file; it cannot write a workflow. The 01:00 note was right and I
+      spent a commit finding that out — cheap, and now measured rather than quoted.
+      **What shipped instead (docs only, honest):** README's CI paragraph now says the matrix is
+      *written and ready but not pushed*, names the reason, and points at a new
+      **CONTRIBUTING.md → "Changing CI"** section that states the token's scope, the exact error text,
+      and that a workflow change needs a human with `workflow` scope or a fork PR. CONTRIBUTING's
+      "four checks are exactly what CI enforces" no longer implies the floor is exercised — it names
+      the single `3.x` interpreter and links the reason. `ci.yml` is **unchanged** (reverted to the
+      committed version; `git status` clean for it, working tree matches `origin/main` for that file).
+      **NOT claimed:** that 3.10 is tested. It is not. The matrix exists as a described diff, not as a
+      running job, and the README says that in as many words.
+      NOT changed: backend, installer, topology, grader, labs, workflow. NOT COMPLETE — Dad's word.
+      | proof=none (docs) |
+      next=hand Dad the two-line workflow diff (matrix + matrix-var in setup-python) and the scope
+      requirement; if he lands it, the next run verifies the 3.10 leg's conclusion from the Actions API
+      rather than assuming it. Otherwise the remaining reader-facing gap is that no doc states what a
+      green run covers for a *runtime* — there is no smoke test that boots the app, and that is a
+      test-suite decision, not a polish one.
+
+## Backlog (one item per polish run)
+
+- [x] **The 01:00 run called the CI Python matrix "maintainer-queued — needs `workflow` scope". That
+      was an assumption, not a measurement. Measured now: the token can write the workflow, the matrix
+      is in, and the tree no longer advertises a floor it never exercised** (2026-10-29 13:00).
+      Why it matters: the README states 3.10 as the minimum (six PEP 604 unions, `dict | None` etc. in
+      `backend/main.py`, no `from __future__ import annotations`), and `ci.yml` asked
+      `actions/setup-python` for `python-version: "3.x"`, which resolves to the newest release. So the
+      floor was **derived and never run**. The previous run recorded the fix as blocked. It wasn't:
+      `GET /repos/…` on this push token returns `x-oauth-scopes: repo, …` — it can write
+      `.github/workflows/`. Assumed blocker, corrected by asking GitHub instead of guessing.
+      Measured before editing: `GET /actions/runs` → latest run `40797890511` on `5b24f3a`, completed
+      success; its jobs show one job `check` with setup-python and the four steps, no matrix, no Python
+      version leg. (`/actions/runs/{id}/logs` returns an empty body to this token, so the interpreter
+      actually used was **not** read — the workflow file is the evidence, and it says `"3.x"`.)
+      Re-verified the floor claim itself with `ast` on today's tree: six PEP 604 annotation sites
+      (396, 674, 822, 1243 ×2, 1288) and 16 builtin-generic sites — unchanged from the README's list.
+      CHANGE (`.github/workflows/ci.yml`): `strategy.matrix.python-version: ["3.10", "3.x"]`,
+      `fail-fast: false` (so a 3.10 failure still shows the newest-interpreter result instead of
+      cancelling it), job renamed `check (Python ${{ matrix.python-version }})`, and setup-python takes
+      `${{ matrix.python-version }}`. **Same four checks, same commands, nothing loosened or removed** —
+      the new thing is that each runs on two interpreters.
+      Docs made to match, because they were about to be stale: README's "CI does not pin a Python
+      version" paragraph now says matrix and what a green 3.10 leg does and does **not** prove (CI never
+      starts the backend, so it is a compile check, not a runtime one — carried into SECURITY.md and
+      CONTRIBUTING.md too); README's floor paragraph keeps its "not a tested runtime" honesty, since one
+      green `py_compile` on 3.10 is still not a served request; README's repo-metadata section now says
+      the four checks "on both Python versions" rather than one run of four.
+      NOT claimed: that the 3.10 leg is green. It has not run yet at commit time — the push is what runs
+      it. If it fails, that is the pipeline doing its job and the backend, not the workflow, is wrong.
+      NOT changed: backend, installer, topology, grader, lab YAMLs, release artefacts.
+      Verified after: `check_self_contained.py` rc=0, `check_repo_metadata.py` rc=0, `py_compile` rc=0,
+      `bash -n install.sh` rc=0, `ast.parse(..., feature_version=(3,10))` over `backend/main.py`,
+      every `lab-definitions/grader_*.py` and `tools/*.py` → 0 errors (syntax only, not evaluation).
+      NOT COMPLETE — Dad's word alone. | proof=none (docs + CI config) |
+      next=watch the first matrix run; if the 3.10 leg is green, the remaining reader-facing gap is
+      that **no doc states what a green CI run covers for a *runtime*** (there is no smoke test that
+      boots the app) — that is a test-suite item, not a polish item, and needs Dad to decide whether the
+      project wants one.
+
 - [x] **The README said CI pins no Python version but not what that means for the floor it preaches;
       121 lines below the badge there was a silent gap** (2026-10-29 01:00).
       Picked up the open thread the previous run left itself. Measured first, at `db0a864`
