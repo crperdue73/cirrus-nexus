@@ -48,10 +48,10 @@ shipped in this tree.
 > ships **no in-app Markdown renderer** — the frontend is a single `fetch()`-driven page (`frontend/index.html`)
 > and the guide opens in a new tab.
 
-The other topologies are retained for reference and are **not** part of this release; they live in the
-sibling directory `lab-definitions-quarantine-2026-09-30/` (outside `lab-definitions/`, so the loader
-does not see them). That is a different place from `10-archive/` — see the Archive section of
-[`docs/OPERATIONS.md`](docs/OPERATIONS.md) for what is in each.
+The other topologies are **not** part of this release and are **not in this tree**. They were pulled out
+of `lab-definitions/` on 2026-09-30 and held in a sibling quarantine directory until 2026-10-30, when
+that directory was archived out of the repository entirely. Nothing in this tree references them; see
+the Archive section of [`docs/OPERATIONS.md`](docs/OPERATIONS.md) for what remains (`10-archive/`).
 
 ---
 

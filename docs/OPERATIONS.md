@@ -238,14 +238,19 @@ grader.**
 ## Archive
 
 Anything removed from the active lab set is retained for reference, not deployed, in **two separate
-places — neither is inside `10-archive/`**:
+places — now only one of them is still in this tree**:
 
-- `lab-definitions-quarantine-2026-09-30/` — the topologies, guides and graders pulled from
-  `lab-definitions/` on 2026-09-30 (46 tracked files; the file list is its `MANIFEST.txt`).
+- `lab-definitions-quarantine-2026-09-30/` — **no longer in this tree.** The topologies, guides and
+  graders pulled from `lab-definitions/` on 2026-09-30 (46 files) sat in that sibling directory until
+  2026-10-30, when the whole directory was archived outside the repository and deleted here. The
+  working copy is at `~/.openclaw/workspace-selina/archive/quarantine-aegis-20261030/` on the
+  authoring host; its file list is `MANIFEST.txt` (59 lines — the MANIFEST also lists itself and
+  subdirectory contents, hence more lines than files). Nothing in this tree references it.
 - `10-archive/` — an older, smaller archive: `tier-03-bgp-simplified.yml`, the two FRR configs it
   binds (`10-archive/frr-configs/`), and `SUMMARY-for-Dad.md`.
 
-Neither directory is read by the loader (it globs `lab-definitions/**/*.yml` only).
+Only `10-archive/` survives in this tree and it is not read by the loader (the loader globs
+`lab-definitions/**/*.yml` only).
 
 Provenance for the older layout is in [`10-archive/SUMMARY-for-Dad.md`](../10-archive/SUMMARY-for-Dad.md),
 a dated 2026-06-09 topology audit. It describes a tree that predates this release (its

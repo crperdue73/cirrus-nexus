@@ -561,7 +561,8 @@ LABS_REJECTED: list = []
 # RUN 2026-10-16: this map is INERT for the shipping tree -- kept, not deleted, and labelled so a
 # reader of the shipped source does not mistake it for live routing. Measured: every one of its seven
 # target filenames is absent from lab-definitions/ (`for t in <targets>; test -e lab-definitions/$t`
-# -> 7 of 7 missing). All seven ids are quarantined labs (see lab-definitions-quarantine-2026-09-30/),
+# -> 7 of 7 missing). All seven ids are quarantined labs (archived out of this tree on
+# 2026-10-30; they were never in lab-definitions/ in any released version),
 # so _GUIDE_MAP.get(lab_id) returns None for both SHIPPING labs (demo-01/demo-02) and resolution
 # falls through to the topology-relative branch below, which is where the shipped guides actually
 # live. It is a fossil of the pre-release layout, not a route a student can hit -- but it sits in
@@ -1483,8 +1484,8 @@ def _pinned_substrate_digests(pin: dict) -> set[str]:
     `installed_substrate_digests`. So `multi` is always empty and the legacy key is
     the whole accepted set. This docstring previously claimed the installer
     "publishes a SET" and that lab-04 shipped a BGP variant -- both false of this
-    tree (lab-04's definition is quarantined; `Dockerfile.frr-bgp` is a tracked
-    leftover no code references).
+    tree (lab-04's definition is not in this tree, and `Dockerfile.frr-bgp` was
+    deleted on 2026-10-30: no code ever referenced it).
 
     The set-reading code is retained deliberately, not dead-by-accident: it is what
     keeps a record written by an older installer (or a future second substrate)
