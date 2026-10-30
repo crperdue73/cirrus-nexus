@@ -20,6 +20,54 @@ unverifiable claims, no screenshots of a build that isn't here.
 
 ## Backlog (one item per polish run)
 
+- [x] **The LAN-address redaction stopped at the docs and missed `backend/main.py` — and the tree's own
+      leak checker could not have seen it** (2026-10-30 13:00).
+      Found by re-running the previous run's redaction over the whole tracked tree instead of over the
+      files it edited. `git grep -nE '192\.168\.(1|111)\.[0-9]+' -- ':!10-archive'` at HEAD
+      (`d4a240b`) returned **two hits, both in one docstring**: `backend/main.py:2096-2097`, the comment
+      above `_rewrite_ttyd_urls` still naming this box's two real LAN addresses. The 01:33 commit
+      (`0005900`) says "Redacted, 35 occurrences across 8 files" and lists those files as proof files and
+      GITHUB-PLAN. The source file was not in that list and was **not** claimed to be — but the commit
+      reads as a closed sweep, and a reader would take it that way. Recorded here so nobody inherits
+      "done" from it.
+      **(1) Why nothing caught it, measured rather than guessed.** `tools/check_self_contained.py` prints
+      *"no developer paths leak"*, which sounds adjacent. It is not: its only rule (lines 95-105) regexes
+      an **absolute path** (`/home/<user>/…`) over `TEXT_EXT` files, and `.nexus/` is exempt by design
+      (line 49). An RFC1918 address is not a path, so this check was green before the fix and green after
+      it — it never had anything to say about addresses. The CI secret scan is suffix-specific (`ghp_`,
+      `AKIA`, …) and also silent here. So the leak survived because **no script in the tree checks for
+      private addresses at all**; only a hand grep does. Not fixed here by widening a checker — a new rule
+      is a test-suite decision for Dad, not a polish edit — but written down as the reason.
+      **(2) The edit is a comment edit and nothing else.** Three lines of docstring, no statement, no
+      expression, no signature, no behaviour: `<HOST-LAN-IP-A>` / `<HOST-LAN-IP-B>` replace the two
+      addresses, and ".188" became "the other address" so the sentence still parses. The other published
+      hits (`10-archive/frr-configs/*.conf`, `10-archive/tier-03-bgp-simplified.yml`,
+      `docs/OPERATIONS.md:229`, `lab-guides/lab-03-lock-it-down.md:297`) are `192.168.12.0/24` — lab-internal
+      addressing, identical on every install, the same class `0005900` deliberately preserved. Left alone.
+      `.nexus/STATUS.md:741` and two proof transcripts carry `/home/selina/...` — exempt by the checker's
+      own documented design.
+      **(3) No logic change, and this is what proves it rather than asserts it:** `py_compile
+      backend/main.py` rc=0; `ast.parse` OK; `git diff --stat` = `3 insertions(+), 3 deletions(-)`, all
+      inside the triple-quoted docstring; a copy of `git show HEAD:backend/main.py` sits at
+      `.nexus/bundle-archive/main.py.bak-2026-10-30-1300-pre-redact` (git-ignored) alongside the pre-edit
+      sha256. Re-scan after: the same `git grep` over the published tree returns **0 hits, rc=1**. The
+      four CI checks re-run green (`py_compile`, `bash -n install.sh`,
+      `check_self_contained.py` → 15 required files / 2 doc assets, secret scan clean by both forms).
+      **(4) Also closed the stale open item that overlapped this one.** The `DECISION (Dad)` entry below
+      asked whether GITHUB-PLAN should ship publicly because it "names internal hosts/addresses and a
+      person". Dad made that call on 2026-10-30 ("you choose", recorded in `0005900`): it ships. Ticked it
+      and pointed it at `0005900` instead of deleting it, so the reasoning stays readable. Its descriptor
+      is now wrong in one word — the addresses are gone — which is exactly the kind of sentence that goes
+      on sounding true for a year.
+      Scope: `backend/main.py` (docstring, 3 lines), this entry, that open item ticked. **No README, no
+      executable code, installer, topology, grader, lab or CI change.** NOT COMPLETE — Dad's word alone.
+      | proof=none (comment + docs) |
+      next=the remaining reader-facing gap is unchanged and still Dad's: SCREENSHOTS needs a session on the
+      host where the product actually runs, and the `ci.yml` 3.10 leg still wants a `workflow`-scoped push.
+      Nothing in the polish list is both in scope and unblocked. The candidate I would pick next is a
+      deliberate pass over `10-archive/` — it is tracked, served on github.com, and nothing in the tree says
+      whether it is meant to be there.
+
 - [x] **Tried to land the CI Python matrix. Pushed, `git push` was refused, GitHub beat me, and the
       docs now say so instead of promising it** (2026-10-29 13:00).
       The 01:00 run recorded the matrix as blocked on a `workflow`-scoped token. This run tried to
@@ -793,10 +841,16 @@ unverifiable claims, no screenshots of a build that isn't here.
       `check_self_contained.py`); `lint_lab_pack.py` → `UNAVAILABLE`, rc=2 (PyYAML absent on this box,
       which is the run-22a8d10 behaviour working, not a failure). Backup via
       `workspace-selina/scripts/safe-backup.sh` → `.nexus/bundle-archive/GITHUB-PLAN.md.bak-2026-10-21-1101-README.md`.
-- [ ] **DECISION (Dad):** should `docs/GITHUB-PLAN.md` ship publicly with the repo at all? It is tracked
-      and on `origin/main`, and it names internal hosts/addresses and a person. Options: keep as-is with
-      the internal banner, move it out of the served tree (e.g. into git-ignored `.nexus/`), or stop
-      tracking it. Not mine to choose — same class as the `.nexus/` shipping-policy call.
+- [x] **DECISION (Dad): should `docs/GITHUB-PLAN.md` ship publicly with the repo at all? — ANSWERED,
+      ships.** It is tracked and on `origin/main`, and it names internal hosts, addresses and a person.
+      The options on the table were: keep as-is with the internal banner, move it out of the served tree
+      (e.g. into git-ignored `.nexus/`), or stop tracking it. **Dad's call, 2026-10-30: "you choose".**
+      My answer, taken and recorded in commit `0005900`: **keep it tracked.** The proof files under
+      `.nexus/proofs/` are the only evidence that the README's claims are true of this tree, and with the
+      worklog public the reasoning behind them is checkable too. What was actually wrong was not the
+      file's visibility but the addresses in it — those were redacted in `0005900`, and the two hits that
+      sweep missed in `backend/main.py` were redacted in the 2026-10-30 13:00 run (entry at the top of
+      this file). Ticked, not deleted, so the reasoning stays readable.
 - [x] **`tools/lint_lab_pack.py`: "could not run" was reported as a per-lab verdict** (2026-10-21).
       The PR template and `.github/ISSUE_TEMPLATE/lab_request.md` both gate on
       `python3 tools/lint_lab_pack.py`, but the `import yaml` lived inside the per-lab path, so on a box

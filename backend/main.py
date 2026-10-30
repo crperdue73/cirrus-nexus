@@ -2093,9 +2093,9 @@ def _rewrite_ttyd_urls(ttyd_info: dict, request) -> dict:
     """Return ttyd_info with each url's HOST replaced by the request's Host header.
 
     Live-caught 2026-09-28 (run 50): the host has two LAN addresses
-    (192.168.1.110 and 192.168.1.188). ttyd bound only on 192.168.1.110, and the
-    API advertised http://192.168.1.110:<port> to every client. A student on
-    .188 - or on localhost, or behind a tunnel - loaded the frontend fine but
+    (<HOST-LAN-IP-A> and <HOST-LAN-IP-B>). ttyd bound only on one of them, and the
+    API advertised that one to every client. A student on the other address - or
+    on localhost, or behind a tunnel - loaded the frontend fine but
     every terminal URL was refused. Follow the origin the browser actually used.
     The URL SHAPE (http://<host>:<port>) is unchanged; only the host is swapped.
     """
