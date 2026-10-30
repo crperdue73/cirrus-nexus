@@ -5,6 +5,68 @@ All notable changes to AEGIS are recorded here. This project ships two labs
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — week of 2026-10-30
+
+25 non-merge commits on `main` since `v0.2.0` (measure it: `git rev-list --count v0.2.0..HEAD` — a
+number written here goes stale, which is why it is also written as a command). Tag state as measured
+on 2026-10-30: `git describe --tags` → `v0.2.0-25-gf4b148a`. **No tag was cut and no GitHub Release
+was published for this window** — notes are drafted in
+[`docs/RELEASE-NOTES-v0.3.0-draft.md`](docs/RELEASE-NOTES-v0.3.0-draft.md) and awaiting the operator's call.
+
+This window **removes files from the tree** (archived first, not discarded) and changes shipped
+behaviour, so it is not a patch release if it is released at all.
+
+### Fixed
+- **`start_server.py` measured the wrong server and reported the result as fact.** Readiness probed a
+  hardcoded `http://localhost:8000/api` while the backend honours `AEGIS_HOST`/`AEGIS_PORT`, so a
+  server on any other port read as "failed to start" while it was up, and a foreign server on 8000 read
+  as success. The probe also shelled out to `curl`, which `install.sh` never installs, and `curl -s`
+  exits 0 printing nothing on a refused connection. `pkill` patterns were unescaped. The child is now
+  proven to be ours and a dead one is reported as dead.
+- **`install.sh` now says when the FRR pin no longer describes the shipped Dockerfile.** The pin named
+  `Dockerfile.frr` as of `2868142` (2026-09-20); that file has not been in the tree since `0503bc5` the
+  same day, which rewrote the daemon block because the old `sed` matched nothing on FRR 10.x. The pin
+  was stale by one day and one entire class of bug for six weeks. Fields that could not be measured
+  (`image_id`, `layers_sha256`, `tarball_sha256`, `built` — no working Docker daemon on this host, no
+  tarball in any commit) are marked `UNPINNED` rather than guessed.
+- **`install.sh` names the re-pinned Dockerfile that actually ships** (see above); `Dockerfile.frr-bgp`
+  is gone from the tree (below).
+- **`tools/plan_status.py` finds the worklog by pattern**, not one hardcoded filename.
+- **`tools/check_self_contained.py` stopped reporting a doc link as an install failure** — the check's
+  two claims (required files present / links resolve) are now reported separately.
+
+### Added
+- **`tools/check_repo_metadata.py`** plus `tools/check_repo_metadata.json`: records and checks the
+  GitHub description, topics and license against what the repo declares.
+- **`tools/plan_status.py`**: counts the backlog instead of requiring a human to scroll it.
+- **`docs/API.md`**: the API table summarised 11 routes; every route is now documented, including the
+  422 the old table never mentioned.
+- **`.nexus/proofs/`**: the proof trail for the grader-default finding ships publicly; this box's
+  addresses are redacted from it.
+
+### Removed
+- **`Dockerfile.frr-bgp`** — a second substrate image no code path built. `install.sh` Step 7b was
+  removed 2026-09-20 (`0583677`) and lab-04, its only would-be consumer, is not in this tree;
+  unreferenced for six weeks. Documented as "kept as static source" in `architecture.md` and
+  `main.py`'s docstring, which was false and has been corrected.
+- **`lab-definitions-quarantine-2026-09-30/`** (46 files) — archived out of the tree, not discarded:
+  copied verbatim to `archive/quarantine-aegis-20261030/`, diff-verified identical, then `git rm -r`.
+  The loader never read it.
+
+### Documentation
+- Real Python floor stated as **3.10**, not 3.9, and not 3.8 before it; README now also says that CI
+  never tests that floor.
+- README, `CONTRIBUTING.md`, `docs/ADDING-A-LAB.md`, `docs/OPERATIONS.md`, `.gitattributes` swept for
+  claims that no longer match the tree.
+
+### Known, not fixed
+- **Cold install still serves zero labs unless per-lab assets are placed manually** where `install.sh`
+  does not reach them. Documented; not claimed as solved.
+- **The grader default is derived from `metadata.id` and does not resolve** for at least one lab;
+  recorded in `docs/ADDING-A-LAB.md` and the worklog, with a proof file under `.nexus/proofs/`.
+- **CI's Python matrix is written but not pushable** as configured — stated in the repo rather than
+  claimed as coverage.
+
 ## [v0.2.0] — 2026-10-25
 
 **Shipped.** The tag `v0.2.0` exists on `main` and on `origin`, and a GitHub Release was published from

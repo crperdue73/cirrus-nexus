@@ -1,5 +1,9 @@
 # Release notes — AEGIS NEXT (draft)
 
+> **SUPERSEDED on 2026-10-30.** The current pending draft is
+> [`RELEASE-NOTES-v0.3.0-draft.md`](RELEASE-NOTES-v0.3.0-draft.md). Read that one; this file is the
+> 2026-10-23 drafting record only.
+>
 > **SUPERSEDED on 2026-10-25.** The release was cut and published as **`v0.2.0`**; the shipped notes
 > are [`RELEASE-NOTES-v0.2.0.md`](RELEASE-NOTES-v0.2.0.md). This file is kept as the drafting record,
 > including the decision it asked for. Where the two disagree, the published notes win.
