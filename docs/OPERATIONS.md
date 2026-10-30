@@ -188,36 +188,34 @@ operational convention.
 
 ---
 
-## Known drift: `Dockerfile.frr` vs the image pin
+## The image pin, after the 2026-10-30 re-pin
 
-`assets/frr-image.pin` names the substrate `install.sh` *would* prefer to load:
-`dockerfile_sha256=cce15a86…`, `layers_sha256=bb7ef23a…`, `tarball=aegis-frr-image.tar.gz`.
+`assets/frr-image.pin` used to name a substrate the tree does not contain: `dockerfile_sha256=cce15a86…`
+(the `Dockerfile.frr` of commit `2868142`), `layers_sha256=bb7ef23a…`, `tarball=aegis-frr-image.tar.gz`.
+The shipped `Dockerfile.frr` has hashed `b3046a70…` since commit `0503bc5` (2026-09-20), which rewrote
+the daemon block because the previous `sed` matched nothing on FRR 10.x and silently asserted nothing.
 
-The shipped `Dockerfile.frr` now hashes to `b3046a70…` — changed by commit `0503bc5` (2026-09-20)
-whose message said *"Pin/image id unchanged."* The image file was not rebuilt, so **the pin and the
-Dockerfile disagree.**
+**Dad's call, 2026-10-30: re-pin.** What that means concretely, and what it does not:
 
-- **The pinned path is not taken here.** `install.sh` loads the tarball *only if* it is present; the
-  pin's `tarball=aegis-frr-image.tar.gz` is **not in this tree** (measured live 2026-10-11; the tracked
-  contents of `assets/` are only `frr-image.pin` — `installed-image-id.txt` is git-ignored and does not
-  ship). So a cold clone falls to the
-  build-from-source fallback below.
-- **The fallback builds a different substrate.** With no tarball, `install.sh` runs
-  `docker build` from `Dockerfile.frr` (`b3046a70…`), which installs and self-heals normally but does
-  **not** reproduce the pin's `layers_sha256` (`bb7ef23a…`). That is expected, not a failure.
-- **The installer now says so itself (added 2026-10-27).** Step 7 reads the pin and compares its
-  `dockerfile_sha256` with the sha256 of the `Dockerfile.frr` it is about to build. On this tree they
-  disagree, so the install prints a four-line warning naming both values and stating that building
-  from the current source is the correct path and a pinned-tarball restore would not be. It **warns,
-  it does not fail**: the fallback is legitimate and a hard stop would turn a documented drift into a
-  broken install. When the pin is brought back in line with the Dockerfile the warning disappears
-  with no installer change. Verified both directions on 2026-10-27 (stale pin → four warnings;
-  pin rewritten to the current hash → silent).
+- **The pin now names this tree's Dockerfile**: `dockerfile_sha256=b3046a70…`, `dockerfile_commit=0503bc5`.
+  The installer's four-line drift warning therefore no longer fires — verified by sourcing the pin in a
+  shell and comparing, not by reading it.
+- **The image facts are `UNPINNED`, deliberately.** `image_id`, `layers_sha256`, `tarball_sha256` and
+  `built` say `UNPINNED` because measuring them needs a Docker daemon and a build. The host I run on has
+  no working daemon (`docker info` fails). Writing a plausible digest would be the same class of error as
+  the stale pin this replaces, so the file says what is unknown instead of what would look complete.
+- **The installer now treats `UNPINNED` as a value it must not use.** Step 7 blanks those placeholders
+  before any `-n` test, so nothing compares against the literal string; and if a tarball ever ships
+  alongside `dockerfile_sha256=UNPINNED`, the verifier **refuses** rather than passing an empty check.
+- **Nothing can take the pinned path today anyway**: no tarball exists in any commit, so a cold clone
+  builds from `Dockerfile.frr`. The stale-substrate defence that actually works is the
+  `aegis.frr.dockerfile.sha256` label Step 7 stamps into the image and rebuilds on — not this file.
+- **The old record is retained** in the same file below a header, dated, because it was true on
+  2026-09-19. Two records that disagree and say their dates are honest; one record quietly overwritten
+  is not.
 
-Not "fixed" on purpose: choosing which substrate is authoritative is a product decision, not a
-lab-local edit. Recorded so the next operator sees both values.
-
----
+Still open, and it needs a machine with Docker: produce the real `image_id` / `layers_sha256` /
+`tarball_sha256`, decide whether the tarball ships at all, and drop the `UNPINNED` placeholders.
 
 ## Capstone — Net Eng I PBM (curriculum context, not a shipped lab)
 

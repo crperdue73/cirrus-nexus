@@ -347,6 +347,16 @@ if [[ "${NEED_FRR_BUILD}" -eq 1 ]]; then
     if [[ -f "${PIN_FILE}" ]]; then
         # shellcheck disable=SC1090
         source "${PIN_FILE}"
+        # An UNPINNED pin must not be treated as a value. 2026-10-30: the re-pin
+        # names the current Dockerfile but leaves image_id / layers / tarball as
+        # UNPINNED because no build host was available. Those are placeholders,
+        # not hashes -- an `if [[ -n ${layers_sha256} ]]` test would pass on the
+        # string "UNPINNED" and then fail every load, or (worse) compare against
+        # a literal forever. Blank them here so the verifiers below skip.
+        for _k in image_id layers_sha256 tarball_sha256 built; do
+            if [[ "${!_k:-}" == "UNPINNED" ]]; then printf -v "${_k}" '%s' ''; fi
+        done
+        unset _k
         PIN_TARBALL="${ASSETS_DST}/${tarball:-}"
         PIN_IMAGE_ID="${image_id:-}"
 
@@ -357,7 +367,7 @@ if [[ "${NEED_FRR_BUILD}" -eq 1 ]]; then
         # both paths. (Found 2026-10-27: the pin's fingerprint was cce15a86...,
         # the file in this tree hashes b3046a70... after the 2026-09-20
         # daemon-assert rewrite; the tarball it names does not ship at all.)
-        if [[ -n "${dockerfile_sha256:-}" && "${FRR_SRC_SHA}" != "${dockerfile_sha256}" ]]; then
+        if [[ -n "${dockerfile_sha256:-}" && "${dockerfile_sha256}" != "UNPINNED" && "${FRR_SRC_SHA}" != "${dockerfile_sha256}" ]]; then
             warn "FRR pin does not describe the shipped Dockerfile — record is stale, not a failure"
             warn "  pin.dockerfile_sha256: ${dockerfile_sha256}"
             warn "  Dockerfile.frr now:     ${FRR_SRC_SHA}"
@@ -398,6 +408,12 @@ if [[ "${NEED_FRR_BUILD}" -eq 1 ]]; then
             --format '{{range .RootFS.Layers}}{{.}} {{end}}' 2>/dev/null | tr -d ' ')
         LOADED_LAYERS_SHA=$(printf '%s' "${LOADED_LAYERS}" | sha256sum | awk '{print $1}')
 
+        if [[ -n "${dockerfile_sha256:-}" && "${dockerfile_sha256}" == "UNPINNED" ]]; then
+            err "FRR pin is present but UNPINNED (dockerfile_sha256=UNPINNED) — refusing"
+            err "  A pin that names no Dockerfile cannot verify anything. Re-pin it with a"
+            err "  real sha256 before shipping a tarball alongside it."
+            exit 1
+        fi
         if [[ -n "${dockerfile_sha256:-}" && "${LOADED_LABEL}" != "${dockerfile_sha256}" ]]; then
             err "Loaded image was not built from the pinned Dockerfile — refusing"
             err "  expected fingerprint: ${dockerfile_sha256}"

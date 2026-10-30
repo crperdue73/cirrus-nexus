@@ -4,6 +4,10 @@
 # tarball, then VERIFIES the resulting image id equals this value. If it does
 # not, install fails loudly — no silent stale substrate, no hand steps.
 #
+# RE-PINNED 2026-10-30 (Dad's call). The 2026-09-19 record below describes a
+# DIFFERENT Dockerfile than the one in this tree and is retained, not deleted,
+# because it is a true record of that date. Read the two sections separately.
+#
 # Produced 2026-09-19 (Cirrus-Nexus step 4 transport decision).
 # Transport = image tarball, because the image is local-only (RepoDigests: []).
 # This pin is the image ID read off a RUNNING container via docker inspect,
@@ -21,3 +25,41 @@ dockerfile_sha256=cce15a8696ae045e8001f2b32107b1261fa7fc5ba30ad4cab5dfa8c7bc8f38
 tarball=aegis-frr-image.tar.gz
 tarball_sha256=9c6837d26d8dfb4bbbab62288cbb9f6528a48fd40b9e859b0cd7f4ecb43a1ff3
 built=2026-09-19T16:01:57-04:00
+
+# --- Re-pin, 2026-10-30 -----------------------------------------------------
+#
+# What actually happened, measured, not assumed:
+#   The 2026-09-19 pin was built from Dockerfile.frr @ 2868142 (sha256 cce15a86...).
+#   The NEXT DAY, 2026-09-20, commit 0503bc5 rewrote the daemon block: the old
+#   sed matched nothing on FRR 10.x and silently no-op'd, so the build asserted
+#   nothing at all. The rewrite writes the state and FAILS THE BUILD unless
+#   ospfd=no and bgpd=no hold. Dockerfile.frr has been b3046a70... ever since.
+#
+#   So the pin never described anything this repo shipped -- the tarball it
+#   names (aegis-frr-image.tar.gz) is in no commit and no tree, for either
+#   version. A tarball restore path that can never be taken is not transport,
+#   it is a hazard: it makes install.sh look like it verifies an image when it
+#   has never once loaded one.
+#
+# Why this re-pin has no image_id / layers_sha256 / tarball_sha256:
+#   I cannot measure them, so I will not write them. Producing them needs a
+#   Docker daemon and a build; there is no working daemon on the host I run on
+#   (`docker info` fails), and inventing a digest would be exactly the kind of
+#   record this project keeps catching itself writing. The verifiable facts are
+#   below; the image facts are marked UNPINNED until someone builds.
+#
+# What install.sh does with this file, unchanged and correct:
+#   Step 7 stamps the real source hash into the image as the label
+#   `aegis.frr.dockerfile.sha256` and rebuilds whenever it differs. THAT is the
+#   live stale-substrate defence, and it needs no pin at all. This file is a
+#   record of intent, not the verification key.
+
+repin=2026-10-30
+dockerfile_sha256=b3046a7027b7b6300e4babd596eae45f8820036a65aab5ad9c960e4ae9b7c39b
+dockerfile_commit=0503bc5
+dockerfile_commit_date=2026-09-20
+tarball=
+image_id=UNPINNED
+layers_sha256=UNPINNED
+tarball_sha256=UNPINNED
+built=UNPINNED
