@@ -1,13 +1,17 @@
-# AEGIS Topology Audit — Summary for Dad 🐧💍
+# AEGIS Topology Audit — 2026-06-09 (historical) 🐧
 
 > **HISTORICAL ARCHIVE — not a description of the shipping tree.** This is a 2026-06-09 audit of an
 > earlier topology layout. The `aegis-topologies/` directory, the `scripts/wait-and-apply.sh` it names,
 > and the `tier-01*`/`tier-02*`/`tier-04*` YAMLs **do not exist in this repository** — the shipping tree
-> is the two srl-demo labs under `lab-definitions/` and the retained set under
-> `lab-definitions-quarantine-2026-09-30/`. The one file from this audit that does survive is
+> is the two srl-demo labs under `lab-definitions/`. The retained set that used to sit in
+> `lab-definitions-quarantine-2026-09-30/` is not in this tree either: it was archived out of the
+> repository on 2026-10-30. The one file from this audit that does survive is
 > `10-archive/tier-03-bgp-simplified.yml` (see "Files Changed" below). Kept only because
 > `docs/OPERATIONS.md` (Archive section) points readers here for provenance. Do not rely on its file
 > paths.
+>
+> **Renamed 2026-10-30** from `SUMMARY-for-Dad.md`. The old name was a note to one person, and it read
+> as a live summary of the project rather than as a dated record of a layout that no longer exists.
 
 **From:** Selina & Ethan
 **Date:** 2026-06-09
@@ -30,7 +34,11 @@ We inventoried every YAML, FRR config, grader script, and Dockerfile. The origin
 | **T4 EVPN-VXLAN** | 156 lines, MP-BGP + VXLAN + route reflector | 🛑 Replaced with VLAN trunking + router-on-a-stick (70 lines) | EVPN is CCNP/DC level; replacement teaches 802.1q, PVID, subinterfaces |
 | **Capstone** | 86 lines, FRR-as-switch | ⚠️ Pending your call | FRR simulates IOS CLI but confuses switch concepts; Alpine bridge is simpler |
 
-## Pending Decision: Capstone Switch
+## Open question at the time: Capstone Switch (never resolved, and no longer open)
+
+> **Not an open item in this tree** (annotated 2026-10-30). The capstone topology this question is
+> about, `tier-capstone-neteng.yml`, is not in this repository, so there is nothing here to decide.
+> The text is left as written because it is the record of what was on the table on 2026-06-09.
 
 **Two options:**
 
@@ -70,5 +78,8 @@ All files were in `aegis-topologies/` and `frr-configs/`:
 ## Ready When You Are
 
 We can walk through any lab in detail. The old EVPN and multi-AS BGP files are preserved as `*-archive/` for reference.
+
+> **Neither of those is true of this tree** (annotated 2026-10-30): none of the labs above exist here,
+> and there is no `*-archive/` directory. `10-archive/` is the only archive in this repository.
 
 — Selina 🐧 & Ethan 🔧

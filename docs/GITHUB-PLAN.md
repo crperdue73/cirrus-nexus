@@ -20,6 +20,63 @@ unverifiable claims, no screenshots of a build that isn't here.
 
 ## Backlog (one item per polish run)
 
+- [x] **`10-archive/` held a file named `SUMMARY-for-Dad.md` — a 2026-06-09 record addressing one person,
+      indexed in the README as if it were a current summary. Renamed, and its own banner corrected where
+      it had gone stale** (2026-10-30 19:00).
+      Picked up the open thread the 13:00 run left itself ("a deliberate pass over `10-archive/` — it is
+      tracked, served on github.com, and nothing in the tree says whether it is meant to be there").
+      Measured before touching anything, at `7331245` (`git status` clean, HEAD == origin/main `0/0`):
+      `py_compile backend/main.py` rc=0, `bash -n install.sh` rc=0, `check_self_contained.py` rc=0
+      (15 required / 2 doc assets), `check_repo_metadata.py` rc=0 (27 claims). `10-archive/` is 4 tracked
+      files / 28 KB.
+      **What the pass found, in order of how much a reader is misled:**
+      **(1) The README index lied about the file's standing.** The Documentation table row said "dated
+      2026-06-09 topology audit — historical", which is true, but the *filename* two columns to its left
+      was `SUMMARY-for-Dad.md` — the one thing a reader sees before any description. A file that
+      summarises the project for its owner, in a directory of live docs, reads as current. It is not:
+      every topology it names is absent from this tree. **Renamed to `topology-audit-2026-06-09.md`** via
+      `git mv` (rename detected, history kept), with a dated "Renamed 2026-10-30" note in the file so the
+      old name is still findable and the change is not silent. Four live references updated: README ×2,
+      `docs/OPERATIONS.md` ×2 (one is the provenance link at the bottom of the Archive section).
+      **(2) The file's own historical banner had gone stale in the direction it was warning about.** It
+      said the shipping tree is "the two srl-demo labs under `lab-definitions/` **and the retained set
+      under `lab-definitions-quarantine-2026-09-30/`**" — but that directory was archived out of the
+      repository on 2026-10-30 (recorded in `docs/OPERATIONS.md` and in this worklog). So the warning
+      paragraph was itself pointing at a path that no longer exists, fifty lines above the paragraph
+      telling the reader not to trust its paths. Corrected to say the quarantine set is not in this tree
+      either.
+      **(3) Two live-sounding promises inside a historical record.** The file ended with "Ready When You
+      Are … We can walk through any lab in detail. The old EVPN and multi-AS BGP files are preserved as
+      `*-archive/` for reference." None of those labs is here and there is no `*-archive/` directory;
+      `10-archive/` is the only archive. And "Pending Decision: Capstone Switch" presented an open
+      question about a topology (`tier-capstone-neteng.yml`) this repository does not contain. Both left
+      in place — they are the record of 2026-06-09 — with dated annotations saying what is no longer true
+      of this tree. Not deleted, because a record that gets quietly trimmed is a record that starts
+      agreeing with whoever edited it last.
+      **(4) Checked, and true, so left alone:** the loader cannot reach the archived YAML anyway —
+      `_discover_labs()` globs `LABS_DIR` (`lab-definitions/`) top level plus one subdirectory level, and
+      `10-archive/` is a different directory tree entirely (read at `backend/main.py:467-469`). Also
+      re-measured as a non-claim, not a fact worth writing down: the Markdown file is not YAML and the
+      deployed YAML's binds are already documented as broken. No loader/code change, and none needed.
+      **(5) Not done, deliberately, because it is Dad's call:** whether `10-archive/` should ship at all.
+      Three of its four files are referenced by live docs as provenance (`docs/OPERATIONS.md` → Archive,
+      README index), so deleting it would break links; keeping it costs 28 KB. The rename makes the cost
+      honest without deciding the question. Still open in the list below, unchanged.
+      VERIFIED after: full relative-link sweep over the 21 reader-facing Markdown files → **0 broken**;
+      `git grep SUMMARY-for-Dad` outside the worklog/CHANGELOG/history → only the three intentional
+      "renamed from" notes; `py_compile` rc=0; `bash -n install.sh` rc=0; `check_self_contained.py` rc=0
+      (15/2, unchanged); `check_repo_metadata.py` rc=0 (unchanged). Pre-edit copies in
+      `.nexus/bundle-archive/{SUMMARY-for-Dad.md,README.md,OPERATIONS.md}.bak-2026-10-30-1900-*`
+      (git-ignored); the rename itself is the rollback point, `git show HEAD^:10-archive/SUMMARY-for-Dad.md`.
+      No README prose beyond two index rows, no code, installer, topology, grader, lab or CI change.
+      NOT COMPLETE — Dad's word alone. | proof=none (docs + a rename) |
+      next=the polish list has nothing both in scope and unblocked: screenshots need a live host, `ci.yml`
+      needs a `workflow`-scoped token, and the rest are Dad-gated (delete-or-keep decisions above). The
+      candidate I would pick next is the one class of reader-facing claim never measured against the
+      thing it describes: **`install.sh`'s own assertions** — whether the README's prerequisites list
+      matches what the installer actually apt-installs, and whether the startup-config sweep it warns
+      about covers every shipped lab asset. Static-checkable here; not executable without a Docker host.
+
 - [x] **The LAN-address redaction stopped at the docs and missed `backend/main.py` — and the tree's own
       leak checker could not have seen it** (2026-10-30 13:00).
       Found by re-running the previous run's redaction over the whole tracked tree instead of over the

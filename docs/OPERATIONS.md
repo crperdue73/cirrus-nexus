@@ -245,11 +245,15 @@ places — now only one of them is still in this tree**:
   authoring host; its file list is `MANIFEST.txt` (59 lines — the MANIFEST also lists itself and
   subdirectory contents, hence more lines than files). Nothing in this tree references it.
 - `10-archive/` — an older, smaller archive: `tier-03-bgp-simplified.yml`, the two FRR configs it
-  binds (`10-archive/frr-configs/`), and `SUMMARY-for-Dad.md`.
+  binds (`10-archive/frr-configs/`), and `topology-audit-2026-06-09.md`.
 
 Only `10-archive/` survives in this tree and it is not read by the loader (the loader globs
-`lab-definitions/**/*.yml` only).
+`lab-definitions/**/*.yml` only). It is also not a lab pack: `topology-audit-2026-06-09.md` (renamed
+from `SUMMARY-for-Dad.md` on 2026-10-30 — the old name read as a live summary when the file is a
+2026-06-09 record) is Markdown, and the YAML beside it (`tier-03-bgp-simplified.yml`) lives two
+directories away from `lab-definitions/`, so the glob cannot reach either file. Stated as what was
+measured in this tree, not as a loader guarantee.
 
-Provenance for the older layout is in [`10-archive/SUMMARY-for-Dad.md`](../10-archive/SUMMARY-for-Dad.md),
+Provenance for the older layout is in [`10-archive/topology-audit-2026-06-09.md`](../10-archive/topology-audit-2026-06-09.md),
 a dated 2026-06-09 topology audit. It describes a tree that predates this release (its
 `aegis-topologies/` paths do not exist here) — read it as history, not as the shipping tree.
