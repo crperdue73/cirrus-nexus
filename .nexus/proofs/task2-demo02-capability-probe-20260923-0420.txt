@@ -26,7 +26,7 @@ session 60b008b9, 5/5 nodes up: pc-a, sw1, r1, sw2, pc-b
 --- OPERATOR NOTE (my error, recorded honestly) ---
   My FIRST pass configured only the addresses and skipped the cross-subnet
   routes the .md explicitly lists. Result: pc-a -> pc-b = 100% loss, and
-  traceroute LEAKED to the host net (172.20.20.1 -> 192.168.1.1) because pc-a
+  traceroute LEAKED to the host net (172.20.20.1 -> <HOST-LAN-IP>) because pc-a
   fell through to its Docker default gateway. That was MY miss, not a lab
   defect. Adding the documented routes fixed it. Recorded so no one mistakes
   it for a lab bug.

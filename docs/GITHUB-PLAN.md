@@ -883,8 +883,8 @@ unverifiable claims, no screenshots of a build that isn't here.
       corrected 2026-10-09.** Original note blamed "no running AEGIS/docker on this box". Measured
       live today (2026-10-09 11:00 UTC on host `dept-dragon-tech`): the true reason is that the
       AEGIS/Nexus platform runs on a DIFFERENT host on a DIFFERENT subnet — this box is
-      `192.168.111.40/16`, the recorded lab host is `192.168.1.110:8000` (log runs 16+), and NEITHER
-      `127.0.0.1:8000` NOR `192.168.1.110:8000` is reachable from here (both `000`); `nexus.service`
+      `<HOST-LAN-IP>/16`, the recorded lab host is `<HOST-LAN-IP>:8000` (log runs 16+), and NEITHER
+      `127.0.0.1:8000` NOR `<HOST-LAN-IP>:8000` is reachable from here (both `000`); `nexus.service`
       is not even a unit on this host. So "start it here and capture" was never possible on this
       machine; screenshots need a session on the host where AEGIS actually runs. A mock still
       violates the "everything must be true" rule — do NOT fake it. **Dad's call: either grant a
@@ -1046,7 +1046,7 @@ OPERATIONS. Backed up `README.md` and `docs/OPERATIONS.md` via `~/scripts/safe-b
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; all four CI checks pass on
 the tree (`py_compile`, `bash -n install.sh`, `check_self_contained.py` rc=0, secret scan clean).
 The two long-standing items stay blocked exactly as recorded (Screenshots needs a session on the live
-AEGIS host — this box is `192.168.111.40/16`; the cosmetic explicit `ci.yml` grader step needs a
+AEGIS host — this box is `<HOST-LAN-IP>/16`; the cosmetic explicit `ci.yml` grader step needs a
 `workflow`-scoped token). Re-confirmed nothing new there, so I swept the repo root instead of making work.
 
 Found: **no `.gitattributes` in the tree** (`cat` → absent; `git ls-files -s` → 280 files, no
@@ -1077,7 +1077,7 @@ Fixed by making it true of this tree, not by deleting it: replaced the `tar xzf`
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
 `delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the cosmetic
 `ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live AEGIS host (this box
-is `192.168.111.40/16`). All four CI checks pass on the tree before the change(`py_compile`,
+is `<HOST-LAN-IP>/16`). All four CI checks pass on the tree before the change(`py_compile`,
 `bash -n install.sh`, `check_self_contained.py` rc=0, secret scan clean).
 
 The 2026-10-12 13:00 run recorded a **Dad-gated** item: `.nexus/` (189 tracked files) ships publicly
@@ -1116,7 +1116,7 @@ nowhere) — a prune candidate when Dad rules. Not acted on.
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
 `delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the cosmetic
 `ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live AEGIS host (this box
-is `192.168.111.40/16`). All four CI checks pass on the tree before the change (`py_compile`,
+is `<HOST-LAN-IP>/16`). All four CI checks pass on the tree before the change (`py_compile`,
 `bash -n install.sh`, `check_self_contained.py` rc=0, secret scan clean).
 
 The README's Known-limitations section closed the pin-drift bullet with: *"`assets/` holds only
@@ -1141,7 +1141,7 @@ served tree). All four CI checks re-run green.
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
 `delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the cosmetic
 `ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live AEGIS host (this box
-is `192.168.111.40/16`). All four CI checks pass on the tree before the change (`py_compile`,
+is `<HOST-LAN-IP>/16`). All four CI checks pass on the tree before the change (`py_compile`,
 `bash -n install.sh`, `check_self_contained.py` rc=0, secret scan clean).
 
 The last run fixed the README's "one image travels" claim, but `docs/architecture.md` still carried an
@@ -1169,7 +1169,7 @@ agree with each other and with the tree. Backed up `docs/architecture.md` via `~
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
 `delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the cosmetic
 `ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live AEGIS host (this box
-is `192.168.111.40/16`). All four CI checks pass on the tree before the change.
+is `<HOST-LAN-IP>/16`). All four CI checks pass on the tree before the change.
 
 The README Quick-start prerequisites closed with: *"Only **one** image travels in the repo; the switch
 image is pulled at install."* Measured false. `find . -path ./.git -prune -o -name '*.tar*' -print`
@@ -1287,7 +1287,7 @@ exits `1`, naming the file and line. Restored the grader, re-ran, `rc=0`.
 So the CI item is now *satisfied through an unblocked route*; the only residual slice is the cosmetic
 one of also adding the explicit step to `ci.yml`, which stays blocked on the `workflow` token —
 optional now, not load-bearing. Screenshots remain blocked (no session on the live AEGIS host, this box
-is `192.168.111.40/16`).
+is `<HOST-LAN-IP>/16`).
 
 ## Run 2026-10-10 01:00 UTC — one real doc item (orphaned release notes linked), then blocked items stand
 
@@ -1318,7 +1318,7 @@ The only backlog items left are the two already marked blocked:
    `workflow` scope**, so any push touching `.github/workflows/ci.yml` is rejected. The edit already
    verified clean (simulated STEP OK). **Dad's call:** mint a token with `workflow` scope.
 2. **Screenshots** — real captures require a session on the host where AEGIS actually runs (this box
-   is `192.168.111.40/16`; the lab host is on another subnet and unreachable here). **Dad's call:**
+   is `<HOST-LAN-IP>/16`; the lab host is on another subnet and unreachable here). **Dad's call:**
    grant a route/session, or the item stays open.
 
 No in-scope code change was appropriate today (remaining product work is gated on Dad's rulings). One
@@ -1329,7 +1329,7 @@ item honestly assessed, no phantom work.
 Measured live: tree clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
 `delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the cosmetic
 `ci.yml` step stays blocked), and Screenshots still needs a session on the live AEGIS host (this box is
-`192.168.111.40/16`).
+`<HOST-LAN-IP>/16`).
 
 Swept every tracked `*.md`/`*.cff` for inbound links and found the highest-value unlinked pair: the
 **student guides for the two labs the README advertises**. `lab-definitions/srl-demo-unsolved/
@@ -1349,7 +1349,7 @@ Checks re-run: backend compile OK, `bash -n install.sh` OK, `check_self_containe
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
 `delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the cosmetic
 `ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live AEGIS host (this box
-is `192.168.111.40/16`). The CI-hardening gap is already satisfied via `tools/check_self_contained.py`
+is `<HOST-LAN-IP>/16`). The CI-hardening gap is already satisfied via `tools/check_self_contained.py`
 (byte-compiles `lab-definitions/grader_*.py`; runs in CI) — re-confirmed this run.
 
 Found a real repo-cleanliness bug: `lab-definitions/lab-04-two-as-peering.yml.bgp-revert-bak` — a **1917-byte
@@ -1374,7 +1374,7 @@ Checks re-run, all four green: backend compile OK, `bash -n install.sh` OK, `che
 Measured live: `HEAD...origin/main = 0 0` before this run; `origin` token scopes
 `delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the
 `ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live AEGIS host (this box
-is `192.168.111.40/16`).
+is `<HOST-LAN-IP>/16`).
 
 Found a real honesty bug beyond the two blocked items. `README.md`, `docs/OPERATIONS.md`, and
 `docs/architecture.md` all asserted that `aegis/frr:latest` **ships as `assets/aegis-frr-image.tar.gz`**
@@ -1398,7 +1398,7 @@ not taken here"), plus the architecture.md substrate row. Backups via `safe-back
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
 `delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the cosmetic
 `ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live AEGIS host (this box
-is `192.168.111.40/16`). The CI-hardening gap stays satisfied via `tools/check_self_contained.py`.
+is `<HOST-LAN-IP>/16`). The CI-hardening gap stays satisfied via `tools/check_self_contained.py`.
 
 Found a real, in-scope honesty gap: the README **API** section listed **7** routes, but
 `backend/main.py` exposes **11** (`grep -oE '@app\.(get|post|put|delete)\("[^"]+"' backend/main.py`).
@@ -1443,7 +1443,7 @@ audit trail), split it to a private repo, or prune it. Not invented work — rec
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token
 scopes `delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope**
 (the cosmetic `ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live
-AEGIS host (this box is `192.168.111.40/16`). All four CI checks pass on the tree before the change.
+AEGIS host (this box is `<HOST-LAN-IP>/16`). All four CI checks pass on the tree before the change.
 
 Both blocked backlog items re-confirmed blocked, so I swept for a real, in-scope honesty gap. The
 prior run's own note (line ~304) had already flagged `HANDOFF-2026-09-22.md` as **unreferenced**
@@ -1481,7 +1481,7 @@ policy call.
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
 `delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the cosmetic
 `ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live AEGIS host (this box
-is `192.168.111.40/16`). All four CI checks pass on the tree before the change.
+is `<HOST-LAN-IP>/16`). All four CI checks pass on the tree before the change.
 
 Checked the README lab table against the two shipped topologies line by line. Demo 1's Topology cell
 read *"2 Alpine PCs + 1 SR Linux switch, bridged"* — matches `demo-01-...yml` exactly (nodes
@@ -1505,7 +1505,7 @@ workflow-scoped token), and the `.nexus/` public policy call.
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
 `delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the cosmetic
 `ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live AEGIS host (this box
-is `192.168.111.40/16`). All four CI checks pass on the tree before the change.
+is `<HOST-LAN-IP>/16`). All four CI checks pass on the tree before the change.
 
 Both blocked backlog items re-confirmed blocked, so I swept for a real, in-scope honesty gap — this
 time the doc **every contributor reads first**: `.github/PULL_REQUEST_TEMPLATE.md`. Its truth-check
@@ -1542,7 +1542,7 @@ policy call.
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; `origin` token scopes
 `delete:packages, repo, write:discussion, write:packages` — still **no `workflow` scope** (the cosmetic
 `ci.yml` step stays Dad-gated), and Screenshots still needs a session on the live AEGIS host (this box
-is `192.168.111.40/16`). All four CI checks pass on the tree before the change.
+is `<HOST-LAN-IP>/16`). All four CI checks pass on the tree before the change.
 
 Both blocked backlog items re-confirmed blocked, so I swept for a real, in-scope honesty gap. The
 README names the two shipping labs `demo-01-two-pcs-and-a-real-switch-unsolved` and
@@ -1600,7 +1600,7 @@ cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public p
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; all CI checks
 (`check_self_contained.py`, `lint_lab_pack.py`, `check_bundle_fresh.sh`, byte-compile) green on the
 tree before the change. `origin` token scopes unchanged — still **no `workflow` scope** (cosmetic
-`ci.yml` step stays Dad-gated) and no live host for Screenshots (this box is `192.168.111.40/16`).
+`ci.yml` step stays Dad-gated) and no live host for Screenshots (this box is `<HOST-LAN-IP>/16`).
 Both blocked items re-confirmed blocked, so I swept for a real, in-scope honesty gap.
 
 An orphan sweep (every tracked `*.md`/`*.html`/`*.yml` that no other file names) returned exactly two
@@ -1643,7 +1643,7 @@ Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run
 (`85d9f7d`); all four CI checks green on the tree before the change (backend `py_compile`,
 `bash -n install.sh`, `tools/check_self_contained.py` rc=0, secret scan clean). `origin` token scopes
 unchanged — still **no `workflow` scope** (cosmetic `ci.yml` step stays Dad-gated) and no live host for
-Screenshots (this box is `192.168.111.40/16`). Both blocked items re-confirmed blocked, so I swept for
+Screenshots (this box is `<HOST-LAN-IP>/16`). Both blocked items re-confirmed blocked, so I swept for
 a real, in-scope honesty gap.
 
 `10-archive/SUMMARY-for-Dad.md` opened with a banner whose last substantive sentence was:
@@ -1674,7 +1674,7 @@ secret scan clean). `origin` token scopes unchanged — still **no `workflow` sc
 step stays Dad-gated) and no live host for Screenshots. Both blocked items re-confirmed blocked.
 
 Host note (recorded, not acted on): `nexus.service` does **not** exist on this box (`dept-dragon-tech`,
-`192.168.111.40/16`), and neither does `/srv` (so `AGENTS.md`'s `/srv/canon/README.md` reference is not
+`<HOST-LAN-IP>/16`), and neither does `/srv` (so `AGENTS.md`'s `/srv/canon/README.md` reference is not
 satisfiable here). The live-product verification legs of earlier runs were run against the Nexus host;
 the work this host can honestly do is the tree/docs/CI lane, which is what this run stayed in.
 
@@ -1709,7 +1709,7 @@ cosmetic `ci.yml` step (needs workflow-scoped token), and the `.nexus/` public p
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; all CI checks green
 (`py_compile`, `bash -n install.sh`, `tools/check_self_contained.py` rc=0, `tools/lint_lab_pack.py`,
 secret scan clean). `origin` token scopes unchanged — still **no `workflow` scope** (cosmetic `ci.yml`
-step stays Dad-gated) and no live host for Screenshots (this box is `192.168.111.40/16`). Both blocked
+step stays Dad-gated) and no live host for Screenshots (this box is `<HOST-LAN-IP>/16`). Both blocked
 items re-confirmed blocked.
 
 One in-scope honesty gap, measured and fixed without behaviour change. The `[0.1.0]` **Fixed** bullet
@@ -1744,7 +1744,7 @@ Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; C
 `tools/lint_lab_pack.py` cannot run **here** — this box has no PyYAML (`import yaml` → ModuleNotFoundError);
 that is a pre-existing local-env gap, not a regression (this run touched no code, and the lint runs in CI
 where deps install). `origin` token scopes unchanged — still **no `workflow` scope** (cosmetic `ci.yml`
-step stays Dad-gated) and no live host for Screenshots (this box is `192.168.111.40/16`). Both blocked
+step stays Dad-gated) and no live host for Screenshots (this box is `<HOST-LAN-IP>/16`). Both blocked
 items re-confirmed blocked.
 
 One in-scope honesty gap, measured and fixed without behaviour change. Two surfaces carried the same
@@ -1778,7 +1778,7 @@ Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run; C
 (`python3 -m py_compile backend/main.py` OK, `bash -n install.sh` OK, `tools/check_self_contained.py`
 rc=0 — "15 required files present, lab assets + graders resolve, no developer paths leak"). `origin`
 token scopes unchanged — still **no `workflow` scope** (cosmetic `ci.yml` step stays Dad-gated) and no
-live host for Screenshots (this box is `192.168.111.40/16`). Both blocked backlog items re-confirmed
+live host for Screenshots (this box is `<HOST-LAN-IP>/16`). Both blocked backlog items re-confirmed
 blocked.
 
 One in-scope honesty gap, measured and fixed without behaviour change. The prior (19:00) run swept the
@@ -1821,7 +1821,7 @@ Measured live before acting: `git status` clean, `HEAD...origin/main = 0 0`; CI 
 (`python3 -m py_compile backend/main.py` OK, `bash -n install.sh` OK, `tools/check_self_contained.py`
 rc=0 — "15 required files present, lab assets + graders resolve, no developer paths leak", CI's secret
 scan regex clean). `origin` token still has **no `workflow` scope** (cosmetic `ci.yml` step stays
-Dad-gated) and this box is `192.168.111.40/16` with no route to the live host (Screenshots stays
+Dad-gated) and this box is `<HOST-LAN-IP>/16` with no route to the live host (Screenshots stays
 blocked). Both blocked items re-confirmed blocked.
 
 Swept for a fresh honesty gap: orphan check found **0** (every `.md`/`.py`/`.sh` in the tree is named
@@ -2232,7 +2232,7 @@ pulled into the release, and whether a published security contact address should
 
 ## 2026-10-23 11:00 — `10-archive/tier-03-bgp-simplified.yml` binds configs that are not where it says
 
-One in-scope honesty item, measured then fixed without behaviour change (this box is 192.168.111.40/16;
+One in-scope honesty item, measured then fixed without behaviour change (this box is <HOST-LAN-IP>/16;
 no route to the live host, `nexus.service` is not a unit here — tree/docs lane only).
 
 **Measured before.** `git status` clean, HEAD==origin/main (0/0), CI green (`py_compile`,
@@ -2313,7 +2313,7 @@ Dad-gated: Screenshots, grading-coverage code fix, `v0.1.0` tag, `.nexus/` polic
 
 ## Run 2026-10-24 11:00 UTC — cross-reference sweep: clean, no fix manufactured
 
-Lane: tree/docs honesty (this box is 192.168.111.40/16; `nexus.service` is not a unit here). Measured
+Lane: tree/docs honesty (this box is <HOST-LAN-IP>/16; `nexus.service` is not a unit here). Measured
 before: `git status` clean, `HEAD...origin/main = 0 0`, `py_compile backend/main.py` OK, `bash -n
 install.sh` OK. (`lint_lab_pack` still UNAVAILABLE rc=2 — PyYAML absent, the 2026-10-21 `22a8d10`
 behaviour, not a regression; no linter result is cited below.)
@@ -2347,7 +2347,7 @@ DELETE-OR-KEEP `Dockerfile.frr-bgp` / `lab-definitions-quarantine-2026-09-30/` /
 `v0.1.0` tag re-cut, pulling `check_self_contained.py` into the release, and a published security
 contact address.
 
-2026-10-25 11:00 | README | In-scope honesty item, measured then fixed (docs only, no code/behaviour; tree at projects/aegis, this box is 192.168.111.40/16, nexus.service not a unit here). MEASURED before: git clean, HEAD==origin/main 0/0, py_compile backend/main.py OK, bash -n install.sh OK, check_self_contained rc=0 (16 required files). FOUND: README.md "Release status" claimed the v0.1.0 tag is behind main because "every commit since the tag is documentation or CI, with no change to how a lab runs". False of the tree: git rev-list --count v0.1.0..HEAD = 73, and git log v0.1.0..HEAD over backend/frontend/install.sh/lab-definitions/tools/scripts returns 11 commits, of which the behaviour-changing ones are 6bfb293 + b06751e (clab-reaper: reaped live learners' labs by age alone, then reaped nothing), 22a8d10 (lint_lab_pack false ERROR), 9c66cef (Demo 2 prerequisite pointed at a non-shipping id) and 0c86d13 (installer now copies/verifies per-lab assets) - i.e. the tag ships known-broken destructive tooling, and the sentence told an installer the opposite. This is the class the standing rule forbids: a self-citing reassurance ("see the CHANGELOG sweep") that no longer matches the tree. FIXED (README only): the bullet now states the tag is 73 behind as of 2026-10-25, names the four behaviour changes, and says plainly that installing from the tag gets the older behaviour - tag position still given as a command, not a number that can drift silently. Backup via scripts/safe-backup.sh (label archive-tagstate-truth-2026-10-25). CI re-run green. NOT COMPLETE - Dad's word alone. | proof=none (docs) | next=run: the v0.1.0 re-cut is now the top unblocked-but-Dad-gated item (73 commits, five behaviour fixes, tag is actively misleading) - do NOT cut it myself; without a word from Dad, next run re-verifies tree+CI and re-states the blocker rather than sweeping this README again. STILL BLOCKED ON DAD: v0.1.0 re-cut / GitHub Release, Screenshots (live host), cosmetic ci.yml step (workflow token), .nexus/ public-shipping policy, DELETE-OR-KEEP Dockerfile.frr-bgp / quarantine / 10-archive / three empty lab-definitions dirs, check_self_contained.py into the release, published security contact.
+2026-10-25 11:00 | README | In-scope honesty item, measured then fixed (docs only, no code/behaviour; tree at projects/aegis, this box is <HOST-LAN-IP>/16, nexus.service not a unit here). MEASURED before: git clean, HEAD==origin/main 0/0, py_compile backend/main.py OK, bash -n install.sh OK, check_self_contained rc=0 (16 required files). FOUND: README.md "Release status" claimed the v0.1.0 tag is behind main because "every commit since the tag is documentation or CI, with no change to how a lab runs". False of the tree: git rev-list --count v0.1.0..HEAD = 73, and git log v0.1.0..HEAD over backend/frontend/install.sh/lab-definitions/tools/scripts returns 11 commits, of which the behaviour-changing ones are 6bfb293 + b06751e (clab-reaper: reaped live learners' labs by age alone, then reaped nothing), 22a8d10 (lint_lab_pack false ERROR), 9c66cef (Demo 2 prerequisite pointed at a non-shipping id) and 0c86d13 (installer now copies/verifies per-lab assets) - i.e. the tag ships known-broken destructive tooling, and the sentence told an installer the opposite. This is the class the standing rule forbids: a self-citing reassurance ("see the CHANGELOG sweep") that no longer matches the tree. FIXED (README only): the bullet now states the tag is 73 behind as of 2026-10-25, names the four behaviour changes, and says plainly that installing from the tag gets the older behaviour - tag position still given as a command, not a number that can drift silently. Backup via scripts/safe-backup.sh (label archive-tagstate-truth-2026-10-25). CI re-run green. NOT COMPLETE - Dad's word alone. | proof=none (docs) | next=run: the v0.1.0 re-cut is now the top unblocked-but-Dad-gated item (73 commits, five behaviour fixes, tag is actively misleading) - do NOT cut it myself; without a word from Dad, next run re-verifies tree+CI and re-states the blocker rather than sweeping this README again. STILL BLOCKED ON DAD: v0.1.0 re-cut / GitHub Release, Screenshots (live host), cosmetic ci.yml step (workflow token), .nexus/ public-shipping policy, DELETE-OR-KEEP Dockerfile.frr-bgp / quarantine / 10-archive / three empty lab-definitions dirs, check_self_contained.py into the release, published security contact.
 
 2026-10-27 01:00 | REPO-METADATA | In-scope honesty item (tooling + README; no product behaviour): the claims on github.com that no file in the repo can contradict now have a record and a checker. Measured first: git clean, HEAD 0f65ce9 == origin/main, py_compile backend/main.py OK, bash -n install.sh OK, check_self_contained rc=0 (15 required files), secret scan clean; live API reads gave description + 9 topics + Apache-2.0, and the blob sha GitHub serves for README/CONTRIBUTING/docs GITHUB-PLAN/docs API == local HEAD:<path> sha for all four. ADDED: tools/check_repo_metadata.json (description, 9 topics each with a stated reason, license) and tools/check_repo_metadata.py (0/1/2 exit contract; every software topic backed by a named file, subject topics backed by README scope language, topics checked BOTH ways so a dropped topic fails as loudly as an invented one, description rejected if it names OSPF/BGP/EVPN/VPN without the static-only qualifier, says complete/finished/production-ready, or carries a rotting count, license must match LICENSE). VERIFIED 7 ways, not just the happy path: in place rc=0 (27 claims); invented topic rc=1; dropped topic rc=1; teaching-instead-of-education rc=1; description regrown to "Two labs, with OSPF and BGP, complete." rc=1 (4 problems); Dockerfile.frr stripped rc=1; LICENSE retitled rc=1; JSON removed rc=2; all restored, final rc=0. LIMIT recorded, not papered over: swapping the SR Linux image out of BOTH shipping labs still returns rc=0 because the srlinux evidence check greps the whole lab-definitions/ tree (quarantine + archive still carry the string) - the check proves an SR Linux topology exists in the tree, not that a shipping lab uses it; shipping-set integrity stays the labs table's job. README: new "Repository metadata" section with the run line, the three curl+jq live-value commands, the record-vs-live distinction, and the not-in-CI note (CI is still four checks). No backend/installer/topology/grader/CI change. NOT COMPLETE - Dad's word alone. | proof=none (tool diff + the seven runs above) | next=run: another in-scope honesty item; the only backlog boxes left are the two non-executable ones (DECISION(Dad) on shipping docs/GITHUB-PLAN.md, Screenshots blocked on real captures), so pick a fresh defect rather than re-sweeping this tool - candidates worth checking next: whether docs/API.md's 11-route table still matches backend/main.py after any route change, and whether the issue templates' claims about the substrate still match install.sh's pinned containerlab 0.75.0. STILL BLOCKED ON DAD: v0.1.0 re-cut / GitHub Release, Screenshots (live host), cosmetic ci.yml step (no workflow-scoped token), .nexus/ public-shipping policy, DELETE-OR-KEEP Dockerfile.frr-bgp / quarantine / 10-archive / three empty lab-definitions dirs, check_self_contained.py into the release, published security contact.
 

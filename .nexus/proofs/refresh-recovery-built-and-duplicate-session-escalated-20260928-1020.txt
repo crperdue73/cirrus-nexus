@@ -40,7 +40,7 @@ VERIFIED:
   GET /api/sessions now returns ttyd per session (8ffb7d88: pc-a/sw1/sw2 urls
     8765/8766/8767)
   Browser (same-origin driver served from frontend/, then removed):
-    reconnectSession('8ffb7d88') -> frames=3, urls=192.168.1.110:8765,8766,8767,
+    reconnectSession('8ffb7d88') -> frames=3, urls=<HOST-LAN-IP>:8765,8766,8767,
     activeShown=true, catalogHidden=true
   Post-reconnect journey through the SAME session's containers: pc-a 1.0,
     pc-b 1.0, sw1 1.0; stop 200 -> 0 containers, 0 ttyd

@@ -48,7 +48,7 @@ DEPLOY: session f16e2e71, 5/5 nodes Up:
   pc-a, sw1, r1, sw2, pc-b  (2x SR Linux + 3 linux/FRR).
 
 COLD: pc-a has no 10.x addr; traceroute 10.0.2.1 exits via mgmt
-      (172.20.20.1 -> 192.168.1.1) — no lab data path. FAILS as expected.
+      (172.20.20.1 -> <HOST-LAN-IP>) — no lab data path. FAILS as expected.
 
 APPLIED student config (from the lab yaml's expected commands):
   pc-a: 10.0.1.1/24 eth1, route 10.0.2.0/24 via 10.0.1.253

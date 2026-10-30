@@ -29,8 +29,8 @@ FIXED (reversible): hoisted host detection into `_detect_ttyd_host()` and used i
 
 VERIFIED LIVE:
   py_compile OK; service active; /api 200
-  live LAB-A (a9bfa4da): all 3 ttyd procs now bind `-i 192.168.1.110` (was 0.0.0.0)
-  student path intact: http://192.168.1.110:<port>/ -> 200; iframe LOADED ok
+  live LAB-A (a9bfa4da): all 3 ttyd procs now bind `-i <HOST-LAN-IP>` (was 0.0.0.0)
+  student path intact: http://<HOST-LAN-IP>:<port>/ -> 200; iframe LOADED ok
   exposure narrowed: http://172.17.0.1:<port>/ -> 000 (connection refused)
   grading unaffected: pc-b -> False 0.0 status graded
   stop 200 -> containers 0, ttyd 0

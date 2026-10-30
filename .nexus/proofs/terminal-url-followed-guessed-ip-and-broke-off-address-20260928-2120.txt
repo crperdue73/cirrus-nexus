@@ -6,22 +6,22 @@ the STUDENT's terminal path on LAB-A (the way the frontend actually opens a shel
 and found a demo-day footgun in the session API.
 
 THE DEFECT (found live):
-  The host has TWO real LAN addresses: 192.168.1.110 and 192.168.1.188.
+  The host has TWO real LAN addresses: <HOST-LAN-IP-A> and <HOST-LAN-IP-B>.
   _detect_ttyd_host() picks the FIRST 192.168.* from `hostname -I` (.110) and that
   single guess was (a) used as the ttyd BIND and (b) stored in the session as the
   terminal URL for every client forever. Two failures follow:
 
     1. WRONG HOST ADVERTISED. A browser that reached the frontend at .188 (or by
        hostname, or over a tunnel) was handed terminal URLs on .110.
-    2. REFUSED CONNECTION. ttyd was bound to 192.168.1.110 only (run-36 narrowed
+    2. REFUSED CONNECTION. ttyd was bound to <HOST-LAN-IP> only (run-36 narrowed
        it from 0.0.0.0), and the API listens on 0.0.0.0:8000. So the frontend
        LOADED at .188/localhost while every terminal URL was REFUSED.
 
 LIVE PROOF OF THE BUG (before the fix, addressed to the OTHER address):
-    GET /api/sessions  via 192.168.1.188  ->  ttyd urls all said
-    http://192.168.1.110:<port>   (.188 client handed .110 URLs)
+    GET /api/sessions  via <HOST-LAN-IP>  ->  ttyd urls all said
+    http://<HOST-LAN-IP>:<port>   (the .188-addressed client was handed .110-addressed URLs)
   Reachability on a running session:
-    http://192.168.1.110:8799 -> 200
+    http://<HOST-LAN-IP>:8799 -> 200
     http://127.0.0.1:8799     -> REFUSED
     http://localhost:8799     -> REFUSED
 
@@ -44,8 +44,8 @@ THE FIX (reversible, inside the 2 labs):
   invent an interface.)
 
 PROOF OF THE FIX (service restarted, one session started via .188):
-    start via 192.168.1.188 -> ttyd urls http://192.168.1.188:8765/8766/8767
-    GET /api/sessions via .110      -> http://192.168.1.110:8765
+    start via <HOST-LAN-IP> -> ttyd urls http://<HOST-LAN-IP>:8765/8766/8767
+    GET /api/sessions via .110      -> http://<HOST-LAN-IP>:8765
     GET /api/sessions via localhost -> http://localhost:8765
     reachability of the advertised url on all three: .188 -> 200, .110 -> 200,
     localhost -> 200

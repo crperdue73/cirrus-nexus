@@ -7,9 +7,9 @@ ttyd-URL fix was proven only on LAB-A's 3-node topology. Nobody had run a LAB-B
 session ENTIRELY over the off-address (.188) and carried it cold->warm->teardown.
 
 VERIFICATION 1 — RUN-50 FIX HOLDS ON LAB-B'S 5-NODE TOPOLOGY
-  start via 192.168.1.188 (query params, per the source): session bbda80f0, 5 nodes, 50s.
-  GET /api/sessions via .188 -> every ttyd url  http://192.168.1.188:<8768-8772>
-  GET /api/sessions via .110 -> every ttyd url  http://192.168.1.110:<8768-8772>
+  start via <HOST-LAN-IP> (query params, per the source): session bbda80f0, 5 nodes, 50s.
+  GET /api/sessions via .188 -> every ttyd url  http://<HOST-LAN-IP>:<8768-8772>
+  GET /api/sessions via .110 -> every ttyd url  http://<HOST-LAN-IP>:<8768-8772>
   Same session, same ports, host follows the REQUESTING address. Fix is not LAB-A-only.
   REACHABILITY (the claim that matters): :8768 answered 200 on .188, .110, localhost, 127.0.0.1.
 

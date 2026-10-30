@@ -35,7 +35,7 @@ TERMINALS ACTUALLY OPEN (the demo-critical bit)
      pc-a http://127.0.0.1:8827 -> 200
      pc-b http://127.0.0.1:8828 -> 200
      sw1  http://127.0.0.1:8829 -> 200
-  API advertises the host's real IP (192.168.1.110, confirmed on this box via
+  API advertises the host's real IP (<HOST-LAN-IP>, confirmed on this box via
   `ip addr`), so the URLs a student's browser gets are reachable.
   CORRECTNESS: for every node, ttyd[name].container == nodes[name] => a student
   lands on THEIR OWN node's terminal, not someone else's. Verified, not assumed.
