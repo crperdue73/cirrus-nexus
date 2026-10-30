@@ -23,18 +23,28 @@ The installer sets `User=aegis`, `WorkingDirectory=/opt/aegis`, and
 
 ```bash
 cd /opt/aegis
-python3 start_server.py          # serves on :8000
+python3 start_server.py          # serves on :8000 (AEGIS_HOST/AEGIS_PORT honoured)
 ```
 
-`start_server.py` runs `pkill -f "ttyd.*docker exec"` and `pkill -f "aegis.*main.py"` before starting
-`backend/main.py` in the foreground.
+What it does, in order:
 
-> ⚠️ **The second pattern also matches the running service.** The service process is
-> `/usr/bin/python3 .../aegis/backend/main.py`, which `aegis.*main.py` matches (verified live
-> 2026-09-28: `pgrep -f 'aegis.*main.py'` returns the service PID). Running this script on a host
-> where the service is already up **kills it** — and because the service is `Restart=on-failure`,
-> systemd may immediately start a *second* server, after which `:8000` is contested.
-> **Stop the service first:** `systemctl stop aegis` (or `nexus` on the pre-install layout).
+1. `pkill -f "ttyd.*docker exec"` — clears leftover terminals from previous runs.
+2. `pkill -f` on **this tree's own absolute backend path** — stops only a server started from the
+   same directory, never one installed at `/opt/aegis` from somewhere else.
+3. Starts `backend/main.py` in the foreground-logged background (log: `/tmp/aegis-server.log`), then
+   waits up to 15 s for `GET /api` — on `AEGIS_HOST`/`AEGIS_PORT` if you set them, else `127.0.0.1:8000`.
+   It also fails fast if the child **exits**, printing the real log instead of an empty one.
+
+> ⚠️ **If the systemd service is running, this script will not take over `:8000`.** It only kills a
+> server launched from its own directory, so on an installed host the service keeps the port, the new
+> process dies immediately, and the script now reports that failure (exit 1, with the log) instead of
+> reporting the old server's answer as success. **Stop the service first:** `systemctl stop aegis`
+> (or `nexus` on the pre-install layout).
+>
+> (Corrected 2026-10-30. This section previously said the kill pattern was `aegis.*main.py` and that
+> it therefore matched the service — that was true of a 2026-09-28 build. The pattern was narrowed
+> later the same week; the docs were not, so they described a hazard the tree no longer has and
+> omitted the one it does have.)
 
 `start_server.py` resolves `backend/` relative to its own location, so it works from any install
 directory.
