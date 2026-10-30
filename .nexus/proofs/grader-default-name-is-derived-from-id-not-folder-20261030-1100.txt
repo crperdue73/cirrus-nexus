@@ -1,0 +1,40 @@
+PROOF — docs/ADDING-A-LAB.md's grader-default claim was false by name (docs only, no code change)
+Run 2026-10-30 11:00 | tree projects/aegis | HEAD 7685ee8 == origin/main (0/0), tree clean at start
+
+MEASURED BEFORE
+  git rev-list --left-right --count HEAD...origin/main -> 0  0
+  python3 -m py_compile backend/main.py             -> OK
+  bash -n install.sh                                -> OK
+  tools/check_self_contained.py                     -> rc=0 (15 required, 2 doc assets)
+  tools/check_repo_metadata.py                      -> rc=0 (27 claims)
+
+THE DEFECT (claim vs code)
+  ADDING-A-LAB.md said: "`grader` defaults to `grader_<id>` when omitted".
+  backend/main.py:497 (read, live) sets grader_module = meta.get("grader", f"grader_{lab_id}")
+  and lab_id is metadata.id. Both shipping ids are sentences:
+    demo-01-two-pcs-and-a-real-switch-unsolved -> default grader_demo-01-two-pcs-and-a-real-switch-unsolved
+    demo-02-two-switches-one-router-unsolved   -> default grader_demo-02-two-switches-one-router-unsolved
+  _load_grader (main.py:751-793) resolves only <name>.py under LABS_DIR or backend/graders/.
+  Neither default file exists. So a lab that omits `grader:` gets NO grader and falls through to
+  _fallback_grade (main.py:1647-1650) -- an IP/ping check -- silently. The doc's "always ship it
+  explicitly" advice was right for the wrong reason: it read as house style, not as "the default is dead."
+
+STATIC REPLAY (no fastapi/yaml on this box, so the loader was replayed, not called)
+  both shipping YAMLs set grader: explicitly -> grader_demo_01_srl.py / grader_demo_02.py, both exist.
+  So the SHIPPING labs are unaffected. The defect is in the guidance an outside contributor follows.
+
+FIXED (docs/ADDING-A-LAB.md only)
+  - field note now names the true derivation (metadata.id, not folder/file), says the default "almost
+    never resolves", and names the silent fallback to the built-in IP/ping grade.
+  - tree listing marks the grader line "flat, NOT inside the lab folder".
+  - "After you edit a lab: reload" no longer implies the filename must match grader_* — it is convention,
+    not a loader rule (the loader takes whatever module name the YAML gives it).
+
+VERIFIED AFTER
+  check_self_contained rc=0 (15/2, unchanged); py_compile OK; bash -n install.sh OK; grep for
+  "defaults to `grader_<id>`" -> 0 hits.
+  NOT DONE / OUT OF SCOPE: the backend still silently falls back to _fallback_grade when a grader
+  module is missing -- changing that is a product-behaviour change and is not mine to make. Recorded
+  as a candidate for Dad, not fixed here.
+
+NOT COMPLETE — Dad's word alone.

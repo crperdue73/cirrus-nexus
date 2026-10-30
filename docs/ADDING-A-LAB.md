@@ -20,7 +20,7 @@ lab-definitions/
     demo-01-two-pcs-and-a-real-switch-unsolved.md    # student guide (optional)
     assets/
       sw1.cfg                                        # a startup-config the YAML names
-  grader_demo_01_srl.py                              # the grader
+  grader_demo_01_srl.py                              # the grader (flat, NOT inside the lab folder)
 ```
 
 - The loader scans `lab-definitions/*.yml` **and one level of subdirectories**
@@ -69,7 +69,11 @@ Field notes:
   whole service at import; it no longer does, but the lab is still refused.
 - **`gradeable_nodes`** is the set of nodes the UI offers a *Check* button for. It
   may name only nodes the topology defines.
-- **`grader`** defaults to `grader_<id>` when omitted — always ship it explicitly.
+- **`grader`** defaults to `grader_<id>` when omitted, where `<id>` is the lab's **`metadata.id`**
+  (e.g. `grader_demo-01-two-pcs-and-a-real-switch-unsolved`), *not* its folder or file name. Because a
+  shipping lab id is usually a sentence, the default almost never resolves — `_load_grader` looks for
+  `<name>.py` in `lab-definitions/` and `backend/graders/`, and a missing module silently falls back to
+  the built-in IP/ping grade. Both shipped labs set `grader:` explicitly, and so should you.
 - **`requires_daemons`** is enforced at deploy time against the substrate's own
   `/etc/frr/daemons`, so a lab can never be deployed onto a substrate that could
   only ever grade it red.
@@ -178,7 +182,8 @@ Both shipped graders wrap `grade` with a `_self_identifying` decorator that stam
 ## After you edit a lab: reload
 
 Lab definitions and graders are **cached in memory for the life of the process**.
-Editing a `.yml` or a `grader_*.py` does nothing until you reload:
+Editing a `.yml` or a grader module does nothing until you reload (a grader may be named
+anything — `grader_*.py` is the convention, not a loader rule):
 
 ```bash
 curl -X POST http://localhost:8000/api/labs/reload
