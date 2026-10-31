@@ -24,6 +24,43 @@ truth was "nobody looked." A refusal says so, in words that name the cause.
 
 ---
 
+## What `score` and `passed` actually mean here
+
+Read this before you interpret a number. The two fields are **not** the same claim, and
+only one of them is a pass condition.
+
+- **`passed` is the node's verdict, and it is all-or-nothing.** It is true only when every
+  check that node was asked succeeded — the shipped graders spell that out per node
+  (Demo 1: `passed = ok and reached == len(PING_TARGETS)` for `pc-a`; Demo 2:
+  `passed = ok and reached == len(targets)`). It is never derived from the score.
+- **`score` is a completion fraction, not a grade.** It is the share of that node's graded
+  checks that succeeded, in `[0, 1]`. Because `passed` does not depend on it, **a node can
+  carry a positive score and still fail**: Demo 1's `pc-a` scores `0.5` when its address is
+  correct and neither ping target answers. (Demo 1's `pc-b` is the sharpest case: it has one
+  check, so its wrong address scores `0.0` and its right address also *passes*.)
+- **The two shipped graders do not scale `score` the same way, and per-node credit is
+  uneven inside a lab.** Demo 1 gives `pc-a` `0.5` for its address plus `0.5` for its two
+  ping targets, but gives `pc-b` the full `1.0` for its single address check — a node with
+  one check can be worth more than a node with three. Demo 2 gives every node `0.5` for its
+  address plus `0.5` for its reachability targets, but *which* targets a node is asked about
+  differs by node: `pc-a` is asked for four (two local plus two across the router), `pc-b`
+  for one. The number is per-node, per-lab credit — do not compare it across nodes or across
+  labs, and do not treat it as a percentage of the exercise.
+- **The lab verdict does not read `score` at all.** A session becomes `submitted` only when
+  the grader's `grade_all()` returns `passed: true`, and both shipped `grade_all()`s are
+  built out of the per-node `passed` flags (`pc-a`/`pc-b`/`sw1` in Demo 1;
+  `pc-a`/`pc-b`/`sw1`/`sw2`/`r1` in Demo 2 — see the Coverage section below for the one lab
+  whose lab-level condition ignores a node it grades). A node at `score: 1.0` in one lab and
+  `score: 0.5` in another can be equally "done".
+- **A refusal or an error carries `score: 0.0`.** That zero is the absence of a
+  measurement, not a measurement of zero — the same reason `status` exists. Never read it as
+  "scored nothing".
+
+If you are writing a grader, the same rule applies from the other side: express the pass
+condition with `passed` and use `score` only as feedback about how far along the student is.
+
+---
+
 ## Per-node grade vs lab verdict
 
 - **`POST /api/sessions/{id}/submit?node=<node>`** grades **one node** and returns

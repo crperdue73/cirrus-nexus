@@ -1023,6 +1023,62 @@ unverifiable claims, no screenshots of a build that isn't here.
       numbers that actually trace to a shipped file (`lab-guides/lab-03-lock-it-down.md` — 100 pts,
       70 = pass) and labelled it curriculum context, not a shipped lab — 2026-10-11
 
+## Run 2026-10-31 13:00 UTC — the docs described `score` as a grade; it is a completion fraction
+
+Measured live before editing: `git status` clean, `HEAD == origin/main == 19ac351`. `python3
+ tools/check_self_contained.py` and `tools/check_repo_metadata.py` both rc=0 (27 claims). This run's
+item came from the grading-model backlog, and the honest finding was not a bug in the code but a
+misleading sentence in the docs.
+
+**What was wrong.** `docs/GRADING-MODEL.md` line 13 described a pass/fail result as "`score` in
+`[0, 1]`" and stopped. With only that, a reader infers a percentage of the exercise and probably
+infers that `passed` follows from it. Neither is true of the shipped graders:
+
+(1) **`passed` is never derived from `score`.** Demo 1: `passed = ok and reached ==
+ len(PING_TARGETS)` for `pc-a`; Demo 2: `passed = ok and reached == len(targets)`; the other
+ nodes use bare `ok`/`1.0 if ok else 0.0`. So Demo 1 `pc-a` with a correct address and no pings
+ scores `0.5` and fails — a positive score on a failed node, by design.
+(2) **The two labs weight the same number differently, and unevenly inside one lab.** Demo 1
+ `pc-a` = 0.5 address + 0.5 over 2 ping targets (`PING_TARGETS = ["10.0.1.254", "10.0.1.2"]`),
+ but `pc-b` = full 1.0 for its single address check. Demo 2 = 0.5 address + 0.5 over that node's
+ targets, and the target count varies by node: `pc-a` gets 4 (`PC_A_LOCAL_TARGETS` 2 + `END_TO_END`
+ 2), `pc-b` gets 1. Cross-node and cross-lab score comparison is therefore meaningless.
+(3) **A refusal or error carries `score: 0.0`** — absence of measurement, not a measurement of zero.
+ The three-outcome vocabulary already said this; the `score` field's own description did not.
+(4) **The README's status-code table's `200` row also read as if a `200` meant success.**
+ In this API a **failure** is a `200` with `passed: false`, and a grader **error** is a `200` with
+ `status: "error"`; only a refusal is non-`200`. Now stated in the row.
+
+**Changed (docs only — no grader or backend line touched, so no re-verification of runtime is implied):**
+- `docs/GRADING-MODEL.md` — new section *"What `score` and `passed` actually mean here"*: five rules,
+  each traced to the line in `lab-definitions/grader_demo_01_srl.py` /
+  `grader_demo_02.py` that implements it, plus the rule for grader authors (express pass conditions
+  with `passed`). It also points at the existing Coverage section for the one lab whose `grade_all()`
+  ignores a node it grades.
+- `README.md` — one paragraph at the grade payload ("`score` is not a grade"), a link to the new
+  section, the `200` row reworded, and the Documentation table row updated to advertise it.
+  Deliberately short: a README should warn a reader, not teach the accounting.
+- `docs/ADDING-A-LAB.md` — the `grade()` return schema's `score` comment now says "SHARE OF THIS
+  NODE'S CHECKS, not a grade; `passed` must not be derived from it".
+
+**Verified after editing:** `tools/check_self_contained.py` rc=0 (15 required files, 2 linked doc
+assets, graders resolve, no developer paths). The new anchor `#what-score-and-passed-actually-mean-here`
+matches the heading GitHub will generate from ``## What `score` and `passed` actually mean here``
+(backticks dropped, punctuation dropped, spaces → hyphens). Every claim in the new section was read
+back against the grader source in this tree; the two numbers I first assumed (Demo 2 `pc-a` at 0.5
+"with no reachability", Demo 1 `pc-b` as a `score: 0.5` example) were **wrong on first draft** and were
+corrected by re-reading `END_TO_END` / `PC_A_LOCAL_TARGETS` — recorded here because a doc that
+invents a plausible example is the same defect as an invented metric.
+
+**Not decided here:** whether `score` should be re-weighted to a consistent per-node scale. That is a
+product change to the graders with a real pass/fail consequence, not a polish item.
+
+**Still open:** screenshots (BLOCKED — no route to the host running AEGIS from here; `127.0.0.1:8000`
+and the LAN address both return `000`, `nexus.service` is not a unit on this box; not faked), and the
+`DECISION (Dad)` on whether this worklog ships publicly.
+
+---
+
 ## Run 2026-10-21 13:00 UTC — OPERATIONS had no "what a failed stop means" section
 
 Measured live: `git status` clean, `HEAD...origin/main = 0 0` before this run. The two long-standing

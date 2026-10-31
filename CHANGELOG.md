@@ -17,6 +17,14 @@ This window **removes files from the tree** (archived first, not discarded) and 
 behaviour, so it is not a patch release if it is released at all.
 
 ### Fixed
+- **`score` was documented as if it were a grade.** `docs/GRADING-MODEL.md` said a pass/fail result
+  carries "`score` in `[0, 1]`" and stopped there; nothing in the tree said what the number *is*. Read
+  against both shipped graders, it is the share of that node's checks that succeeded, `passed` is never
+  derived from it, and the two labs weight it differently (Demo 1: `pc-a` 0.5 address + 0.5 for two
+  pings, `pc-b` 1.0 for one; Demo 2: 0.5 + 0.5 for every node, with a different target count per node).
+  `docs/GRADING-MODEL.md` now has a "What `score` and `passed` actually mean here" section, the README
+  says it in one paragraph at the grade payload, and `docs/ADDING-A-LAB.md` warns grader authors not to
+  derive `passed` from `score`. No behaviour changed — this is a documentation correction.
 - **The SR Linux image size was overstated by ~3× in five places.** README, `docs/OPERATIONS.md`,
   `docs/SELF-CONTAINED.md`, `docs/architecture.md` and a comment in `install.sh` said
   `ghcr.io/nokia/srlinux:latest` is "~2.35 GB". Read from the ghcr.io manifest on 2026-10-31 it is a

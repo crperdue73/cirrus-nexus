@@ -134,7 +134,8 @@ Grades **one node**. `session` is the live session dict; `session["nodes"]` is t
 ```python
 {
     "passed": bool,
-    "score": float,           # 0.0 … 1.0
+    "score": float,           # 0.0 … 1.0 — SHARE OF THIS NODE'S CHECKS, not a grade;
+                              #   `passed` must not be derived from it (see GRADING-MODEL.md)
     "feedback": [str, ...],   # one line per check; shown to the student verbatim
     "competencies": [str, ...],
 }

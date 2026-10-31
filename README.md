@@ -298,12 +298,21 @@ auth) if that is not what you want.
 
 **Responses.** A grade returns `{session_id, node, grade}` where `grade` carries `passed`, `score`,
 `feedback`, `competencies`, the in-band `status` (`graded` / `error` / `refused`) and the
-`runtime_digest` it was taken against. A **refusal** is HTTP `409` with the reason in `detail` — the
-same three-outcome rule as the grading model above. Status codes, measured against this tree:
+`runtime_digest` it was taken against.
+
+One reading of that payload is easy to get wrong: **`score` is not a grade.** It is the share of
+that node's graded checks that succeeded, and `passed` does not depend on it — a correct address
+with no reachability scores `0.5` and still fails. A refusal or an error carries `score: 0.0`
+because nothing was measured, not because nothing was right. The field-by-field accounting,
+including how the two shipped graders weight their checks differently, is in
+[`docs/GRADING-MODEL.md`](docs/GRADING-MODEL.md#what-score-and-passed-actually-mean-here).
+
+A **refusal** is HTTP `409` with the reason in `detail` — the same three-outcome rule as the
+grading model above. Status codes, measured against this tree:
 
 | code | when |
 |------|------|
-| `200` | the request was answered truthfully |
+| `200` | the request was answered truthfully — a **failure** is a `200` with `passed: false`, and so is a grader **error** (`status: "error"`); only a *refusal* is a non-`200` |
 | `404` | an unknown lab, session, or **session record** — including `submit` on a session id that does not exist |
 | `409` | a **refusal**: the system could not make a truthful statement. Covers a node the *lab* does not have (the detail carries the node list), a node that is not running, a substrate that changed since start, and no grader module |
 | `422` | a required query parameter is missing (`lab_id` on `start`, `node` on `submit`). FastAPI's own validation, returned before any handler runs |
@@ -390,7 +399,7 @@ labs; it is not a finished product. What that means concretely:
 | [`docs/architecture.md`](docs/architecture.md) | components, diagrams, the lab lifecycle, the grading path, substrates, scope boundaries |
 | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) | stopping a session (what a failed stop means), bundle rebuild, runtime digests, concurrency, running without the service, substrate details, known drift |
 | [`docs/ADDING-A-LAB.md`](docs/ADDING-A-LAB.md) | what a lab is, the metadata schema, the load-time validation the loader refuses by name, the grader interface |
-| [`docs/GRADING-MODEL.md`](docs/GRADING-MODEL.md) | pass / fail / refused, per-node vs lab verdict, the digest gate, the refusal vocabulary |
+| [`docs/GRADING-MODEL.md`](docs/GRADING-MODEL.md) | pass / fail / refused, what `score` and `passed` actually mean, per-node vs lab verdict, the digest gate, the refusal vocabulary |
 | [`docs/SELF-CONTAINED.md`](docs/SELF-CONTAINED.md) | what "self-contained" means here, the CI check that enforces it, and exactly what a cold install pulls |
 | [`docs/RELEASE-NOTES-v0.2.0.md`](docs/RELEASE-NOTES-v0.2.0.md) | release notes for the current release, `v0.2.0` — **published** |
 | [`docs/RELEASE-NOTES-v0.1.0-draft.md`](docs/RELEASE-NOTES-v0.1.0-draft.md) | release notes for `v0.1.0` — **historical draft**; the tag exists, its GitHub Release was never published (see `v0.2.0`) |
