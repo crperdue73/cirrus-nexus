@@ -232,12 +232,15 @@ The UI is at `http://localhost:8000/`; the API at `http://localhost:8000/api`.
 
 A grade is a **verdict only when the node could actually be examined.** The grader returns one of:
 
-| outcome | meaning |
-|---------|---------|
-| **pass / fail** | the node was examined and the configuration met / didn't meet the lab's criteria |
-| **refused** | the system could not make a truthful statement (node down, substrate changed since start, no grader) — returned as HTTP `409`, **never** as a silent pass |
+| outcome | meaning | on the wire |
+|---------|---------|-------------|
+| **pass / fail** | the node was examined and the configuration met / didn't meet the lab's criteria | `200`, `passed` true/false |
+| **refused** | the system could not make a truthful statement (node down, substrate changed since start, no grader module) — **never** a silent pass | `409` |
+| **error** | the grader module itself raised — void, not a verdict on the student | `200`, `status: "error"` |
 
-The last case matters: a student should never be told "wrong" when the truth is "nobody looked."
+That last rule matters: a student should never be told "wrong" when the truth is "nobody looked."
+The full vocabulary, including what each refusal sentence says, is in
+[`docs/GRADING-MODEL.md`](docs/GRADING-MODEL.md).
 
 ---
 
