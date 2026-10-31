@@ -29,7 +29,7 @@ Only third-party images the two labs (`demo-01-two-pcs-and-a-real-switch-unsolve
 
 | image | why | size |
 |---|---|---|
-| `ghcr.io/nokia/srlinux:latest` | the real switch in both labs | ~2.35 GB |
+| `ghcr.io/nokia/srlinux:latest` | the real switch in both labs | ~0.75 GB compressed, single layer (measured from its registry manifest 2026-10-31) |
 | `alpine:latest` | the PCs | small |
 | `aegis/frr:latest` | the router in Demo 2 (`demo-02-two-switches-one-router-unsolved`) | **built locally** from `Dockerfile.frr` |
 

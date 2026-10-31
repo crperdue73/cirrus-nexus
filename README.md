@@ -100,14 +100,23 @@ The same shape in text, for terminals and diffs:
 
 ## Quick start
 
-**Prerequisites:** a clean Debian/Ubuntu host (a distro whose `apt` provides a `python3` of **3.10 or newer**
-— Ubuntu 24.04 does; 22.04 ships 3.10 as well, and 25.04+ ship newer), `sudo`, internet access (to pull the
-SR Linux image), and ~3 GB free disk. `install.sh` does not check the Python version it gets from `apt`;
-the four notes below explain what is pinned and what is not, and the last one derives the 3.10 floor.
+**Prerequisites:** a clean **Debian** host with `apt` (see the first note below for why that word is
+narrower than it sounds), a `python3` of **3.10 or newer** from that `apt` — Ubuntu 24.04 does; 22.04
+ships 3.10 as well, and 25.04+ ship newer — `sudo`, internet access (to pull the SR Linux image), and
+**at least 4 GB free disk** (the figure and how it was derived are in the last note below).
+`install.sh` does not check the Python version it gets from `apt`.
 **No image ships in the repo:** the router image (`aegis/frr:latest`) is built locally from
 `Dockerfile.frr`, and the switch image is pulled at install.
 
-Four things you should know before you start, because they are **not pinned or checked in this tree**:
+Five things you should know before you start, because they are **not pinned or checked in this tree**:
+
+- **A stock Ubuntu host will not get Docker from `install.sh`.** Step 2 adds only the **Debian**
+  repository (`https://download.docker.com/linux/debian`, suite chosen from `lsb_release -cs`), and only
+  when `docker` is not already on `PATH`. There is no `VERSION_ID`/`ID_LIKE` check and no fallback to
+  Ubuntu's own packages, so on a host without Docker where that repository has no suite matching the
+  release codename, `apt-get install` fails before any step that builds or pulls an image. Installing
+  Docker from your distribution (or from Docker's Ubuntu repository) before running `install.sh` is the
+  way around it. (Static reading of Step 2 — no cold install on an Ubuntu host was performed here.)
 
 - **The base images are tags, not digests.** `Dockerfile.frr` is `FROM alpine:latest`; both shipped
   topologies bind `ghcr.io/nokia/srlinux:latest` for the switches and `alpine:latest` for the PCs;
@@ -134,6 +143,21 @@ Four things you should know before you start, because they are **not pinned or c
   fastapi uvicorn pyyaml`, with a plain `pip3 install` fallback) — not `pip install -r requirements.txt`.
   The backend also imports `pydantic`, but only for two `BaseModel` subclasses (no validators, no
   `Field`), and it is not named in either file. Nothing here fixes *which* FastAPI you get.
+- **Disk: the "4 GB free" figure is derived, not measured by a working install.** The switch image
+  `ghcr.io/nokia/srlinux:latest` is a **single layer of 752,789,048 bytes (≈0.75 GB) compressed**, per
+  its registry manifest; `alpine:latest` is ≈4 MB, and `aegis/frr:latest` is a local build on top of it.
+  Demo 2 runs two switch nodes, and each container gets its own writable layer on top of that image, so
+  the image plus two containers plus Docker, the `ttyd` binary and the Python packages is on the order of
+  1.5–2 GB before anything else. The exact total depends on the Docker storage driver and on how much
+  you write inside the labs.
+
+  **This note used to say "~2.35 GB pull", and that number was wrong.** Measured against the registry
+  on 2026-10-31, the amd64 and arm64 manifests are 752.8 MB and 708.2 MB — there is no 2.35 GB the image
+  could be describing. 2.35 GB is close to **3×** the real figure, which is exactly what you get if a
+  single-layer pull is counted once per switch node (Demo 2 has two) rather than once for the image;
+  whether that is how the number was produced is unknown, and is not asserted here. The same stale
+  figure had been repeated in `docs/OPERATIONS.md`, `docs/SELF-CONTAINED.md`, `docs/architecture.md`
+  and a comment in `install.sh`; all four are corrected as of this date.
 - **The Python floor is 3.10, and nothing here enforces it.** The `python-3.10+` badge above states it;
   `install.sh` installs whatever `python3` `apt` gives the host and never checks the version. The floor
   comes from *runtime* behaviour, not grammar: `backend/main.py` does **not** start with
@@ -338,8 +362,10 @@ labs; it is not a finished product. What that means concretely:
   including `start`, `stop`, and `/docs` — is unauthenticated. That is deliberate for a classroom's
   own network and is **not** safe exposed to the internet. The in-browser terminals (ttyd, ports
   `8765`–`9765`) are similarly open, which is why those ports ship bound to all interfaces too.
-- **The SR Linux image is a ~2.35 GB pull**; each switch node runs a full instance of it. Keep to
-  **one session per student per lab**; use *Reconnect* for a returning student rather than Start.
+- **The SR Linux image is a ~0.75 GB compressed pull that expands to roughly that much uncompressed**
+  (see the *Disk* note under Quick start for the digest and the measurement method); each switch node
+  runs a full instance of it. Keep to **one session per student per lab**; use *Reconnect* for a
+  returning student rather than Start.
 - **Architecture is not tested beyond x86-64.** The topologies request
   `ghcr.io/nokia/srlinux:latest` with no `--platform` override and `install.sh` never checks
   `uname -m` for the labs (it reads it only to choose a prebuilt `ttyd` binary). x86-64 is what this

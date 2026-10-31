@@ -17,6 +17,16 @@ This window **removes files from the tree** (archived first, not discarded) and 
 behaviour, so it is not a patch release if it is released at all.
 
 ### Fixed
+- **The SR Linux image size was overstated by ~3× in five places.** README, `docs/OPERATIONS.md`,
+  `docs/SELF-CONTAINED.md`, `docs/architecture.md` and a comment in `install.sh` said
+  `ghcr.io/nokia/srlinux:latest` is "~2.35 GB". Read from the ghcr.io manifest on 2026-10-31 it is a
+  **single layer of 752,789,048 B** on amd64 (708,235,673 B on arm64) — ≈0.75 GB compressed. The README's
+  free-disk prerequisite (also unsourced at "~3 GB") is now stated as a derived floor, **4 GB**, with the
+  arithmetic shown and labelled as derived, not as a measured install.
+- **README said "a clean Debian/Ubuntu host" while `install.sh` Step 2 configures only Docker's Debian
+  repository.** There is no `VERSION_ID`/`ID_LIKE` check and no distro-package fallback, so a stock Ubuntu
+  host with no Docker already installed can fail at that step. The prerequisite now says Debian and the
+  Ubuntu caveat is stated with the reason (static reading of Step 2; no cold Ubuntu install performed).
 - **`start_server.py` measured the wrong server and reported the result as fact.** Readiness probed a
   hardcoded `http://localhost:8000/api` while the backend honours `AEGIS_HOST`/`AEGIS_PORT`, so a
   server on any other port read as "failed to start" while it was up, and a foreign server on 8000 read

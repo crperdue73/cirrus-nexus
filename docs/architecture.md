@@ -145,7 +145,7 @@ surface is listed in the [README](../README.md#api).
 |---|---|---|
 | `alpine:latest` | the PCs | ❌ pulled at deploy time (small) |
 | `aegis/frr:latest` | the router in Demo 2 | ❌ built locally by `install.sh` from `Dockerfile.frr` (no image tarball ships in this tree; the pin's `aegis-frr-image.tar.gz` is absent) |
-| `ghcr.io/nokia/srlinux:latest` | the REAL switches | ❌ pulled at deploy time — **~2.35 GB** |
+| `ghcr.io/nokia/srlinux:latest` | the REAL switches | ❌ pulled at deploy time — **~0.75 GB**, single layer |
 
 `install.sh` pre-pulls the two registry images before creating the service, so a blocked
 registry fails early instead of at first deploy.

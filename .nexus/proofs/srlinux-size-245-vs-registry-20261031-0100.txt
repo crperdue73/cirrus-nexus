@@ -1,0 +1,23 @@
+# Proof: the "~2.35 GB" SR Linux image figure vs its actual registry manifest
+# Run: 2026-10-31 01:00 UTC, on dept-dragon-tech. No Docker daemon used; this is a registry read.
+#
+# 1. Anonymous token for ghcr.io, then the manifest list for :latest
+#    (token printed nothing; only the JSON was kept)
+#      curl -s "https://ghcr.io/token?scope=repository:nokia/srlinux:pull"
+# 2. Resolve the per-arch manifest digests from the manifest list:
+#      amd64 sha256:38177562d8218899acd01ed2ca2356a2628ca2b7ab86ca9dc638b7c0725ef9e7
+#      arm64 sha256:43b3579df34ced58c722028b7287b0108ead1310d460d70eb4734d4293c7cd7f
+# 3. Read each arch manifest and sum layers:
+#      amd64: 1 layer, 752789048 B  (752.8 MB)
+#      arm64: 1 layer, 708235673 B  (708.2 MB)
+#
+# Result recorded in the tree (2026-10-31):
+#   README.md              5th Quick-start note + Known limitations bullet -> ~0.75 GB compressed
+#   docs/OPERATIONS.md     2 spots (image table, session-cap paragraph)
+#   docs/SELF-CONTAINED.md image table
+#   docs/architecture.md   image table
+#   install.sh             Step 7c comment + IMG_NOTE (the operator-visible string)
+#
+# LIMIT: manifest bytes are COMPRESSED layer size. This does NOT measure on-disk size after a pull
+# or the extra writable layers containerlab gives each node. That is why the README's disk floor is
+# labelled "derived", not "measured", and why no exact installed-size number is claimed anywhere.

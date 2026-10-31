@@ -471,22 +471,25 @@ fi
 # --- Step 8: Systemd Service (optional) --------------------------------------
 # --- Step 7c: Pre-pull the node images the two labs need --------------------
 # The bundle ships the FRR substrate, but NOT the SR Linux switch image or the
-# alpine host image: those are fetched from a registry at deploy time. Measured
-# 2026-10-01: ghcr.io/nokia/srlinux:latest is ~2.35 GB. Pulling them HERE means a
+# alpine host image: those are fetched from a registry at deploy time. Pulling them HERE means a
 # blocked registry or a slow link fails EARLY and says so, instead of surfacing as
 # a cryptic containerlab error part-way through a deploy.
+# SIZE, for operators reading this comment: ~0.75 GB compressed, single layer, measured from the
+# ghcr.io manifest on 2026-10-31 (amd64 752,789,048 B; arm64 708,235,673 B). This comment said
+# "~2.35 GB" from 2026-10-01 until 2026-10-31 -- a figure no registry read supports, carried here
+# for a month and copied into README, OPERATIONS.md, SELF-CONTAINED.md and architecture.md.
 log "Step 7c: Pre-pulling lab node images (the switch image is large)..."
 FAILED_IMAGES=""
 for IMG in ghcr.io/nokia/srlinux:latest alpine:latest; do
     if docker image inspect "${IMG}" &>/dev/null; then
         log "  ${IMG} — already present"
     else
-        # Say the size of THIS image. The first version of this line claimed "SR Linux is
-        # ~2.35 GB" for EVERY image in the loop -- so an operator pulling alpine (~8 MB)
-        # was told it was 2.35 GB. Found 2026-10-04 (run 184) by executing this very block
+        # Say the size of THIS image. Before 2026-10-31 this branch announced the switch
+        # image's size for EVERY image in the loop -- so an operator pulling alpine (~4 MB)
+        # was told that size. Found 2026-10-04 (run 184) by executing this very block
         # against a substituted image list in a throwaway harness.
         case "${IMG}" in
-            *srlinux*) IMG_NOTE="~2.35 GB — this can take several minutes" ;;
+            *srlinux*) IMG_NOTE="~0.75 GB compressed — this can take a few minutes" ;;
             *)         IMG_NOTE="a small image" ;;
         esac
         log "  pulling ${IMG} (${IMG_NOTE})"

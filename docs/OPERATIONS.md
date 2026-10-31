@@ -120,7 +120,7 @@ The two shipped labs need three node images. **None ships as a tarball in this t
 | image | who needs it | shipped? |
 |---|---|---|
 | `aegis/frr:latest` | the router in Demo 2 (`demo-02-two-switches-one-router-unsolved`) | ❌ built locally by `install.sh` from `Dockerfile.frr` — the pin's tarball (`aegis-frr-image.tar.gz`) is *not* in this tree |
-| `ghcr.io/nokia/srlinux:latest` | the REAL switch in both labs | ❌ pulled at deploy time — **~2.35 GB** |
+| `ghcr.io/nokia/srlinux:latest` | the REAL switch in both labs | ❌ pulled at deploy time — **~0.75 GB**, single layer |
 | `alpine:latest` | the PCs | ❌ pulled at deploy time (small) |
 
 `install.sh` (Step 7c) pre-pulls the two registry images **before** creating the service, so a blocked
@@ -183,7 +183,7 @@ and each grade reading its own session's containers). No policy refuses a duplic
 avoids them by accident rather than by rule.
 
 **What this costs:** every session consumes its lab's full container set (Demo 1 = 3 nodes, Demo 2 = 5), and each
-switch is a ~2.35 GB image. Nothing caps it — treat "one session per student per lab" as the
+switch is a ~0.75 GB image. Nothing caps it — treat "one session per student per lab" as the
 operational convention.
 
 ---
