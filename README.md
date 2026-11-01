@@ -189,7 +189,7 @@ runner is. No Ubuntu version is pinned in `install.sh` either — it installs wh
 **CI does not test the floor, either.** Because `"3.x"` resolves to the newest release, CI has never
 run the `py_compile` check on 3.10 — the version this README calls the minimum. What the job actually
 proves is that the file compiles under whatever 3.x was newest on that run, nothing about 3.10 or 3.11. A regression
-that broke a 3.10 host while staying fine on the newest interpreter would pass all six checks. The
+that broke a 3.10 host while staying fine on the newest interpreter would pass all four CI checks. The
 fix is a matrix (`3.10` alongside `3.x`) **written and ready to land but not yet pushed**: the
 maintainer's automation token can write any other file in this repo and is refused on workflow paths,
 so the change needs someone with `workflow` scope to apply it (see
@@ -408,8 +408,8 @@ labs; it is not a finished product. What that means concretely:
 | [`docs/RELEASE-NOTES-v0.1.0-draft.md`](docs/RELEASE-NOTES-v0.1.0-draft.md) | release notes for `v0.1.0` — **historical draft**; the tag exists, its GitHub Release was never published (see `v0.2.0`) |
 | [`CONFERENCE.md`](CONFERENCE.md) | booth-operator cheat sheet (install, ports, troubleshooting, reset) — **draft / not maintained**; install & lab-catalog sections corrected to this tree |
 | [`HANDOFF-2026-09-22.md`](HANDOFF-2026-09-22.md) | dated handoff note from a 2026-09-22 demo drive — **historical / not maintained**; counts and lab names in it describe a wider tree than this release (see the banner in the file) |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | the ground rules, and the checks to run before pushing (the same six CI runs) |
-| [`SECURITY.md`](SECURITY.md) | how to report a vulnerability privately, the threat model (unauthenticated by design), what's in scope, and the automated checks that exist (six, and no more) |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | the ground rules, and the checks to run before pushing (the four CI runs, plus two local claim checks not yet in the workflow) |
+| [`SECURITY.md`](SECURITY.md) | how to report a vulnerability privately, the threat model (unauthenticated by design), what's in scope, and the automated checks that exist (four in CI, two by hand, and no more) |
 | [`CHANGELOG.md`](CHANGELOG.md) | what changed, newest first |
 | [`10-archive/topology-audit-2026-06-09.md`](10-archive/topology-audit-2026-06-09.md) | dated 2026-06-09 topology audit — **historical**, describes a pre-release layout (see `docs/OPERATIONS.md` → Archive). Renamed from `SUMMARY-for-Dad.md` on 2026-10-30 |
 | [`lab-guides/lab-03-lock-it-down.md`](lab-guides/lab-03-lock-it-down.md) | a single student guide for `lab-03-lock-it-down` — **historical / not a shipping lab** (the only file in `lab-guides/`; its lab definition is quarantined); cited by `docs/OPERATIONS.md` as the in-tree source for the capstone's point numbers |
@@ -476,11 +476,12 @@ curl -s -H 'Accept: application/vnd.github+json' \
 curl -s https://api.github.com/repos/crperdue73/cirrus-nexus | jq -r '.license.spdx_id'
 ```
 
-Change a claim in the tree and change the JSON in the same commit. Like
-`tools/check_self_contained.py`, this tool runs in CI since 2026-11-01, so a record that stops matching
-the tree fails the build instead of sitting on a page nobody re-reads. Step 4 of the same job,
-`tools/check_prerequisites.py`, does the matching thing for the README's own Prerequisites block — see
-[`CONTRIBUTING.md`](CONTRIBUTING.md#before-you-push).
+Change a claim in the tree and change the JSON in the same commit. Unlike
+`tools/check_self_contained.py`, this tool is **not** yet a CI step: the one-file diff that adds it (and
+`tools/check_prerequisites.py`, which does the matching thing for this README's Prerequisites block) is
+written and verified, but this repo's automation token is refused on workflow paths, so it needs a human
+with `workflow` scope. Until then it is a manual re-check for whoever touches the repo's front page —
+run it with the command above.
 
 ---
 
