@@ -1,0 +1,43 @@
+API.md claim audit — 2026-11-01T01:02:32Z — dept-dragon-tech
+tree: e312606 main
+
+1) /api version string vs API.md:78 and openapi info.version
+  route /api -> {'service': 'NEXUS', 'version': '0.3.0', 'labs_count': 2}
+  openapi info.version -> 0.3.0
+  (no version field in requirements.txt)
+
+2) import side effects on GET-free import (startup events run under TestClient)
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+    print('  @app.on_event startup count ->', len([[h for h in r.startup for _ in [0]] for r in main.app.router.on_startup]) if main.app.router.on_startup else 0)
+                                                               ^^^^^^^^^
+AttributeError: 'function' object has no attribute 'startup'
+
+3) start with no docker on host (digest unresolvable path)
+  from starlette.testclient import TestClient as TestClient  # noqa
+Traceback (most recent call last):
+  File "/home/selina/.openclaw/workspace-selina/projects/aegis/backend/main.py", line 1856, in start_lab
+    containers = deploy_lab(lab, session_id)
+  File "/home/selina/.openclaw/workspace-selina/projects/aegis/backend/main.py", line 1329, in deploy_lab
+    result = subprocess.run(
+        ["containerlab", "deploy", "-t", str(clean_path), "--reconfigure"],
+        capture_output=True, text=True, timeout=60
+    )
+  File "/usr/lib/python3.13/subprocess.py", line 554, in run
+    with Popen(*popenargs, **kwargs) as process:
+         ~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 1039, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        pass_fds, cwd, env,
+                        ^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+                        gid, gids, uid, umask,
+                        ^^^^^^^^^^^^^^^^^^^^^^
+                        start_new_session, process_group)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 1972, in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+FileNotFoundError: [Errno 2] No such file or directory: 'containerlab'
+  HTTP 500 | detail: [Errno 2] No such file or directory: 'containerlab'
+  SESSIONS after failed start -> {}
