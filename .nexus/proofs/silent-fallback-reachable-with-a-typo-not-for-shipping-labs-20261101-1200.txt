@@ -1,0 +1,34 @@
+Can a missing/unresolvable grader: module be detected at load time, or does it silently fall back?
+2026-11-01T12:00Z — dept-dragon-tech — tree e312606 main (HEAD==origin/main 0/0)
+
+QUESTION (from run 2026-10-30 11:00 next=): a lab whose `grader:` does not resolve — can it be
+labelled at load time, or does it silently get _fallback_grade?
+
+MEASURED (not replayed, actually called): installed a throwaway venv (/tmp/apivenv: pyyaml,
+fastapi, uvicorn, httpx) so backend/main.py could be IMPORTED as the service imports it, then called
+the tree's own functions unchanged.
+
+A) _discover_labs() + _load_grader() for the SHIPPING tree:
+   demo-01-two-pcs-and-a-real-switch-unsolved  grader_module='grader_demo_01_srl' -> grader_demo_01_srl
+   demo-02-two-switches-one-router-unsolved    grader_module='grader_demo_02'     -> grader_demo_02
+   _GRADER_CACHE = ['grader_demo_01_srl', 'grader_demo_02']
+   -> Both shipping labs resolve their real grader modules. Confirms (independently of any README
+      prose) that the shipped labs do NOT grade on the fallback path. This CORRECTS the closing
+      claim of the 2026-10-31 19:00 entry ("neither shipped lab is graded by its SR Linux grader")
+      to the extent it implies "the shipped labs grade on IP/ping only": Demo 2's grader module
+      loads. What that entry proved — that no shipped lab's grade passes the aegis/frr DIGEST GATE —
+      still stands and is a separate claim (the gate is a pre-grader check; the module load is not).
+
+B) Is the silent fallback reachable? Yes — it is exactly the code path main.py:1647-1650 takes when
+   _load_grader returns None, and _load_grader returns None (never raises) for: a missing .py, a
+   module name that is a sentence (the derived default `grader_<metadata.id>`), a module that
+   escapes LABS_DIR/backend/graders (logged REFUSED, then skipped -> None), or a module whose
+   import raises (the except in the containment block `continue`s). There is NO record on the lab
+   object or in /api/labs of whether the grader resolved: metadata carries grader_module as a
+   string only.
+
+CONCLUSION: no behaviour changed; nothing fixed tonight (a label/refusal is a product change and is
+Dad's call). Shipping labs are unaffected. The finding is: resolution is never verified until a
+student submits, and the only signal then is a fallback pass/fail that looks like a normal verdict.
+
+NOT COMPLETE — Dad's word alone.
