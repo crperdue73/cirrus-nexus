@@ -1,0 +1,17 @@
+PREREQ CHECK — five-state proof, 2026-11-01 14:00 UTC
+tool: tools/check_prerequisites.py (36 claims)
+
+== A: pristine /tmp copy ==
+rc=0, 36 claims OK
+== B: python3 --version injected into install.sh ==
+rc=1 — names 'install.sh now has a Python version check'
+== C: topology image pinned @sha256: ==
+rc=1 — names the tag-set AND the digest claim
+== D: git removed from Step 1 ==
+rc=1 — names git
+== E: requirements.txt moved away ==
+rc=2 — UNAVAILABLE, not a false pass
+
+== CI push (workflow scope) ==
+git push origin main -> refused: workflow scope required (2026-11-01)
+=> ci.yml diff NOT shipped; README/CONTRIBUTING/SECURITY corrected to 'four in CI + two local-only'.

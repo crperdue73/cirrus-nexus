@@ -1,0 +1,79 @@
+SELF-CONTAINED DOC vs TOOL — measured 2026-11-01 20:00 UTC
+tree: projects/aegis @ 7aab791 (HEAD == origin/main 0/0 at start; working tree had the
+      unshipped ci.yml diff from the 14:00 run + its proof file, both left untouched)
+
+== BASELINE BEFORE ==
+py_compile backend/main.py        rc=0
+bash -n install.sh                rc=0
+check_self_contained.py           rc=0  (15 required + 2 doc assets)   [old wording]
+check_prerequisites.py            rc=0  (36 claims)
+check_repo_metadata.py            rc=0  (27 claims)
+
+== FINDING 1 (false claim): "fails if a required file ... is missing" — LICENSE was not install-required ==
+docs/SELF-CONTAINED.md listed "installer, backend, frontend, lab definitions, graders, pin" as
+"required". LICENSE was in REQUIRED under a comment reading "Files/dirs the installer and the
+running product require", but install.sh never copies it:
+    grep -n 'LICENSE' install.sh -> 0 hits
+    Step 6 (install.sh:170-186) copies backend/ frontend/ lab-definitions/ Dockerfile.frr
+    README.md, start_server.py, then assets/ (:193-200) and per-lab assets/ (:211-224).
+So a clone missing LICENSE fails the check with a message that says "required file" — an install
+blocker it cannot cause. Second occurrence of the class fixed 2026-10-26 (the architecture PNG).
+
+== FINDING 2 (false claim): the guard's own docstring claimed coverage it does not have ==
+tool docstring, PATH_ALLOWLIST comment: "This is the guard for the rule: a clone of this repo on a
+clean host must contain everything the product needs. If something is missing here, an install from
+GitHub will fail."
+Measured: PATH_PATTERN is /(home|Users)/<user>/.openclaw only, NOT /.ai. This tree contains no
+/.ai paths in shipped source (grep -rIlE '/(home|Users)/[A-Za-z0-9._-]+/\.ai' -> only .nexus/ and
+logs/, both legitimately excluded), so the pattern is currently correct — but the docstring's claim
+that a clean-host install fails on ANY missing thing is the same over-claim as Finding 1.
+
+== FINDING 3 (unmeasured branch presented as covered): pinned-tarball restore ==
+install.sh:344-431 loads assets/frr-image.pin's tarball when one ships. Measured the pin file:
+    line 61  tarball=
+    line 63  layers_sha256=UNPINNED
+    line 65  built=UNPINNED
+    git ls-files assets/ -> assets/frr-image.pin ONLY
+So no tarball ships, the `-f "${PIN_TARBALL}"` test is always false, and a cold host ALWAYS takes the
+build-from-source path (install.sh:433-440). The load-and-verify branch is exercised by no check and
+by no recent install. The doc said only "built from source when no pinned tarball is shipped" — true,
+but silent about the branch being permanently unreachable, which reads as "there is a verified
+tarball path available if you want it". There is not.
+
+== FINDING 4 (incomplete list): a check the doc did not mention ==
+tool compiles every lab-definitions/grader_*.py (py_compile, doraise) and reports
+"does not compile -> ...". The doc's "It fails if:" list had three bullets and omitted this one.
+
+== FIXED ==
+tools/check_self_contained.py
+  - REQUIRED -> 14 entries, restricted to what install.sh actually carries; comment now states the
+    membership test ("does the installer carry it") and records the 2026-11-01 measurement.
+  - LICENSE moved to new NOT_COPIED list, message "missing repo-only file (not carried by
+    install.sh)", so licensing and install-completeness never share one number again.
+  - success line reports all three counts separately.
+docs/SELF-CONTAINED.md
+  - "How that is enforced" rewritten to match the tool bullet-for-bullet (incl. the grader-compile
+    check and the LICENSE split).
+  - the two blind spots named explicitly: a file deleted before commit, and an untracked file on the
+    machine that ran the check (the 2026-10-24 assets/ incident, given as the real instance).
+  - the unreachable pinned-tarball branch recorded as unexercised, in the doc rather than hidden.
+  - image table: alpine:latest also named as Dockerfile.frr's base (Dockerfile.frr:5 `FROM
+    alpine:latest`); the FRR paragraph now states the pin ships tarball= empty + UNPINNED.
+
+== VERIFIED — five states, /tmp/scproof (git ls-files export, not the live tree) ==
+A pristine                          -> rc=0  "14 required install files present, 1 repo-only file(s), 2 linked doc asset(s)"
+B LICENSE removed                   -> rc=1  names LICENSE under "missing repo-only file (not carried by install.sh)"
+C README.md removed                 -> rc=1  "missing required install file: README.md"
+D grader_demo_02.py syntax broken   -> rc=1  "does not compile -> ... line 395"
+E restored                          -> rc=0
+(B is the point: before this change, B and C were the same message.)
+
+== BASELINE AFTER (live tree) ==
+py_compile rc=0 | bash -n rc=0 | check_self_contained rc=0 (14 install + 1 repo-only + 2 doc assets)
+check_prerequisites rc=0 (36 claims) | check_repo_metadata rc=0 (27 claims)
+
+== LIMITS OF THIS RUN ==
+No cold `sudo ./install.sh` was run — this box has no Docker daemon and no root for that; the tool
+and doc both say so. Nothing in backend/, install.sh, lab-definitions/, graders, or CI changed.
+The ci.yml diff (adding the two claim checkers to CI) is STILL unshipped: `git push` is refused for
+`workflow` scope on this token. Do not retry it here.

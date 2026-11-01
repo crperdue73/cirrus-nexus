@@ -18,13 +18,23 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# Files/dirs the installer and the running product require.
+# Files/dirs the INSTALLER AND THE RUNNING PRODUCT require: everything a clean host
+# needs for `install.sh` to succeed and for the installed service to serve a lab.
+#
+# What belongs here is measured against install.sh's copy block (Step 6, plus the
+# explicit start_server.py / per-lab-assets copies), not assumed. Checked 2026-11-01:
+# install.sh copies backend/, frontend/, lab-definitions/, Dockerfile.frr, README.md,
+# start_server.py, assets/ and each lab's assets/ into /opt/aegis. It does NOT copy
+# LICENSE -- which is why the license lives under the NOT-COPIED list below. The test
+# for membership is "does the installer carry it", so a file the repository must have
+# for other reasons (licensing, reader links) is a different claim and gets a
+# different list; lumping them together reports one number for two claims, which is
+# the exact over-claim this split exists to prevent.
 REQUIRED = [
     "install.sh",
     "start_server.py",
     "Dockerfile.frr",
     "README.md",
-    "LICENSE",
     "backend/main.py",
     "frontend/index.html",
     "assets/frr-image.pin",
@@ -35,6 +45,13 @@ REQUIRED = [
     "lab-definitions/srl-demo2-unsolved/demo-02-two-switches-one-router-unsolved.yml",
     "lab-definitions/srl-demo2-unsolved/assets/sw1.cfg",
     "lab-definitions/srl-demo2-unsolved/assets/sw2.cfg",
+]
+
+# Files the REPOSITORY must contain for claims made outside the install path. A
+# missing LICENSE is a licensing/jurisdiction problem, not an install failure: the
+# service still starts. Reported separately, and worded as such.
+NOT_COPIED = [
+    "LICENSE",
 ]
 
 # Files README.md / docs/ link to that must exist in the repo (docs-only; see main()).
@@ -59,7 +76,11 @@ def main() -> int:
 
     for rel in REQUIRED:
         if not (ROOT / rel).exists():
-            problems.append(f"missing required file: {rel}")
+            problems.append(f"missing required install file: {rel}")
+
+    for rel in NOT_COPIED:
+        if not (ROOT / rel).exists():
+            problems.append(f"missing repo-only file (not carried by install.sh): {rel}")
 
     # REQUIRED above is the INSTALL set: things install.sh must carry to /opt/aegis for a
     # cold host to serve a lab. Repo-only docs (e.g. docs/assets/architecture-components.png,
@@ -107,7 +128,8 @@ def main() -> int:
     if problems:
         print("repo is NOT self-contained:\n  " + "\n  ".join(problems))
         return 1
-    print(f"self-contained OK: {len(REQUIRED)} required files present, "
+    print(f"self-contained OK: {len(REQUIRED)} required install files present, "
+          f"{len(NOT_COPIED)} repo-only file(s), "
           f"{len(DOCS_READER_FACING)} linked doc asset(s) present, "
           f"lab assets + graders resolve, no developer paths leak.")
     return 0
