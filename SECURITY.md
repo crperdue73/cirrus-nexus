@@ -57,11 +57,12 @@ Problems that break the design above rather than restating it. Examples:
 
 ## What this project checks today
 
-CI (`.github/workflows/ci.yml`) runs four checks on every push and pull request: the backend
+CI (`.github/workflows/ci.yml`) runs six checks on every push and pull request: the backend
 byte-compiles, `install.sh` is valid shell, the tree is self-contained (a bare clone is installable,
-every shipped grader byte-compiles, no absolute developer paths), and a grep for obvious committed
-secrets. That is the whole automated surface — there is **no dependency scanning, no SAST, and no
-fuzzing**. Don't assume those exist.
+every shipped grader byte-compiles, no absolute developer paths), the README's Prerequisites still match
+what `install.sh` does, the published repository metadata still matches the tree, and a grep for obvious
+committed secrets. That is the whole automated surface — there is **no dependency scanning, no SAST, and
+no fuzzing**. Don't assume those exist.
 
 ## Supported versions
 

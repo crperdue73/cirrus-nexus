@@ -10,14 +10,27 @@ write the claim.
 
 ## Before you push
 
-Run the same checks CI runs (`.github/workflows/ci.yml` — all four):
+Run the same checks CI runs (`.github/workflows/ci.yml` — all six):
 
 ```bash
 python3 -m py_compile backend/main.py     # 1. backend compiles
 bash -n install.sh                        # 2. installer is valid shell
 python3 tools/check_self_contained.py     # 3. a bare clone is installable
-# 4. no obvious secrets committed — CI greps the tree for token/key patterns
+python3 tools/check_prerequisites.py      # 4. README's Prerequisites still match install.sh
+python3 tools/check_repo_metadata.py      # 5. the published repo metadata still matches the tree
+# 6. no obvious secrets committed — CI greps the tree for token/key patterns
 ```
+
+Step 4 is the newest: the README's **Prerequisites** block is the paragraph a reader plans a machine
+from, and it makes claims that are *negative* — the installer does **not** check the Python version, does
+**not** add an Ubuntu Docker repository, does **not** pin a base image by digest. A note like that is the
+most fragile claim in the repo, because the day someone fixes the hazard the README starts warning about
+something that no longer exists and nothing notices. `check_prerequisites.py` runs one targeted search
+per claim, in both directions, and fails the build on either drift. It reads the installer and the tree;
+it does not install anything.
+
+Step 5 checks the record of what github.com *says* about this repo (description, topics, license — none
+of which are files here) against the tree it describes. See the README's *Repository metadata* section.
 
 `check_self_contained.py` (step 3) is the important one: it fails if a required file is missing, a
 lab's `startup-config` or `grader` doesn't resolve, a shipped grader fails to byte-compile, or a
@@ -26,7 +39,7 @@ files that are present** — it cannot notice a required file you never added, a
 file you deleted before committing. It also resolves its root from its own path, so it checks the
 checkout it lives in, not the one you are standing in.
 
-Step 4 is a shell command in CI, not a script, so there is nothing to run locally for it. The same
+Step 6 is a shell command in CI, not a script, so there is nothing to run locally for it. The same
 grep, run by hand, is:
 
 ```bash
@@ -55,7 +68,7 @@ committed. The two commands answer different questions: the `grep` form is "is m
 right now, in the suffixes we ship most of", the `git grep` form is "is the whole tracked tree clean,
 no suffix filter". Zero output from each is the pass.
 
-The four checks above are exactly what CI enforces on every push and PR — on **one** interpreter, the
+The six checks above are exactly what CI enforces on every push and PR — on **one** interpreter, the
 newest `3.x` the runner offers, because `ci.yml` asks for `python-version: "3.x"`. The 3.10 floor the
 README states is therefore not exercised by CI (see *Changing CI* below for why the matrix that would
 fix this is not in place). Four further tools exist
@@ -195,7 +208,7 @@ a pull request:
    Direct pushes to `main` here are the maintainer's, not a contributor's.
 2. **Branch** off `main` with one change on it. `main` is the only active branch; `legacy-orphan-tree`
    is preserved history from the old public tree and is not the place for new work.
-3. **Run the four checks** in *Before you push* above, in your clone (see *Where to develop*). Paste the real output into the PR's
+3. **Run the six checks** in *Before you push* above, in your clone (see *Where to develop*). Paste the real output into the PR's
    *How it was verified* section — a summary is not evidence. For step 4, zero output is the result.
 4. **Open the pull request** using
    [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md). CI runs on the PR.
