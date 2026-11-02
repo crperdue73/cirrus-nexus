@@ -214,8 +214,16 @@ from the annotations above rather than exercised by CI.
 ```bash
 git clone https://github.com/crperdue73/cirrus-nexus.git aegis
 cd aegis
-sudo ./install.sh
+./install.sh
 ```
+
+**Run it as root, or via `sudo` — the two are not the same install.** `install.sh` only checks
+`$EUID`, so `sudo ./install.sh` from a normal account and `./install.sh` from a root shell both pass
+that check; but the step that adds the *invoking* user to the `docker` and `clab_admins` groups reads
+`$SUDO_USER`, which is set only on the `sudo` path. On a root shell that step is skipped, and a later
+hand-run backend cannot `docker inspect` and sees an empty lab list (the failure recorded in
+`install.sh`'s own comment at line 256, found live 2026-09-19). If you are installing from a normal
+account, **use `sudo`**; if you are already root, the plain `./install.sh` above is complete.
 
 `install.sh` installs Docker, ContainerLab, `ttyd`, and the Python deps
 (`fastapi`, `uvicorn`, `pyyaml`), copies the app to `/opt/aegis`, builds the FRR router image from
@@ -234,6 +242,8 @@ sudo systemctl start aegis     # start the server
 sudo systemctl enable aegis    # start on boot
 sudo systemctl status aegis    # check
 ```
+
+(Drop the `sudo` if you are already root, as in the install step above.)
 
 The UI is at `http://localhost:8000/`; the API at `http://localhost:8000/api`.
 

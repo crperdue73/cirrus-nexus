@@ -126,12 +126,16 @@ path, so run it in the checkout you mean to test).
 - **`/opt/aegis` is what actually serves students** once installed. An edit made there is invisible to
 git and is overwritten the next time the installer runs — it is a deployment target, not a workspace.
 - **`install.sh` copies the checkout it lives in.** `SCRIPT_DIR` is the installer's own directory, so
-running `sudo ./install.sh` from `<clone>` installs `<clone>`. It copies `backend/`, `frontend/`,
+running `sudo ./install.sh` (or `./install.sh` as root — see the note below) from `<clone>` installs
+`<clone>`. It copies `backend/`, `frontend/`,
 `lab-definitions/` (plus each lab's `assets/`), `assets/`, `Dockerfile.frr`, `README.md`, and
 `start_server.py` — not the repo root wholesale. Docs, tools and tests stay in the clone only.
 
 To test a change against the real service, re-run `sudo ./install.sh` from the clone and
-`systemctl restart aegis`. For a quick foreground run without touching the service, see
+`systemctl restart aegis`. **`sudo` and root are not interchangeable here:** `install.sh` gates on
+`$EUID` (so either passes) but grants the `docker`/`clab_admins` groups to `$SUDO_USER`, which is set
+only on the `sudo` path. Installing as root from a normal account without `sudo` skips that step, and
+the backend then cannot `docker inspect`. For a quick foreground run without touching the service, see
 [`docs/OPERATIONS.md`](docs/OPERATIONS.md) → *Running without the service* — and read the warning there
 first: `start_server.py` runs `pkill -f "aegis.*main.py"`, which **matches the systemd service**, so stop
 the service before you use it.
