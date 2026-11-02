@@ -168,28 +168,43 @@ Five things you should know before you start, because they are **not pinned or c
     types like `list[tuple[str, str, str]]`, `set[str]` and `dict[str, bool]`. On 3.8 these raise
     `TypeError: 'type' object is not subscriptable` (PEP 585 landed in 3.9).
   - **`X | None` unions (3.10+).** Six annotations are written that way — `dict | None` (line 396),
-    `LabDef | None` (674), `str | None` (822), `str | None` and `dict[str, bool] | None` (1243), and
-    `str | None` (1288) — and PEP 604 landed in **3.10**. On 3.9 the import dies with
+    `LabDef | None` (675), `str | None` (823), `dict[str, bool] | None` and `str | None` (1244), and
+    `str | None` (1289) — and PEP 604 landed in **3.10**. On 3.9 the import dies with
     `TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'`, before the app serves a request.
+    (The six sites were re-measured on 2026-11-02: parsed out of the file with `ast`, the count and the
+    forms match, and the line numbers had drifted by one — they are the numbers a reader lands on now.)
 
   Grammar is not a sufficient test: `ast.parse(..., feature_version=(3, 8))` accepts this file, and so
   does an `ast.parse(..., feature_version=(3, 9))`, because both forms are valid *syntax* there and fail
   only when evaluated. **How this was established:** by reading the annotations with `ast` and counting
-  the sites above, and by evaluating each distinct annotation form against the versions that define it —
-  **not** by running the backend on a 3.9 interpreter. No 3.9 or 3.8 interpreter exists on the machine
-  this was checked on (it has 3.13), so 3.13 is the only version actually executed here, and 3.10 is
-  stated as the floor those annotations require, not as a **tested** runtime — treat any specific 3.10
-  patch release as unverified until someone runs the install on one.
+  the sites above, and by evaluating each distinct annotation form against the versions that define it.
 
-Those are the requirements, not a tested matrix. **CI does not pin a Python version:**
+  **3.10 itself has since been executed** (2026-11-02), by standalone interpreter rather than by an
+  install: CPython 3.10.15 (`python-build-standalone`, x86_64) with `fastapi`, `uvicorn`, `pyyaml` and
+  `httpx` in a throwaway venv, run against a clean `git clone` of this repository.
+  `py_compile backend/main.py` passes, the module imports, and a `TestClient` answers `GET /api` with
+  `{"service": "NEXUS", "version": "0.3.0", "labs_count": 2}` — the two shipped labs load, and
+  `GET /openapi.json` lists the same 11 routes the API section below documents. So the 3.10 *floor* is
+  now measured, not merely derived. What is still **not** measured: a 3.10 **install** — no `install.sh`,
+  no Docker, no lab deployed — and no interpreter older than 3.10 was executed here at all, so the
+  3.8/3.9 failure modes above remain reasoned from the language versions, not observed.
+
+Those are the requirements, not a tested matrix — 3.10 and 3.13 are the two versions anyone here has
+actually run. **CI does not pin a Python version:**
 `.github/workflows/ci.yml` asks
 `actions/setup-python` for `python-version: "3.x"`, so each CI run uses whatever the newest 3.x on the
 runner is. No Ubuntu version is pinned in `install.sh` either — it installs what `apt` offers.
 
+**The HTTP layer on 3.10 was measured with today's packages, not with a pinned set.** The run above
+used `fastapi` 0.162.0, `starlette` 1.7.0, `pydantic` 2.14.2 and `httpx` 0.28.1 as pip resolved them on
+2026-11-02. `requirements.txt` and `install.sh` pin none of them, so that is one sample of "a 3.10 host
+that installed today", not a floor on the dependency side.
+
 **CI does not test the floor, either.** Because `"3.x"` resolves to the newest release, CI has never
-run the `py_compile` check on 3.10 — the version this README calls the minimum. What the job actually
-proves is that the file compiles under whatever 3.x was newest on that run, nothing about 3.10 or 3.11. A regression
-that broke a 3.10 host while staying fine on the newest interpreter would pass all four CI checks. The
+run the `py_compile` check on 3.10 — the version this README calls the minimum. What the job proves is
+that the file compiles under whatever 3.x was newest on that run. A regression that broke a 3.10 host
+while staying fine on the newest interpreter would pass all four CI checks (it would not have passed
+the one-off 2026-11-02 run above, which nobody repeats automatically). The
 fix is a matrix (`3.10` alongside `3.x`) **written and ready to land but not yet pushed**: the
 maintainer's automation token can write any other file in this repo and is refused on workflow paths,
 so the change needs someone with `workflow` scope to apply it (see
@@ -381,7 +396,10 @@ labs; it is not a finished product. What that means concretely:
 - **Architecture is not tested beyond x86-64.** The topologies request
   `ghcr.io/nokia/srlinux:latest` with no `--platform` override and `install.sh` never checks
   `uname -m` for the labs (it reads it only to choose a prebuilt `ttyd` binary). x86-64 is what this
-  tree is built and checked on; arm64 switch nodes are untested here.
+  tree is built and checked on; arm64 switch nodes are untested here. The `ttyd` arm64 path itself is
+  at least not broken in the obvious way: `ttyd.aarch64` exists as a 1,280,368-byte asset on the pinned
+  `1.7.4` release, so Step 4's `curl` would fetch something rather than 404. That is a check of the
+  download URL, measured 2026-11-02 — not a run on arm64.
 - **A known image-pin drift:** `Dockerfile.frr` hashes differently from `assets/frr-image.pin`. No
   pinned FRR image tarball ships in this tree (`assets/` tracks only `frr-image.pin`;
   `installed-image-id.txt` exists locally but is git-ignored, so it does not ship), so `install.sh`

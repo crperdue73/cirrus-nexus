@@ -1,0 +1,28 @@
+3.10 FLOOR PROOF — 2026-11-02 (nexus-github-polish 02:00)
+
+interpreter: Python 3.10.15 (python-build-standalone 20241016, x86_64-unknown-linux-gnu)
+host python: Python 3.13.5
+deps pip resolved on 2026-11-02:
+  fastapi 0.162.0 | starlette 1.7.0 | pydantic 2.14.2 | httpx 0.28.1 | uvicorn 0.54.0 | pyyaml 6.0.3
+
+--- py_compile (fresh git clone at /tmp/qt-probe/aegis) ---
+rc=0
+
+--- import + TestClient ---
+GET /api      -> 200 {'service': 'NEXUS', 'version': '0.3.0', 'labs_count': 2}
+GET /api/labs -> 200 labs: ['demo-01-two-pcs-and-a-real-switch-unsolved', 'demo-02-two-switches-one-router-unsolved']
+routes        -> 11
+
+--- ast annotation re-measure ---
+annotations: 129 | PEP604 unions: 6
+  line 396 -> dict | None
+  line 675 -> LabDef | None
+  line 823 -> str | None
+  line 1244 -> dict[str, bool] | None
+  line 1244 -> str | None
+  line 1289 -> str | None
+
+--- ttyd.aarch64 asset on the pinned 1.7.4 release (not previously checked) ---
+  ttyd.aarch64 1280368 bytes
+
+LIMIT: no install.sh run, no Docker, no lab deployed, no interpreter older than 3.10 executed.
