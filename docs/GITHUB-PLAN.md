@@ -2614,3 +2614,52 @@ DELETE-OR-KEEP `lab-definitions-quarantine-2026-09-30/` / `10-archive/` / three 
 dirs, `check_self_contained.py` pulled into a release, published security contact, the two
 grading-behaviour items from 2026-10-31, (iii) labelling an unresolvable grader at load time, and
 whether the unreachable pinned-tarball branch should be removed.
+
+---
+
+## 2026-11-02 20:00 — the README's account of what install.sh does is now checked (tool added; workflow half still blocked)
+
+**Item: one claim checker + the doc sweep it forced.** Item chosen: README/CI hardening.
+
+WHAT WAS WRONG. The Quick start's paragraph after the install command tells the reader, in one
+sentence, that `install.sh` "installs Docker, ContainerLab, `ttyd`, and the Python deps, copies the app
+to `/opt/aegis`, builds the FRR router image, pre-pulls the switch image, and registers a `systemd`
+service (`aegis`)". Nine claims about a shell script, in prose, checked by nothing. `check_prerequisites.py`
+covers the Prerequisites block above it; nothing covered this. It is true today — that is exactly the kind
+of sentence that stays grammatical for years after it stops being true.
+
+WHAT SHIPPED.
+1. `tools/check_install_narrative.py` — new, 12 claims, all PASS. It locates the paragraph by its opening
+   words (not line number), then checks each step against `install.sh`: apt packages present; Docker via
+   the Debian repo or `docker-ce`; ContainerLab via `get.containerlab.dev` **with** `-v <version>`; a ttyd
+   download/build path; the README's named deps are the ones on the `pip3 install` line; `AEGIS_DIR`
+   default equals the `/opt/aegis` the README prints; `docker build -f ${FRR_SRC}` with `FRR_SRC`
+   resolved through its assignment; the pre-pull loop names an `srlinux` image; the unit written to
+   `/etc/systemd/system/` is the one the README says `systemctl start`. It exits 2 if the paragraph is
+   gone, so a rewrite fails loudly instead of checking nothing.
+2. **Verified the checkers actually fail when the tree changes** (mutation test, not a green-run claim):
+   dropping `pyyaml` from the pip line → rc=1 naming the missing dep; renaming the unit to
+   `aegis-lab.service` → rc=1; rewording the paragraph's opening → rc=2. Each mutant reverted with
+   `git checkout --`.
+3. Doc sweep so nothing over-claims the checks: README's docs table, `CONTRIBUTING.md` (test list
+   renumbered 1–7, step cross-references fixed, the now-false "four CI checks" lines corrected) and
+   `SECURITY.md` now say **four in CI, three by hand** — including the new tool in the by-hand list.
+4. `.gitignore`: `.nexus/*.patch` and `.nexus/*.log` (internal scratch, never ship).
+
+WHAT DID NOT SHIP, AND WHY. The `ci.yml` hunk that would run all three claim checkers in CI is written
+and verified, and is parked as `.nexus/WORKFLOW-PATCH-2026-11-02-2000.patch` (gitignored). The
+token is still refused on workflow paths — **re-confirmed this run**: `x-oauth-scopes` =
+`delete:packages, repo, write:discussion, write:packages`; no `workflow`. This is the second unshipped
+`ci.yml` diff. Dad: either grant a `workflow`-scoped token or apply both patches by hand.
+
+MEASURED THIS RUN: `py_compile`=0 · `bash -n`=0 · `check_self_contained.py`=0 · `check_repo_metadata.py`=0
+· `check_prerequisites.py`=0 · `check_install_narrative.py`=0 (12/12). None of them run the installer: a
+cold `./install.sh` on a disposable host remains the only proof the steps execute.
+
+NOT COMPLETE — Dad's word alone. | proof=the tool's own 12 PASS lines + 3 mutation failures, all in this
+entry | next=next in-scope honesty item. STILL BLOCKED ON DAD, unchanged: the two `ci.yml` patches (needs
+a `workflow`-scoped token), v0.3.0 tag / GitHub Release, Screenshots (needs a live host), `.nexus/`
+public-shipping policy, DELETE-OR-KEEP `lab-definitions-quarantine-2026-09-30/` / `10-archive/` / three
+empty `lab-definitions` dirs, `check_self_contained.py` in a release, published security contact, the two
+grading-behaviour items from 2026-10-31, (iii) labelling an unresolvable grader at load time, and whether
+the unreachable pinned-tarball branch should be removed.

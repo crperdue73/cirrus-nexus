@@ -203,7 +203,7 @@ that installed today", not a floor on the dependency side.
 **CI does not test the floor, either.** Because `"3.x"` resolves to the newest release, CI has never
 run the `py_compile` check on 3.10 — the version this README calls the minimum. What the job proves is
 that the file compiles under whatever 3.x was newest on that run. A regression that broke a 3.10 host
-while staying fine on the newest interpreter would pass all four CI checks (it would not have passed
+while staying fine on the newest interpreter would pass every CI check (it would not have passed
 the one-off 2026-11-02 run above, which nobody repeats automatically). The
 fix is a matrix (`3.10` alongside `3.x`) **written and ready to land but not yet pushed**: the
 maintainer's automation token can write any other file in this repo and is refused on workflow paths,
@@ -436,8 +436,8 @@ labs; it is not a finished product. What that means concretely:
 | [`docs/RELEASE-NOTES-v0.1.0-draft.md`](docs/RELEASE-NOTES-v0.1.0-draft.md) | release notes for `v0.1.0` — **historical draft**; the tag exists, its GitHub Release was never published (see `v0.2.0`) |
 | [`CONFERENCE.md`](CONFERENCE.md) | booth-operator cheat sheet (install, ports, troubleshooting, reset) — **draft / not maintained**; install & lab-catalog sections corrected to this tree |
 | [`HANDOFF-2026-09-22.md`](HANDOFF-2026-09-22.md) | dated handoff note from a 2026-09-22 demo drive — **historical / not maintained**; counts and lab names in it describe a wider tree than this release (see the banner in the file) |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | the ground rules, and the checks to run before pushing (the four CI runs, plus two local claim checks not yet in the workflow) |
-| [`SECURITY.md`](SECURITY.md) | how to report a vulnerability privately, the threat model (unauthenticated by design), what's in scope, and the automated checks that exist (four in CI, two by hand, and no more) |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | the ground rules, and the checks to run before pushing (four run in CI, three are claim checkers run by hand) |
+| [`SECURITY.md`](SECURITY.md) | how to report a vulnerability privately, the threat model (unauthenticated by design), what's in scope, and the automated checks that exist (four in CI, three by hand, and no more) |
 | [`CHANGELOG.md`](CHANGELOG.md) | what changed, newest first |
 | [`10-archive/topology-audit-2026-06-09.md`](10-archive/topology-audit-2026-06-09.md) | dated 2026-06-09 topology audit — **historical**, describes a pre-release layout (see `docs/OPERATIONS.md` → Archive). Renamed from `SUMMARY-for-Dad.md` on 2026-10-30 |
 | [`lab-guides/lab-03-lock-it-down.md`](lab-guides/lab-03-lock-it-down.md) | a single student guide for `lab-03-lock-it-down` — **historical / not a shipping lab** (the only file in `lab-guides/`; its lab definition is quarantined); cited by `docs/OPERATIONS.md` as the in-tree source for the capstone's point numbers |

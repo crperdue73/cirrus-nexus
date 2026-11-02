@@ -60,11 +60,14 @@ Problems that break the design above rather than restating it. Examples:
 CI (`.github/workflows/ci.yml`) runs four checks on every push and pull request: the backend
 byte-compiles, `install.sh` is valid shell, the tree is self-contained (a bare clone is installable,
 every shipped grader byte-compiles, no absolute developer paths), and a grep for obvious committed
-secrets. Two further claim checkers — `tools/check_prerequisites.py` (the README's Prerequisites against
-`install.sh`) and `tools/check_repo_metadata.py` (the published repo metadata against the tree) — are
-written and verified but **not yet in the workflow**, because the automation token is refused on workflow
-paths; run them by hand (see [`CONTRIBUTING.md`](CONTRIBUTING.md#before-you-push)). Beyond those, there
-is **no dependency scanning, no SAST, and no fuzzing**. Don't assume those exist.
+secrets. Three further claim checkers — `tools/check_prerequisites.py` (the README's Prerequisites
+against `install.sh`), `tools/check_install_narrative.py` (the README's account of what `install.sh`
+installs, builds, pre-pulls and registers, against `install.sh`) and `tools/check_repo_metadata.py` (the
+published repo metadata against the tree) — are written and verified but **not yet in the workflow**,
+because the automation token is refused on workflow paths; run them by hand (see
+[`CONTRIBUTING.md`](CONTRIBUTING.md#before-you-push)). Beyond those, there is **no dependency scanning,
+no SAST, and no fuzzing**. Don't assume those exist, and none of the checks run the installer: a cold
+`./install.sh` on a disposable host is the only proof the steps execute.
 
 ## Supported versions
 

@@ -46,5 +46,8 @@ __pycache__/
 
 # --- internal bundle snapshots (never ship; 20 MB each) --------------------
 .nexus/bundle-archive/
+# internal scratch: hosted-workflow patches, run logs. Never part of the product.
+.nexus/*.patch
+.nexus/*.log
 *.tar.gz.*
 *.tgz.*

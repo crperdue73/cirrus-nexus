@@ -10,31 +10,43 @@ write the claim.
 
 ## Before you push
 
-Run the same checks CI runs (`.github/workflows/ci.yml` — four of them), plus the two local claim
-checks that are written but **not yet in the workflow** (steps 4 and 5; see below):
+Run the same checks CI runs (`.github/workflows/ci.yml` — four of them), plus the three claim
+checkers that are written and verified but **not yet in the workflow** (steps 4–6; see below):
 
 ```bash
-python3 -m py_compile backend/main.py     # 1. backend compiles                    — in CI
-bash -n install.sh                        # 2. installer is valid shell           — in CI
-python3 tools/check_self_contained.py     # 3. a bare clone is installable        — in CI
-python3 tools/check_prerequisites.py      # 4. README's Prerequisites vs install.sh — local only
-python3 tools/check_repo_metadata.py      # 5. published repo metadata vs the tree  — local only
-# 6. no obvious secrets committed — CI greps the tree for token/key patterns    — in CI
+python3 -m py_compile backend/main.py     # 1. backend compiles                     — in CI
+bash -n install.sh                        # 2. installer is valid shell            — in CI
+python3 tools/check_self_contained.py     # 3. a bare clone is installable         — in CI
+python3 tools/check_repo_metadata.py      # 4. published repo metadata vs the tree  — local only
+python3 tools/check_prerequisites.py      # 5. README's Prerequisites vs install.sh — local only
+python3 tools/check_install_narrative.py  # 6. README's account of install.sh       — local only
+# 7. no obvious secrets committed — CI greps the tree for token/key patterns     — in CI
 ```
 
-Steps 4 and 5 are the newest, and **CI does not run them yet**: the diff that adds them to `ci.yml` is
-written and verified, but this repo's automation token is refused on workflow paths, so it needs a
-human with `workflow` scope (see *Changing CI*). Run them by hand until the job has them.
+**CI does not run steps 4–6 yet.** The diff that adds them is written and verified locally, but this
+repo's automation token has no `workflow` scope, so a `ci.yml` change needs a human with that scope (see
+*Changing CI*). Run steps 4–6 by hand until the job has them.
 
-Step 4 reads the README's **Prerequisites** block, which makes claims that are *negative* — the
+Steps 4–6 are the claim checkers, and they are the fragile ones: each audits English prose in
+`README.md` against the code or the record it describes, so the sentence and the fact can drift apart
+while the tree still builds. Each one exits 2 if its target paragraph is gone, rather than passing
+silently.
+
+Step 5 reads the README's **Prerequisites** block, which makes claims that are *negative* — the
 installer does **not** check the Python version, does **not** add an Ubuntu Docker repository, does
 **not** pin a base image by digest. A note like that is the most fragile claim in the repo, because the
 day someone fixes the hazard, the README starts warning about something that no longer exists and
 nothing notices. `check_prerequisites.py` runs one targeted search per claim, in both directions, and
 fails on either drift. It reads the installer and the tree; it does not install anything.
 
-Step 5 checks the record of what github.com *says* about this repo (description, topics, license — none
+Step 4 checks the record of what github.com *says* about this repo (description, topics, license — none
 of which are files here) against the tree it describes. See the README's *Repository metadata* section.
+
+Step 6 checks the paragraph that follows Prerequisites: the one-sentence account of what `install.sh`
+does — which deps it pip-installs, where the app is copied, which image it builds and which it
+pre-pulls, which systemd unit it registers. Every verb there is a claim about a shell script that
+changes without the README; the checker looks for each step in `install.sh` and compares the names
+(install directory, image tag, unit name) against the prose. Nothing checked that sentence before.
 
 `check_self_contained.py` (step 3) is the important one: it fails if a required file is missing, a
 lab's `startup-config` or `grader` doesn't resolve, a shipped grader fails to byte-compile, or a
@@ -43,8 +55,7 @@ files that are present** — it cannot notice a required file you never added, a
 file you deleted before committing. It also resolves its root from its own path, so it checks the
 checkout it lives in, not the one you are standing in.
 
-Step 6 is a shell command in CI, not a script, so there is nothing to run locally for it. The same
-grep, run by hand, is:
+Step 7 is a shell command in CI, not a script — but the same grep runs fine by hand, and here it is:
 
 ```bash
 grep -rInE 'gho_[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|BEGIN [A-Z ]*PRIVATE KEY' \
@@ -72,11 +83,10 @@ committed. The two commands answer different questions: the `grep` form is "is m
 right now, in the suffixes we ship most of", the `git grep` form is "is the whole tracked tree clean,
 no suffix filter". Zero output from each is the pass.
 
-The four checks in steps 1–3 and 6 are exactly what CI enforces on every push and PR — on **one**
-interpreter, the newest `3.x` the runner offers, because `ci.yml` asks for `python-version: "3.x"`. The
-3.10 floor the README states is therefore not exercised by CI (see *Changing CI* below for why the matrix
-that would fix this is not in place). Four further tools exist
-for lab authors and maintainers, and are **not** part of CI:
+The four checks CI actually enforces are steps 1–3 and 7 — on **one** interpreter, the newest `3.x` the
+runner offers, because `ci.yml` asks for `python-version: "3.x"`. The 3.10 floor the README states is
+therefore not exercised by CI (see *Changing CI* below for why the matrix that would fix this is not in
+place). Four further tools exist for lab authors and maintainers, and are **not** part of CI:
 
 ```bash
 python3 -m pip install -r requirements.txt   # pyyaml is already declared there; CI installs no deps
@@ -216,10 +226,11 @@ a pull request:
    Direct pushes to `main` here are the maintainer's, not a contributor's.
 2. **Branch** off `main` with one change on it. `main` is the only active branch; `legacy-orphan-tree`
    is preserved history from the old public tree and is not the place for new work.
-3. **Run the six checks** in *Before you push* above (the four CI ones are mandatory; run the two local
-   claim checks too if you touched the README's Prerequisites or the repo metadata), in your clone (see
-   *Where to develop*). Paste the real output into the PR's
-   *How it was verified* section — a summary is not evidence. For step 4, zero output is the result.
+3. **Run the seven checks** in *Before you push* above (the four CI ones are mandatory; run the three
+   claim checkers too if you touched the README's Prerequisites, its account of what `install.sh` does,
+   or the repo metadata), in your clone (see *Where to develop*). Paste the real output into the PR's
+   *How it was verified* section — a summary is not evidence. For the secrets grep (step 7), zero
+   output is the result.
 4. **Open the pull request** using
    [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md). CI runs on the PR.
 5. **Expect a conversation, not an auto-merge.** Small, honest, single-purpose changes land fastest;
