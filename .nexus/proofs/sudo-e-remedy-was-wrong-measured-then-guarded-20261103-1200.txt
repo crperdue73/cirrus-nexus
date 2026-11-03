@@ -1,0 +1,33 @@
+PROOF — 2026-11-03 12:00 UTC — SELF-CONTAINED.md's remedy for the SUDO_USER gap
+Baseline: projects/aegis HEAD 0d8c4bb, local==origin/main 0/0, tree clean.
+  py_compile=0 bash -n=0 check_self_contained=0(14/1/2) check_prerequisites=0(36)
+  check_repo_metadata=0(27) check_self_contained_doc=0(16 claims)
+
+DEFECT (docs): docs/SELF-CONTAINED.md:67-70 said a bare `sudo ./install.sh` gets SUDO_USER=root and
+told the reader "Use `sudo -E` from your own shell". `sudo -E` is the one invocation that CANNOT fix
+it: sudo sets SUDO_USER=<target user> (root) under env_reset, and also re-sets USER=root from the
+target's passwd entry, so the installer's ${SUDO_USER:-${USER:-}} parser still resolves root and the
+caller-group step is skipped. 2026-11-02 14:00 fixed README/CONTRIBUTING and wrote the correct rule
+("if you are installing from a normal account, use sudo") — this page kept the wrong advice.
+
+MEASURED (the parser lifted from install.sh:284, run under simulated sudo(8) environments):
+  SUDO_USER=alice USER=root  -> CALLER_USER=alice   (group fix runs; intended)
+  SUDO_USER=root  USER=root  -> CALLER_USER=root    (SKIPPED — this is also what sudo -E gives)
+  neither variable           -> CALLER_USER=       (skipped)
+
+FIX (docs + one checker; no installer, backend, grader or CI behaviour):
+  docs/SELF-CONTAINED.md: plain `sudo ./install.sh` from your own login is the fix; `sudo -E` scoped to
+  "already root, login carries no SUDO_USER/USER"; add the group afterwards; re-login required.
+  tools/check_self_contained_doc.py: +4 DOC_ANCHORS and a new claim that EXECUTES the parser
+  (subprocess, `env -i`) against the three environments instead of asserting the sentence.
+
+MUTATION-TESTED on a /tmp export of the tree:
+  M1 old `sudo -E` wording restored      -> rc=1 (anchor gone)
+  M2 parser edited to "${USER:-${SUDO_USER:-}}" -> rc=1 (executed claim names it: 'root' != 'alice')
+  M3 restored                            -> rc=0, 17 claims
+Verified after, on the live tree: py_compile=0 bash -n=0 check_self_contained=0 check_prerequisites=0
+check_repo_metadata=0 check_self_contained_doc=0(17) check_bundle_fresh=0 (no bundle present).
+
+LIMIT: sudo(8) itself was not installed/run on this box (this host has no sudo, uid 0); the
+environments are simulated to the documented env_reset behaviour, not captured from a real sudo.
+NOT COMPLETE — Dad's word alone.
