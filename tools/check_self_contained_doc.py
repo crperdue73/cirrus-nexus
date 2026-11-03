@@ -27,6 +27,11 @@ them and nothing else in the tree ties them down:
     systemd unit it writes hard-codes `User=aegis`, while the service user is
     configurable (`SERVICE_USER`). Both are real gaps; the doc says the check does not
     read shell logic, and these are the concrete cases.
+  * the doc's *remedy* for the `SUDO_USER` gap is a shell snippet, so it is checked the
+    same way as the rule it describes: the invocation parser is lifted out of
+    `install.sh` and run against simulated environments. A bare `sudo ./install.sh` must
+    resolve to the invoking human; `sudo -E` from a `root` login must too; a login with
+    neither variable must resolve to nothing (the group step is then skipped, as stated).
 
 Exit codes match the other tools in this directory:
   0 = every claim still holds, 1 = at least one claim is now false of this tree,
@@ -35,6 +40,7 @@ Exit codes match the other tools in this directory:
 
 import os
 import re
+import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -81,6 +87,15 @@ DOC_ANCHORS = [
     "does not exercise at all is the pinned-tarball restore",
     "`UNPINNED`",
     "no tarball ships",
+    # The remedy for the SUDO_USER gap. Until 2026-11-03 the doc named `sudo -E` as the
+    # default fix for a bare `sudo`, and `sudo -E` is the one invocation that cannot fix it:
+    # `env_reset` still sets SUDO_USER=root and sudo re-sets USER=root from the target
+    # passwd entry. Measured, then corrected -- claim 6 below now runs the parser instead
+    # of trusting the sentence.
+    "Use a plain `sudo ./install.sh` from your",
+    "`sudo -E` is only for the case where you are already `root`",
+    "always add yourself to the `docker` (and `clab_admins`) group afterwards",
+    "re-login before the new group membership applies",
 ]
 
 
@@ -186,6 +201,44 @@ def main():
     claim("SUDO_USER" in install,
           "the invoking user is derived from SUDO_USER (bare `sudo` -> root -> group fix skipped)",
           "install.sh reads ${SUDO_USER} for CALLER_USER")
+
+    # The doc's remedy, executed rather than read. The parser is lifted out of install.sh,
+    # so this breaks the day someone edits it, and it is run against the environments the
+    # doc makes a promise about. This is the rule that catches the doc's old advice: `sudo -E`
+    # preserves the caller's USER but sudo still sets SUDO_USER=root for the target account,
+    # so it resolved to root and the group step was skipped anyway.
+    parser = re.search(r'^(CALLER_USER=.*)$', install, re.M)
+    if parser is None:
+        claim(False, "the doc's remedy for the SUDO_USER gap still works",
+              "CALLER_USER assignment is gone from %s" % INSTALL)
+    else:
+        line = parser.group(1)
+        # sudo(8) with env_reset (the Debian/Ubuntu default), as three simulated shells.
+        envs = {
+            "plain `sudo ./install.sh` from a normal login":
+                {"SUDO_USER": "alice", "USER": "root"},
+            "`sudo -E ./install.sh` from a `root` login":
+                {"SUDO_USER": "root", "USER": "root"},
+            "a login carrying neither variable":
+                {},
+        }
+        got = {}
+        for label, env in envs.items():
+            try:
+                out = subprocess.run(
+                    ["env", "-i", "-u", "SUDO_USER", "-u", "USER"]
+                    + ["%s=%s" % kv for kv in env.items()]
+                    + ["sh", "-c", line + '; printf %s "$CALLER_USER"'],
+                    capture_output=True, text=True, timeout=10)
+                got[label] = out.stdout
+            except (OSError, subprocess.SubprocessError) as exc:
+                got[label] = "<could not run: %s>" % exc
+        keys = list(envs)
+        claim(got[keys[0]] == "alice" and got[keys[1]] == "root" and got[keys[2]] == "",
+              "the doc's remedy for the SUDO_USER gap still works (parser executed)",
+              "plain sudo -> %r (want 'alice'); sudo -E as root -> %r (want 'root', i.e. skipped "
+              "as the doc says); neither var -> %r (want '')"
+              % (got[keys[0]], got[keys[1]], got[keys[2]]))
     unit = section(install, "cat > /etc/systemd/system/aegis.service", "SERVICE\n")
     claim(unit is not None and "User=aegis" in unit and "SERVICE_USER" in install,
           "the unit hard-codes User=aegis while SERVICE_USER is configurable",

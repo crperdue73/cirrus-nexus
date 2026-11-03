@@ -66,8 +66,11 @@ of "the check does not read shell logic":
 
 - `install.sh` derives the invoking user from `SUDO_USER`. A bare `sudo ./install.sh` therefore gets
   `SUDO_USER=root`, and the step that adds that account to the `docker` group is skipped — you end up
-  with docker permissions you think you granted and did not. Use `sudo -E` from your own shell, or add
-  yourself to the group afterwards.
+  with docker permissions you think you granted and did not. Use a plain `sudo ./install.sh` from your
+  own login and it works as intended; `sudo -E` is only for the case where you are already `root` from
+  a login that carries no `SUDO_USER`/`USER` at all (it preserves the caller's `USER`), and you can
+  always add yourself to the `docker` (and `clab_admins`) group afterwards. Either way you must
+  re-login before the new group membership applies.
 - The systemd unit `install.sh` writes hard-codes `User=aegis` / `Group=aegis` / `WorkingDirectory=/opt/aegis`,
   while the service account is configurable (`SERVICE_USER`, `AEGIS_DIR`). Change those variables and the
   unit still names `aegis`. Neither this check nor the installer notices.
