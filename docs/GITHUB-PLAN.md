@@ -2697,3 +2697,76 @@ public-shipping policy, DELETE-OR-KEEP `lab-definitions-quarantine-2026-09-30/` 
 empty `lab-definitions` dirs, `check_self_contained.py` in a release, published security contact, the two
 grading-behaviour items from 2026-10-31, (iii) labelling an unresolvable grader at load time, and whether
 the unreachable pinned-tarball branch should be removed.
+
+---
+
+## 2026-11-03 12:00 — the remedy this page gave for the installer's root/sudo fork was the one that cannot work
+
+In-scope honesty item (docs + one checker; no installer, backend, grader, route or CI change). Took the
+stale-thread candidate: the 2026-11-02 14:00 run corrected `README.md`/`CONTRIBUTING.md` for the
+root-vs-sudo fork and left `docs/SELF-CONTAINED.md` alone — reasonable at the time, since that run had
+only measured `README`/`CONTRIBUTING`. Measured before (HEAD `0d8c4bb`, local==origin 0/0, tree clean;
+`py_compile`=0 · `bash -n`=0 · `check_self_contained`=0 14/1/2 · `check_prerequisites`=0 36 ·
+`check_repo_metadata`=0 27 · `check_self_contained_doc`=0 16).
+
+**The defect.** `docs/SELF-CONTAINED.md:67-70` said a bare `sudo ./install.sh` gets `SUDO_USER=root` and
+therefore skips the caller-group step — correct — and then told the reader **"Use `sudo -E` from your own
+shell"**. `sudo -E` is the one invocation that cannot fix it: under `env_reset` sudo sets
+`SUDO_USER=<target user>` (here `root`) and *also* re-sets `USER=root` from the target's passwd entry, so
+the installer's `${SUDO_USER:-${USER:-}}` parser resolves `root` either way and the step is skipped exactly
+as on a plain `sudo`. The doc named a remedy that provably does nothing, in the same paragraph that
+correctly described the failure. Worse than prose drift: someone following it would get the empty-lab-list
+failure and have been told they had already avoided it.
+
+**Measured, not argued.** The parser is lifted from `install.sh:284` (via the tool's own regex) and run
+under simulated `sudo(8)` environments:
+
+| environment | `SUDO_USER` | `USER` | `CALLER_USER` | group fix |
+|---|---|---|---|---|
+| `sudo ./install.sh` by alice | alice | root | **alice** | runs — intended |
+| `sudo -E ./install.sh` as root | root | root | **root** | **skipped** |
+| login with neither var | — | — | *(empty)* | skipped |
+
+A separate check while reading sudo's docs and being honest about it: `export -n SUDO_USER` in bash gives
+`${SUDO_USER-unset}` no value but *does* leave `${SUDO_USER}` set to whatever it already had — so that
+quoted "trick" is not one; only a real `unset` or a login that never carried the variable works. Recorded
+so it is not re-proposed as the fix.
+
+**Fix, docs only, plus the guard that would have caught it.** `docs/SELF-CONTAINED.md` now says: from your
+own login, a plain `sudo ./install.sh` is the intended path; `sudo -E` is scoped to "already `root`, login
+carries no `SUDO_USER`/`USER` at all"; you can always add yourself to `docker`/`clab_admins` afterwards;
+either way re-login first. `tools/check_self_contained_doc.py` gains four anchors for that sentence **and a
+new claim that executes the parser** — `subprocess.run(["env","-i",…,"sh","-c",line])` against the three
+environments above — instead of asserting the sentence. This is the tool's first *behavioural* claim, and it
+is what catches this class: the old wording passes every textual check.
+
+**Proven in three states on a `/tmp` export of the tree**, not just the happy path: M1 old `sudo -E` wording
+restored → rc=1 (anchor gone); M2 parser edited to `${USER:-${SUDO_USER:-}}` → rc=1, the executed claim
+names it (`plain sudo -> 'root'`, want `'alice'`); M3 restored → rc=0, 17 claims.
+
+**Also noted, not acted on (Dad's call):** the doc-tool itself is still not run in CI — `.github/workflows/ci.yml`
+runs `check_self_contained.py` and nothing else of this family. It is one line in the parked
+`.nexus/WORKFLOW-PATCH-2026-11-02-2000.patch`'s territory, and the token still lacks `workflow` scope; the
+patch file should absorb this fourth checker the next time a human applies it. And this host still has no
+`sudo` binary, so the environments above are simulated to sudo's documented `env_reset` behaviour, not
+captured from a real sudo run — stated plainly.
+
+VERIFIED after on the live tree: `py_compile`=0 · `bash -n`=0 · `check_self_contained`=0 (14/1/2) ·
+`check_prerequisites`=0 (36) · `check_repo_metadata`=0 (27) · `check_self_contained_doc`=0 (**17** claims) ·
+`check_bundle_fresh.sh`=0 (no bundle present in this tree). Backups: `/tmp/SELF-CONTAINED.md.bak-20261103`,
+`/tmp/check_self_contained_doc.py.bak-20261103` (git history is the real record). Commit `0509db4` pushed,
+local==origin 0/0.
+
+NOT COMPLETE — Dad's word alone. | proof=`.nexus/proofs/sudo-e-remedy-was-wrong-measured-then-guarded-20261103-1200.txt`
+| next=run: **do not re-open this page** — the doc now has a behavioural guard. Highest-value in-scope item
+left is the *other* remedy class: `README.md`'s "Repository metadata" section and `CONTRIBUTING.md`'s
+release section both tell a reader to do something by hand (topics/description via `gh`, the tag/release
+steps) and nothing checks those instructions against the tools' real flags — execute `gh`'s flag surface
+against the documented commands with `--help` (offline, no API write) and record any divergence. STILL
+BLOCKED ON DAD, unchanged: the two `ci.yml` patches (**now three checkers' worth** — needs a
+`workflow`-scoped token; do not retry from this one), v0.3.0 tag / GitHub Release (`v0.2.0` is 38 commits
+behind), Screenshots (needs a live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP
+`lab-definitions-quarantine-2026-09-30/` / `10-archive/` / three empty `lab-definitions` dirs,
+`check_self_contained.py` in a release, published security contact, the two grading-behaviour items from
+2026-10-31, (iii) labelling an unresolvable grader at load time, whether the unreachable pinned-tarball
+branch should be removed, and whether this worklog ships publicly.
