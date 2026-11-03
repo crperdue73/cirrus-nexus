@@ -163,7 +163,41 @@ unverifiable claims, no screenshots of a build that isn't here.
 
 ## Backlog (one item per polish run)
 
-- [x] **The 01:00 run called the CI Python matrix "maintainer-queued — needs `workflow` scope". That
+- [x] **`docs/SELF-CONTAINED.md` described a boundary nobody measured — the doc's limits were the only
+      claims in the tree with no check behind them. Now `tools/check_self_contained_doc.py` pins 16 of
+      them, in both directions** (2026-11-03 02:00).
+      Why it matters: that page's job is to say what the guard proves *and what it does not*. The
+      positive half ("it fails if X") is checkable by reading the tool; the negative half ("it cannot
+      notice Y") is the half that protects a reader, and nothing notices the day a limitation stops
+      being true — a rule quietly widened and the sentence keeps reading as a boundary. So the new check
+      pins each `fails if` bullet to the rule implementing it, and re-measures each stated limitation:
+      the developer-path rule's suffix set (re-derived from `TEXT_EXT`, then asserted still to exclude
+      `.conf`/`.log`/`.bak`, which the tree ships), the `PATH_ALLOWLIST` containing the doc itself, the
+      walk being `pathlib.rglob` over the working tree with no `git` call, and the pin's *current*
+      `tarball`/`UNPINNED` state.
+      Measured while writing it, three things worth keeping:
+      (1) **the pin file keeps its 2026-09-19 record above the 2026-10-30 re-pin**, so a
+      first-occurrence read reports a shipped tarball — the check reads the *last* occurrence, and this
+      is the failure mode that would have made a naive check lie;
+      (2) the doc now names the two concrete installer gaps it was abstractly gesturing at — `install.sh`
+      derives the caller from `SUDO_USER`, so a bare `sudo ./install.sh` gets root and skips the
+      `docker`-group fix, and the systemd unit hard-codes `User=aegis` while `SERVICE_USER`/`AEGIS_DIR`
+      are configurable;
+      (3) the pull table was asserted equal to `install.sh`'s pre-pull loop, and it is (2 images).
+      Proof: `tool rc=0` on the clean tree, 16/16 claims PASS; then five broken trees on a `/tmp` copy —
+      rule deleted from tool → FAIL, `.conf` added to `TEXT_EXT` → FAIL, an anchor reworded → FAIL,
+      a tarball made to ship → FAIL (first-occurrence trap), tool file removed → rc=2. All five behaved.
+      Also `py_compile` rc=0, `bash -n install.sh` rc=0, `check_self_contained` 15/2 unchanged,
+      `check_prerequisites` / `check_repo_metadata` / `check_install_narrative` rc=0, relative-link sweep
+      over 21 reader-facing files 0 broken. Honest limits: the check reads the tool's *source*, it does
+      not run it, and it is **not** in CI — same missing-`workflow`-scope gap as
+      `check_prerequisites.py` and `check_repo_metadata.py`, so it is a check you run, not a gate.
+      Rollback: `.nexus/bundle-archive/SELF-CONTAINED.md.bak-2026-11-03-0200-boundary`.
+      next=wire the three local-only claim checks (`check_prerequisites.py`, `check_repo_metadata.py`,
+      `check_self_contained_doc.py`) into `ci.yml`; the token can write workflows (measured 2026-10-29),
+      so the blocker is taste, not scope — decide whether three doc-claim checks belong in the gate or in
+      a `docs-check` job that is allowed to fail.
+ "maintainer-queued — needs `workflow` scope". That
       was an assumption, not a measurement. Measured now: the token can write the workflow, the matrix
       is in, and the tree no longer advertises a floor it never exercised** (2026-10-29 13:00).
       Why it matters: the README states 3.10 as the minimum (six PEP 604 unions, `dict | None` etc. in
