@@ -2,6 +2,7 @@
 
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![status: v0.2.0 — early release](https://img.shields.io/badge/status-v0.2.0%20early%20release-yellow.svg)](#release-status)
+[![release notes: v0.3.0 not published](https://img.shields.io/badge/release%20notes-v0.3.0%20draft%2C%20unpublished-lightgrey.svg)](#release-status)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)
 ![Powered by ContainerLab](https://img.shields.io/badge/powered%20by-containerlab-orange.svg)
 ![API: FastAPI](https://img.shields.io/badge/API-FastAPI-009688.svg)
@@ -370,12 +371,28 @@ bundle; that path is kept there as *historical* because a `nexus-release.tar.gz`
 
 ## Release status
 
-**v0.2.0 — early release.** The tree is a working, installable teaching platform for its two shipped
-labs; it is not a finished product. What that means concretely:
+**v0.2.0 — early release, one release behind `main`.** The tree is a working, installable teaching
+platform for its two shipped labs; it is not a finished product. What that means concretely:
 
-- **`v0.2.0` is the release to install.** Tagged 2026-10-25 and published as a GitHub Release; see
-  [`docs/RELEASE-NOTES-v0.2.0.md`](docs/RELEASE-NOTES-v0.2.0.md). `git checkout v0.2.0` before
-  `./install.sh` — installing from `main` gives you whatever landed after the tag.
+- **`v0.2.0` is the newest numbered release.** Tagged 2026-10-25 and published as a GitHub Release;
+  see [`docs/RELEASE-NOTES-v0.2.0.md`](docs/RELEASE-NOTES-v0.2.0.md). There is **no** release for
+  anything after it: no `v0.2.1`, no `v0.3.0`, no tag and no GitHub Release. The release notes for
+  what came next exist only as a draft in this tree
+  ([`docs/RELEASE-NOTES-v0.3.0-draft.md`](docs/RELEASE-NOTES-v0.3.0-draft.md)) and are explicitly
+  **not published**.
+- **So `v0.2.0` and `main` are not the same product, and the difference is not cosmetic.** Two paths
+  left the tree after the tag: the 46 files under `lab-definitions-quarantine-2026-09-30/` and
+  `Dockerfile.frr-bgp` (47 deletions). `backend/main.py`, `start_server.py`, `install.sh`,
+  `assets/frr-image.pin`, `.gitignore` and the two GitHub templates also changed behaviour or text.
+  Nothing in those deletions is reachable from a shipped lab — the quarantine directory was never in
+  `lab-definitions/`, and nothing shipped references `Dockerfile.frr-bgp` — but **what a reader sees in the
+  repository is not what an installer from `v0.2.0` gets.** That gap is the reason this bullet exists.
+- **Which one to install is your call, stated plainly.** `git checkout v0.2.0` before `./install.sh`
+  gives you the exact tree the release notes describe and the two labs that release validated.
+  Installing from `main` gives you the current tree, which includes the installer and `start_server.py`
+  fixes listed in the linked changelog but has **no release notes and no tag behind it**. Do not read
+  `main` as "more tested" — neither path has been through a release gate for the work after `v0.2.0`,
+  because there has not been one.
 - **`v0.1.0` is not moved.** It was cut 2026-10-09 and is now behind the tip; it is left in place as
   a record of what shipped then rather than force-pushed forward. Four behaviour fixes landed
   between it and `v0.2.0` (`scripts/clab-reaper.sh` twice, `tools/lint_lab_pack.py`, `install.sh`,
