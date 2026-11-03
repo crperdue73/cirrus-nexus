@@ -57,9 +57,10 @@ commit.
 
 Practically: `python3 tools/check_self_contained_doc.py` — exit 0 holds, 1 a claim is now false,
 2 it could not run. It reads the tool's source; it does not run it. Like
-`tools/check_prerequisites.py` and `tools/check_repo_metadata.py` it is **not** wired into CI (that
-needs a `workflow`-scoped token this tree does not have), so until it is, it is a check you run before
-you change this page or the tool — not a gate.
+`tools/check_prerequisites.py` and `tools/check_repo_metadata.py` it is **not** wired into CI: adding
+it means a workflow change, and this repo's automation token is refused on `.github/workflows/`
+(re-measured 2026-11-03), so that takes a human with `workflow` scope. Until it is, it is a check you
+run before you change this page or the tool — not a gate.
 
 Two facts about the installer that this page leans on, written down because they are the concrete form
 of "the check does not read shell logic":

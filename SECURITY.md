@@ -63,8 +63,9 @@ every shipped grader byte-compiles, no absolute developer paths), and a grep for
 secrets. Three further claim checkers — `tools/check_prerequisites.py` (the README's Prerequisites
 against `install.sh`), `tools/check_install_narrative.py` (the README's account of what `install.sh`
 installs, builds, pre-pulls and registers, against `install.sh`) and `tools/check_repo_metadata.py` (the
-published repo metadata against the tree) — are written and verified but **not yet in the workflow**,
-because the automation token is refused on workflow paths; run them by hand (see
+published repo metadata against the tree) — are written and verified but **not yet in the workflow**:
+this repo's automation token is refused on workflow paths (re-measured 2026-11-03), so adding them takes
+a human with `workflow` scope; run them by hand (see
 [`CONTRIBUTING.md`](CONTRIBUTING.md#before-you-push)). Beyond those, there is **no dependency scanning,
 no SAST, and no fuzzing**. Don't assume those exist, and none of the checks run the installer: a cold
 `./install.sh` on a disposable host is the only proof the steps execute.

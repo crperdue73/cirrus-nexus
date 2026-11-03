@@ -163,6 +163,50 @@ unverifiable claims, no screenshots of a build that isn't here.
 
 ## Backlog (one item per polish run)
 
+- [x] **Four docs said the CI matrix was "written and ready but not pushed". It is neither written nor
+      pushable by this token — and the probe that proved it left a scratch branch, deleted** (2026-11-03 20:00).
+      Picked up the 02:00 run's own next line ("wire the three local-only claim checks into `ci.yml`; the
+      token can write workflows (measured 2026-10-29)"), which cited the **older** measurement and got it
+      wrong. Measured first, at `7f0b4c5` (`git status` clean, HEAD == `origin/main`): `py_compile` rc=0,
+      `bash -n install.sh` rc=0, `check_self_contained` 15/2 rc=0, `check_prerequisites` 36 claims rc=0,
+      `check_repo_metadata` 27 claims rc=0, `check_install_narrative` 12 claims rc=0,
+      `check_self_contained_doc` 17 claims rc=0. GitHub API: newest run `41649730563` on `7f0b4c5`,
+      completed success. `ci.yml` at HEAD: one job `check`, `python-version: "3.x"`, four steps — no matrix.
+      `x-oauth-scopes: delete:packages, repo, write:discussion, write:packages` (no `workflow`).
+      **The probe, done properly this time.** Created `probe-workflow-scope-tmp2` at `7f0b4c5` (201), then
+      PUT two files on that same branch: a root-level `probe-root-tmp2.yml` → **201**, and
+      `.github/workflows/probe-tmp.yml` → **404 "Not Found"**. So the refusal is per *workflow path*, not
+      per file type or per branch — that is the sentence the docs now carry. Scratch branch deleted
+      (204, re-read 404). Nothing written to `main` or to any workflow path.
+      **(1) The wrong claim, in four files.** `README.md` (Python-floor paragraph) said the matrix was
+      "written and ready to land but not yet pushed". That is false twice over: `ci.yml` at HEAD contains
+      no matrix (measured above), and this token cannot land it (probed above). Now: "not applied", with
+      the reason, and the floor's honesty intact — 3.10 is still listed as derived from annotations plus
+      the one-off 2026-11-02 interpreter run, **not** exercised by CI.
+      **(2) Three more files echoed it.** `CONTRIBUTING.md` (*Before you push* + *Changing CI*),
+      `SECURITY.md` (*What this project checks today*), `docs/SELF-CONTAINED.md` (the local-only check
+      paragraph). All four now say the same measured thing: adding a step means a `.github/workflows/`
+      write, this token is refused there (re-measured 2026-11-03), a human with `workflow` scope is
+      needed. The claim about *what CI runs today* is unchanged, because it was already true.
+      **(3) Corrected the older record rather than editing it.** The 2026-10-29 entry in this worklog says
+      `repo` scope is sufficient to write the workflow. It is not, and the 02:00 run inherited that
+      sentence. Left in place as the record of what was believed then; this entry is the correction, and
+      the two entries above it that say "the token can write workflows" are now known-wrong in that one
+      respect. A future run should not re-derive them as current.
+      VERIFIED after: `py_compile` rc=0, `bash -n install.sh` rc=0, all five claim checkers rc=0 with
+      unchanged counts (36 / 27 / 12 / 17 / 15+2), relative-link sweep over 24 Markdown files → 1 "broken",
+      pre-existing and false-positive (a `…/badge/python-3.x-blue.svg` inside a prose sentence in this
+      worklog, not a link). Pre-edit copies in `.nexus/bundle-archive/*.bak-2026-11-03-2000-ci-claim`
+      (git-ignored). **No workflow, code, installer, topology, grader, lab or CI-file change** — the
+      workflow is byte-identical to HEAD, which is the point. NOT COMPLETE — Dad's word alone.
+      | proof=none (docs + an API probe) |
+      next=the polish list is exhausted of items this token can both do and prove: screenshots need a live
+      host on the other subnet, the CI matrix and the three checkers need a `workflow`-scoped human, and
+      the `10-archive/` ship-or-delete call is Dad's. The candidate I would pick next is the one reader-
+      facing artefact nobody has audited against the tree: **`docs/RELEASE-NOTES-v0.3.0-draft.md`** —
+      it is linked from the README, describes a release that was never cut, and I have not checked that
+      every entry in it still names a file, lab or behaviour that exists here.
+
 - [x] **`docs/SELF-CONTAINED.md` described a boundary nobody measured — the doc's limits were the only
       claims in the tree with no check behind them. Now `tools/check_self_contained_doc.py` pins 16 of
       them, in both directions** (2026-11-03 02:00).

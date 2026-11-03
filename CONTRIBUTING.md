@@ -23,9 +23,10 @@ python3 tools/check_install_narrative.py  # 6. README's account of install.sh   
 # 7. no obvious secrets committed — CI greps the tree for token/key patterns     — in CI
 ```
 
-**CI does not run steps 4–6 yet.** The diff that adds them is written and verified locally, but this
-repo's automation token has no `workflow` scope, so a `ci.yml` change needs a human with that scope (see
-*Changing CI*). Run steps 4–6 by hand until the job has them.
+**CI does not run steps 4–6 yet.** Adding them means a `ci.yml` change, and this repo's automation token
+has no `workflow` scope — GitHub answers `404` to a write under `.github/workflows/` with this token
+(re-measured 2026-11-03), so it takes a human with that scope (see *Changing CI*). Run steps 4–6 by
+hand until a job has them.
 
 Steps 4–6 are the claim checkers, and they are the fragile ones: each audits English prose in
 `README.md` against the code or the record it describes, so the sentence and the fact can drift apart
@@ -238,13 +239,16 @@ a pull request:
 
 ### Changing CI
 
-`.github/workflows/ci.yml` is not editable by this repo's automation token: it holds `repo` scope, which
-GitHub refuses for workflow paths (measured 2026-10-29 — the same token can commit any other file, and
-the Contents API answers `404` for a write under `.github/workflows/`; `git push` says so outright:
-*refusing to allow a Personal Access Token to create or update workflow … without `workflow` scope*).
+`.github/workflows/ci.yml` is not editable by this repo's automation token. It holds
+`delete:packages, repo, write:discussion, write:packages` — `workflow` is absent — and the refusal is
+**per workflow path, not per file type**: measured 2026-11-03, the same token creates a root-level
+`*.yml` on a scratch branch (`201`) and gets `404` for every write under `.github/workflows/` on that
+same branch. `git push` of a workflow change is refused outright:
+*refusing to allow a Personal Access Token to create or update workflow … without `workflow` scope*.
 A workflow change therefore has to be applied by a human whose token has `workflow` scope, or through
 a PR from a fork. Any proposed workflow diff is reviewed like any other change, with the same rule: it
-is not "done" until a run shows it doing what the diff says.
+is not "done" until a run shows it doing what the diff says — check the newest run's job list at
+`/actions`, not the badge alone.
 
 If your change is a **new lab**, it is much more likely to be reviewable if it says up front which node
 the grader examines, what the exact expected output is, and how you confirmed the lab does **not** pass

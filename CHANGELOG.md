@@ -16,6 +16,13 @@ was published for this window** — notes are drafted in
 This window **removes files from the tree** (archived first, not discarded) and changes shipped
 behaviour, so it is not a patch release if it is released at all.
 
+### Changed
+- **Four docs claimed the CI Python matrix was "written and ready but not pushed".** It is neither: the
+  committed `ci.yml` has no matrix, and this repo's automation token is refused on `.github/workflows/`
+  (re-measured 2026-11-03 — a root-level `*.yml` on the same branch is accepted, a workflow path is
+  `404`). `README.md`, `CONTRIBUTING.md`, `SECURITY.md` and `docs/SELF-CONTAINED.md` now say the change
+  is **not applied** and needs a human with `workflow` scope. What CI runs today is unchanged.
+
 ### Fixed
 - **`score` was documented as if it were a grade.** `docs/GRADING-MODEL.md` said a pass/fail result
   carries "`score` in `[0, 1]`" and stopped there; nothing in the tree said what the number *is*. Read
