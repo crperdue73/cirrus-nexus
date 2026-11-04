@@ -521,11 +521,12 @@ curl -s https://api.github.com/repos/crperdue73/cirrus-nexus | jq -r '.license.s
 ```
 
 Change a claim in the tree and change the JSON in the same commit. Unlike
-`tools/check_self_contained.py`, this tool is **not** yet a CI step: the one-file diff that adds it (and
-`tools/check_prerequisites.py`, which does the matching thing for this README's Prerequisites block) is
-written and verified, but this repo's automation token is refused on workflow paths, so it needs a human
-with `workflow` scope. Until then it is a manual re-check for whoever touches the repo's front page —
-run it with the command above.
+`tools/check_self_contained.py`, this tool is **not** yet a CI step: the `ci.yml` diff that adds it (and
+the other local-only claim checkers — `tools/check_prerequisites.py` for this README's Prerequisites
+block, `tools/check_install_narrative.py` for the paragraph after it, `tools/check_lab_assets.py` for
+the per-lab startup-config promise) is written and verified, but this repo's automation token is refused
+on workflow paths, so it needs a human with `workflow` scope. Until then this is a manual re-check for
+whoever touches the repo's front page — run the commands above.
 
 ---
 

@@ -10,8 +10,8 @@ write the claim.
 
 ## Before you push
 
-Run the same checks CI runs (`.github/workflows/ci.yml` — four of them), plus the three claim
-checkers that are written and verified but **not yet in the workflow** (steps 4–6; see below):
+Run the same checks CI runs (`.github/workflows/ci.yml` — four of them), plus the four claim
+checkers that are written and verified but **not yet in the workflow** (steps 4–7; see below):
 
 ```bash
 python3 -m py_compile backend/main.py     # 1. backend compiles                     — in CI
@@ -20,15 +20,16 @@ python3 tools/check_self_contained.py     # 3. a bare clone is installable      
 python3 tools/check_repo_metadata.py      # 4. published repo metadata vs the tree  — local only
 python3 tools/check_prerequisites.py      # 5. README's Prerequisites vs install.sh — local only
 python3 tools/check_install_narrative.py  # 6. README's account of install.sh       — local only
-# 7. no obvious secrets committed — CI greps the tree for token/key patterns     — in CI
+python3 tools/check_lab_assets.py         # 7. per-lab startup-configs: copied+found — local only
+# 8. no obvious secrets committed — CI greps the tree for token/key patterns     — in CI
 ```
 
-**CI does not run steps 4–6 yet.** Adding them means a `ci.yml` change, and this repo's automation token
+**CI does not run steps 4–7 yet.** Adding them means a `ci.yml` change, and this repo's automation token
 has no `workflow` scope — GitHub answers `404` to a write under `.github/workflows/` with this token
-(re-measured 2026-11-03), so it takes a human with that scope (see *Changing CI*). Run steps 4–6 by
+(re-measured 2026-11-03), so it takes a human with that scope (see *Changing CI*). Run steps 4–7 by
 hand until a job has them.
 
-Steps 4–6 are the claim checkers, and they are the fragile ones: each audits English prose in
+Steps 4–7 are the claim checkers, and they are the fragile ones: each audits English prose in
 `README.md` against the code or the record it describes, so the sentence and the fact can drift apart
 while the tree still builds. Each one exits 2 if its target paragraph is gone, rather than passing
 silently.
@@ -48,6 +49,15 @@ does — which deps it pip-installs, where the app is copied, which image it bui
 pre-pulls, which systemd unit it registers. Every verb there is a claim about a shell script that
 changes without the README; the checker looks for each step in `install.sh` and compares the names
 (install directory, image tag, unit name) against the prose. Nothing checked that sentence before.
+
+Step 7 checks the paragraph after that one — the per-lab startup-config promise. It verifies that
+`install.sh` defines **and calls** a function copying each `lab-definitions/<lab>/assets/` into the
+installed tree, that the sweep really reads `startup-config:` out of the *installed* topologies and
+warns by path when one is missing, and that every `startup-config:` a shipped topology names is a
+relative path under that lab's own `assets/` and exists in this tree. That last part matters because
+this failure already happened twice here: a per-lab `assets/` folder that is untracked, or that the
+installer never copied, serves **zero** labs while every local run looks healthy. Like the others, it
+does not run the installer.
 
 `check_self_contained.py` (step 3) is the important one: it fails if a required file is missing, a
 lab's `startup-config` or `grader` doesn't resolve, a shipped grader fails to byte-compile, or a
@@ -84,7 +94,7 @@ committed. The two commands answer different questions: the `grep` form is "is m
 right now, in the suffixes we ship most of", the `git grep` form is "is the whole tracked tree clean,
 no suffix filter". Zero output from each is the pass.
 
-The four checks CI actually enforces are steps 1–3 and 7 — on **one** interpreter, the newest `3.x` the
+The four checks CI actually enforces are steps 1–3 and 8 — on **one** interpreter, the newest `3.x` the
 runner offers, because `ci.yml` asks for `python-version: "3.x"`. The 3.10 floor the README states is
 therefore not exercised by CI (see *Changing CI* below for why the matrix that would fix this is not in
 place). Four further tools exist for lab authors and maintainers, and are **not** part of CI:
