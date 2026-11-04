@@ -69,12 +69,12 @@ land first.
 | `backend/main.py` | The whole server: FastAPI app, lab discovery/validation, session lifecycle, ttyd wiring, the grader runner, and the runtime-digest gate. Single file by design. |
 | `frontend/index.html` | The student UI — one static HTML page (no build step, no framework). Talks to the API with `fetch()` and embeds one `ttyd` iframe per node. |
 | `lab-definitions/**/*.yml` | Lab topologies with a `metadata:` block (id, name, gradeable nodes, grader module, daemons). containerlab consumes the `topology:` half. |
-| `lab-definitions/grader_*.py` | Per-lab graders. Imported on demand; implement the two-function interface documented in [`ADDING-A-LAB.md`](ADDING-A-LAB.md). |
+| `lab-definitions/grader_*.py` | Per-lab graders, one module per lab (`grader_demo_01_srl.py`, `grader_demo_02.py`), named by each YAML's `metadata.grader`. Imported on demand from inside the grader directory only — a lab file cannot point the loader at code outside it; interface in [`ADDING-A-LAB.md`](ADDING-A-LAB.md). |
 | `install.sh` | One-command host setup: Docker, containerlab, ttyd, Python deps, the app copy to `/opt/aegis`, the substrate image, pre-pulled node images, and the systemd unit. |
 | `start_server.py` | Foreground launcher for running without the service (see the caveat in [`OPERATIONS.md`](OPERATIONS.md)). |
 | `Dockerfile.frr` | Builds the `aegis/frr:latest` substrate — Alpine + FRR with **only** `zebra` and `staticd`; the build asserts `ospfd=no`/`bgpd=no`. |
-| ~~`Dockerfile.frr-bgp`~~ | **Deleted 2026-10-30.** It was a second image for dynamic-routing labs that no code path built — `install.sh`'s Step 7b was removed 2026-09-20 (commit `0583677`), and lab-04 (its only would-be consumer) is not in this tree. It survived as unreferenced source until it was removed. |
-| `assets/frr-image.pin` | **Re-pinned 2026-10-30.** Names the current `Dockerfile.frr` (`b3046a70…`, commit `0503bc5`) with its image id, layer chain and tarball marked `UNPINNED`: no tarball ships in any commit, and no build host was available to measure a real image. `install.sh` blanks `UNPINNED` placeholder values, so the pin cannot be mistaken for a hash, and refuses to verify against an `UNPINNED` Dockerfile fingerprint. The live stale-substrate defence is not this file — it is the `aegis.frr.dockerfile.sha256` label Step 7 stamps into the image and rebuilds on. See [`OPERATIONS.md`](OPERATIONS.md) → "Known drift". |
+| `Dockerfile.frr-bgp` *(not in this tree)* | **Deleted 2026-10-30.** It was a second image for dynamic-routing labs that no code path built — `install.sh`'s Step 7b was removed 2026-09-20 (commit `0583677`), and lab-04 (its only would-be consumer) is not in this tree. It survived as unreferenced source until it was removed. This row is kept as a note, not a component: a path rendered with `~~strikethrough~~` still renders as a path, and the section is called *Components*. |
+| `assets/frr-image.pin` | **Re-pinned 2026-10-30.** Names the current `Dockerfile.frr` (`b3046a70…`, commit `0503bc5`), records the last known image id from the 2026-09-19 build, and marks the layer chain and the transport tarball `UNPINNED`: no tarball ships in any commit, and no build host was available to re-measure a real image. `install.sh` blanks `UNPINNED` placeholder values, so the pin cannot be mistaken for a hash, and refuses to verify against an `UNPINNED` Dockerfile fingerprint. The live stale-substrate defence is not this file — it is the `aegis.frr.dockerfile.sha256` label Step 7 stamps into the image and rebuilds on. See [`OPERATIONS.md`](OPERATIONS.md) → "Known drift". |
 | `tools/` | Maintenance scripts: `check_self_contained.py` (clone-and-install completeness), `lint_lab_pack.py`, `check_bundle_fresh.sh`. |
 | `.github/workflows/ci.yml` | CI: backend compiles, `bash -n install.sh`, self-containment check, secret scan. |
 
@@ -101,13 +101,14 @@ sequenceDiagram
 
     S->>A: POST /api/sessions/{id}/submit?node=…
     A->>A: re-resolve runtime_digest
-    alt digest matches the pinned one
+    alt digest matches, node examinable, grader loadable
         A->>G: import grader, run grade(node)
-        G->>A: pass / fail + score
-        A-->>S: 200 { passed, score, feedback }
-    else substrate changed since start
-        A-->>S: 409 refused — not a verdict
+        G->>A: passed + score + feedback
+        A-->>S: 200 status=verdict { passed, score, feedback }
+    else substrate changed / node down / grader missing or unloadable
+        A-->>S: 409 status="refused" — not a verdict
     end
+    Note over A,S: a grader that raises is its own outcome —<br/>200 status="error", also not a verdict
 
     S->>A: POST /api/sessions/{id}/stop
     A->>C: containerlab destroy
@@ -126,13 +127,16 @@ sequenceDiagram
 ## The grading path, and why it can refuse
 
 A grade is a **verdict only when the node could actually be examined.** The grader inspects the
-running node over `docker exec` (via `vtysh` for FRR, `sr_cli` for SR Linux). Two gates matter:
+running node over `docker exec` (via `vtysh` for FRR, `sr_cli` for SR Linux). The API carries the
+outcome in an in-band `status` field with three values — `graded`, `refused`, `error` — so a
+broken grader and a wrong answer never look alike. Two gates matter:
 
 - **Identity gate** — each session pins a `runtime_digest` read off the live containers at
   start. Grading re-resolves it and **refuses** (HTTP `409`) if the substrate changed, so a
   grade can't be cited against a substrate it wasn't measured on.
-- **Examinability gate** — a node that is down, or a lab with no grader, produces a **refusal**,
-  not a silent `pass`/`fail`.
+- **Examinability gate** — a node that is down, or a lab whose grader module is missing or cannot be
+  loaded, produces a **refusal**, not a silent `pass`/`fail`. Three outcomes exist, not two: a
+  **third**, `error`, covers a grader that raises, and it is also not a verdict on the student.
 
 Outcomes and the full refusal vocabulary are in [`GRADING-MODEL.md`](GRADING-MODEL.md). The API
 surface is listed in the [README](../README.md#api).
@@ -143,24 +147,27 @@ surface is listed in the [README](../README.md#api).
 
 | image | node | in the repo? |
 |---|---|---|
-| `alpine:latest` | the PCs | ❌ pulled at deploy time (small) |
-| `aegis/frr:latest` | the router in Demo 2 | ❌ built locally by `install.sh` from `Dockerfile.frr` (no image tarball ships in this tree; the pin's `aegis-frr-image.tar.gz` is absent) |
-| `ghcr.io/nokia/srlinux:latest` | the REAL switches | ❌ pulled at deploy time — **~0.75 GB**, single layer |
+| `alpine:latest` | the PCs (`kind: linux`) | ❌ pulled at deploy time (small) |
+| `aegis/frr:latest` | the router in Demo 2 | ❌ built locally by `install.sh` from `Dockerfile.frr` (no image tarball ships in this tree; the pin's tarball is marked `UNPINNED`) |
+| `ghcr.io/nokia/srlinux:latest` | the REAL switches (`kind: nokia_srlinux`) | ❌ pulled at deploy time — **~0.75 GB**, single layer (752,789,048 bytes compressed) |
 
-`install.sh` pre-pulls the two registry images before creating the service, so a blocked
-registry fails early instead of at first deploy.
+The size is read from the registry manifest, as quoted in the README's *Known limitations*; the
+full disk arithmetic lives there. `install.sh` pre-pulls the two registry images before creating
+the service, so a blocked registry fails early instead of at first deploy.
 
 ---
 
 ## Scope boundaries (what this architecture does *not* include)
 
 - **Static routing only.** The substrate asserts `ospfd=no`/`bgpd=no`. No OSPF, BGP, EVPN, or VPNs
-  in the shipped labs.
+  in the shipped labs. There is no dynamic-routing substrate in this tree: the `Dockerfile.frr-bgp`
+  that once held one was deleted on 2026-10-30 after being unreferenced for six weeks, and the
+  install record publishes one substrate digest, not a set.
 - **One host, no database.** Session state is in-process; a host reboot loses running labs
-  (containers are not restored on boot).
-- **No dynamic routing in the demo set.** There is no dynamic-routing substrate in this tree: the
-  `Dockerfile.frr-bgp` that once held one was deleted on 2026-10-30 after being unreferenced for
-  six weeks, and the install record publishes one substrate digest, not a set.
+  (containers are not restored on boot), and deploys are serialized per process, not coordinated
+  across processes.
+- **Two labs.** This tree ships the two demo labs under `lab-definitions/` and nothing else; the
+  README's lab table is the authoritative count.
 
 ---
 
