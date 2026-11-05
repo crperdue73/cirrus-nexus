@@ -44,6 +44,10 @@ Measured 2026-10-26: the committed PNG re-renders to an **identical** file — `
 that commit the block and the image agree. That is a measurement of one commit, not a standing
 guarantee; re-run it after editing the block.
 
+Re-measured 2026-11-05 at `331dda3` (after the architecture.md and OPERATIONS.md truth passes): the
+same block re-renders to the **identical** file — same sha256, same 1568×1646, same 110243 bytes —
+so the PNG is still the current block, not an October render of an older one.
+
 > Rendering as `root` needs Chromium's sandbox off. `mermaid-cli` takes a puppeteer config; with
 > `{"args":["--no-sandbox"]}` in a JSON file passed as `-p puppeteer.json`, the command above
 > works in a root shell. Rendering as a normal user needs no such flag.
