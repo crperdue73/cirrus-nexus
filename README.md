@@ -144,13 +144,22 @@ Five things you should know before you start, because they are **not pinned or c
   fastapi uvicorn pyyaml`, with a plain `pip3 install` fallback) — not `pip install -r requirements.txt`.
   The backend also imports `pydantic`, but only for two `BaseModel` subclasses (no validators, no
   `Field`), and it is not named in either file. Nothing here fixes *which* FastAPI you get.
-- **Disk: the "4 GB free" figure is derived, not measured by a working install.** The switch image
+- **Disk: the "4 GB free" figure is derived. The compressed size below was measured; the on-disk total
+  was not measured by a working install here.** The switch image
   `ghcr.io/nokia/srlinux:latest` is a **single layer of 752,789,048 bytes (≈0.75 GB) compressed**, per
   its registry manifest; `alpine:latest` is ≈4 MB, and `aegis/frr:latest` is a local build on top of it.
   Demo 2 runs two switch nodes, and each container gets its own writable layer on top of that image, so
   the image plus two containers plus Docker, the `ttyd` binary and the Python packages is on the order of
   1.5–2 GB before anything else. The exact total depends on the Docker storage driver and on how much
   you write inside the labs.
+
+  **Compressed is not on-disk.** When that 0.75 GB image was pulled on the host this repository is
+  maintained on (Docker Engine 29.9.3, overlayfs), `docker images` reported **3.2 GB** of disk usage and
+  `docker system df` **3.276 GB** across all three images — with build cache making `/var/lib/docker`
+  **2.4 GB**. The two numbers count different things (compressed layer vs. uncompressed bytes on the
+  storage driver), so if your host reports the pulled image as ~3 GB rather than ~0.75 GB, nothing is
+  wrong — but the 4 GB floor above is built on the smaller number and is the tighter of the two. That is
+  a measurement on this one host, not a guarantee for yours.
 
   **This note used to say "~2.35 GB pull", and that number was wrong.** Measured against the registry
   on 2026-10-31, the amd64 and arm64 manifests are 752.8 MB and 708.2 MB — there is no 2.35 GB the image
@@ -406,6 +415,16 @@ platform for its two shipped labs; it is not a finished product. What that means
 
 - **Static routing only** — see "what this is not," above.
 - **A host reboot loses running labs.** Student containers are not restored on boot.
+- **Re-running `install.sh` over an existing install nests the app tree.** Step 6 is
+  `cp -r "${SCRIPT_DIR}/backend" "${AEGIS_DIR}/backend"` (and likewise for `frontend/`
+  and `lab-definitions/`). GNU `cp -r` copies *into* a destination directory that already exists, so on
+  a second run the source directory lands one level deeper — `${AEGIS_DIR}/backend/backend/main.py` —
+  instead of replacing the old copy. The service still starts (its `ExecStart` names the top-level
+  `main.py`, which is updated normally), so the failure is silent: what you get is a stale duplicate
+  rather than a broken install. There is no idempotence check in the installer and no `rm -rf` before
+  the copy, so the only reliable reinstall today is `rm -rf /opt/aegis` first, or a fresh host. Observed
+  as the directory layout on the maintenance host (files dated 2026-11-04, the run's own date), not
+  reproduced from a cold host.
 - **A missing lab asset fails the whole catalog, not one lab's switch.** The backend refuses a lab whose
   `startup-config` it cannot find, and that refusal is per-lab — but if every lab is refused the UI
   comes up with no labs at all. `install.sh` now verifies those files exist after installing and warns
