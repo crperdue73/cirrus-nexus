@@ -60,12 +60,15 @@ Problems that break the design above rather than restating it. Examples:
 CI (`.github/workflows/ci.yml`) runs four checks on every push and pull request: the backend
 byte-compiles, `install.sh` is valid shell, the tree is self-contained (a bare clone is installable,
 every shipped grader byte-compiles, no absolute developer paths), and a grep for obvious committed
-secrets. Four further claim checkers — `tools/check_prerequisites.py` (the README's Prerequisites
+secrets. Five further claim checkers — `tools/check_prerequisites.py` (the README's Prerequisites
 against `install.sh`), `tools/check_install_narrative.py` (the README's account of what `install.sh`
 installs, builds, pre-pulls and registers, against `install.sh`), `tools/check_lab_assets.py` (the
 README's per-lab startup-config copy-and-verify promise, against `install.sh` and the shipped
-topologies) and `tools/check_repo_metadata.py` (the
-published repo metadata against the tree) — are written and verified but **not yet in the workflow**:
+topologies), `tools/check_repo_metadata.py` (the
+published repo metadata against the tree) and `tools/check_operations_doc.py` (the operational
+claims in `docs/OPERATIONS.md` — unit shape, start_server behaviour, digest schemes, stop
+semantics, the image pin, the archived labs — against the files that implement them) — are written
+and verified but **not yet in the workflow**:
 this repo's automation token is refused on workflow paths (re-measured 2026-11-03), so adding them takes
 a human with `workflow` scope; run them by hand (see
 [`CONTRIBUTING.md`](CONTRIBUTING.md#before-you-push)). Beyond those, there is **no dependency scanning,

@@ -1,7 +1,9 @@
 # AEGIS — Operations Notes
 
 The detail behind the README: how to run, ship, and reason about the system, plus the known drift.
-Everything here was measured on a live host; it is not aspirational.
+Everything here was measured on a live host; it is not aspirational. **`python3 tools/check_operations_doc.py`
+re-measures it from the tree** (50 checks, exit 1 on any drift) — run it before you trust a number below,
+and run it after you change the code these notes describe.
 
 ---
 
@@ -219,17 +221,31 @@ Still open, and it needs a machine with Docker: produce the real `image_id` / `l
 
 ## Capstone — Net Eng I PBM (curriculum context, not a shipped lab)
 
-The course outline describes a **performance-based measure** (PBM) out of 100 points, **70 = proficient**:
+The course outline describes a **performance-based measure** (PBM) out of 100 points, **70 = proficient**.
 
-- **Subnetting (27 pts)** — a /24 into /25 + /28
-- **Device Config (67 pts)** — RTR, SW1, PC-A, PC-B
-- **Connectivity (6 pts)** — end-to-end IPv4 + IPv6
+There is **no capstone artifact in this tree that carries its own point breakdown** — the capstone lab
+definition was archived out on 2026-10-30. The only in-tree numbers are the ones
+`lab-guides/lab-03-lock-it-down.md` states in its own rubric table, and it presents itself as the exact
+format of the capstone rather than as the capstone. Summed from that table as shipped:
 
-The three sub-scores above sum to **100**, and the only in-tree artifact that carries them is
-`lab-guides/lab-03-lock-it-down.md`, which cross-references the capstone (it names 192.168.12.0/24,
-"Auto-graded (100 pts)", and "70% = pass"). **Those numbers are read directly from that shipped guide;
-the capstone itself is not one of the two labs in this tree and is not auto-graded by either shipping
-grader.**
+- **Subnetting — 15 pts** (address scheme, CIDR notation, host ranges)
+- **Device Config — 75 pts**, made of five rows: RTR SSH Config 30, RTR Interface Config 15, SW1 SVI 15,
+  SW1 Port Security 10, PC Config 5
+- **Connectivity — 10 pts** (all seven ping tests pass)
+
+The three figures sum to **100**, and they are **arithmetic over the shipped table** — `tools/check_operations_doc.py`
+re-parses that table and fails if this section ever quotes a number the guide does not produce.
+
+> **Corrected 2026-11-05.** This section previously read "Subnetting 27 / Device Config 67 /
+> Connectivity 6" and attributed them to the guide as numbers "read directly" from it. The guide says
+> no such thing: its rows are 15 / 75 / 10, and no in-tree file ever contained 27, 67 or 6 as a
+> capstone sub-score. The prose was a reconstruction that drifted into a citation — the exact failure
+> mode this file exists to avoid. Prose describing the sub-tasks ("a /24 into /25 + /28", "RTR, SW1,
+> PC-A, PC-B") is kept because the guide does describe those, but the point values now come from the
+> table and nothing else.
+
+The **70 = proficient** line is likewise the guide's ("70% = pass"), not a capstone document's. **The capstone
+itself is not one of the two labs in this tree and is not auto-graded by either shipping grader.**
 
 ---
 
