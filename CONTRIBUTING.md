@@ -27,8 +27,22 @@ python3 tools/check_operations_doc.py     # 8. OPERATIONS.md's claims vs the tre
 
 **CI does not run steps 4–8 yet.** Adding them means a `ci.yml` change, and this repo's automation token
 has no `workflow` scope — GitHub answers `404` to a write under `.github/workflows/` with this token
-(re-measured 2026-11-03), so it takes a human with that scope (see *Changing CI*). Run steps 4–8 by
+(re-measured 2026-11-03; re-confirmed 2026-11-05, `x-oauth-scopes` = `delete:packages, repo,
+write:discussion, write:packages`), so it takes a human with that scope (see *Changing CI*). Run steps 4–8 by
 hand until a job has them.
+
+The step list and the file write are two different obstacles, and it is worth not conflating them: a
+step that runs `python3 tools/<checker>.py` needs nothing from the token *once the file can be written*.
+The write is the whole blocker. So the intended diff — steps 5 and 6 added as invocations, plus a
+`python-version` floor of `3.10` — sits parked, applies cleanly to `main`, and has not been pushed:
+
+```bash
+git apply .nexus/WORKFLOW-PATCH-2026-11-05-2000.patch   # then review, commit, push with a `workflow` token
+```
+
+`.nexus/` is git-ignored, so that file exists only in a working copy that was made here. The patch is
+re-generated, not stored, and the commands in the block above are the thing to trust; the token refusal
+itself was measured, not assumed.
 
 Steps 4–8 are the claim checkers, and they are the fragile ones: each audits English prose in
 `README.md` against the code or the record it describes, so the sentence and the fact can drift apart

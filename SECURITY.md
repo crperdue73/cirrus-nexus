@@ -69,8 +69,10 @@ published repo metadata against the tree) and `tools/check_operations_doc.py` (t
 claims in `docs/OPERATIONS.md` — unit shape, start_server behaviour, digest schemes, stop
 semantics, the image pin, the archived labs — against the files that implement them) — are written
 and verified but **not yet in the workflow**:
-this repo's automation token is refused on workflow paths (re-measured 2026-11-03), so adding them takes
-a human with `workflow` scope; run them by hand (see
+this repo's automation token is refused on workflow paths (re-measured 2026-11-03, re-confirmed
+2026-11-05), so adding them takes
+a human with `workflow` scope — a step that invokes a checker needs nothing else; the *write* to the
+workflow file is the whole blocker (see
 [`CONTRIBUTING.md`](CONTRIBUTING.md#before-you-push)). Beyond those, there is **no dependency scanning,
 no SAST, and no fuzzing**. Don't assume those exist, and none of the checks run the installer: a cold
 `./install.sh` on a disposable host is the only proof the steps execute.
