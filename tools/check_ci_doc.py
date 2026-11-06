@@ -19,12 +19,17 @@ What it checks, in both directions:
      CONTRIBUTING step list must NOT be run by the workflow; a checker promoted into CI while
      the docs still say "not yet in the workflow" fails.
   4. CONTRIBUTING's step list (the hand-run block) must agree with itself: each entry's own
-     comment says whether it is "in CI" or "local only", and that must match ci.yml — for all
-     ten entries, not just the ones CI runs.
+     comment says whether it is "in CI" or "local only", and that must match ci.yml — for every
+     entry, not just the ones CI runs.
+  5. The ORDER. The entries the block marks `— in CI` are listed in the order a reader should run
+     them; ci.yml must run them in that same order. Labels and commands can both be right while the
+     sequence drifts, and then the block no longer describes the workflow it claims to mirror
+     (same failure as 2026-11-06 12:00, one axis over).
 
 What it does NOT check: whether a step's command is any good, whether the workflow is valid
 YAML Actions semantics, or whether CI passed — that last one is the API's word, not this tool's.
-It reads the file. It does not run the workflow.
+It reads the file. It does not run the workflow. Sub-claims inside a step (e.g. a version named in
+prose) are only checked where a claim below names them.
 """
 
 import os
@@ -64,7 +69,17 @@ ANCHORED_BY_COMMAND = {
     "Backend compiles": ("py_compile backend/main.py", "py_compile"),
     "Installer is valid shell": ("bash -n install.sh", "install.sh"),
     "No obvious secrets committed": ("grep -rInE", "secrets-grep"),
+    # Not a check — `uses:` only, no `run:` — and it used to be skipped by the NOT_A_CHECK prefix.
+    # Anchoring it keeps it out of the check count while letting a claim below name its version, so a
+    # `python-version` change in ci.yml breaks the sentence that quotes it.
+    "Set up Python": ("actions/setup-python@", "setup-python"),
 }
+# Keys in `found` that are runner steps rather than checks: never counted, never listed as checks.
+NON_CHECK_KEYS = {"setup-python"}
+# The three step-list lines that are not claim checkers. Defined at module level because the order
+# claim below needs it too — it used to be a local inside the step-list branch, which meant the order
+# claim read a name defined in a sibling block and silently filtered nothing.
+NON_CHECKERS = {"py_compile", "install.sh", "secrets-grep"}
 # A step whose name starts with this is not a check (it is the runner setup).
 NOT_A_CHECK = "Set up Python"
 
@@ -101,7 +116,7 @@ def ci_checks():
 
     found = []  # (key, step name)
     for name, cmds in steps:
-        if not cmds and name.startswith(NOT_A_CHECK):
+        if not cmds and name.startswith(NOT_A_CHECK) and name not in ANCHORED_BY_COMMAND:
             continue
         blob = " ".join(cmds)
         key = None
@@ -118,6 +133,12 @@ def ci_checks():
             key = "unrecognised:" + name
         found.append((key, name))
     return steps, found
+
+
+def ci_check_keys():
+    """ci.yml's check keys, in workflow order — runner steps like setup-python excluded."""
+    _, found = ci_checks()
+    return [k for k, _ in found if k not in NON_CHECK_KEYS]
 
 
 TOOLS = [
@@ -194,7 +215,7 @@ def main():
             die(f"{label} is missing")
 
     steps, found = ci_checks()
-    keys = [k for k, _ in found]
+    keys = ci_check_keys()
     n_ci = len(keys)
     if n_ci == 0:
         die("no checks parsed out of ci.yml — the parser or the file changed shape")
@@ -294,7 +315,6 @@ def main():
         # ci.yml's total step count — the two differ by the three lines that are not checkers. This
         # comparison had been `n_ci + len(not_in_ci)`, which only equalled the block's length while the
         # secrets-grep line failed to parse (see STEP_LIST): 11 lines vs. 10 could never have passed.
-        NON_CHECKERS = {"py_compile", "install.sh", "secrets-grep"}
         checker_lines = [t for _, t, _, _ in entries if t not in NON_CHECKERS]
         # every checker this repo has = every tools/check_*.py, read from the tree, not from a list here
         repo_checkers = sorted(os.path.splitext(f)[0] for f in os.listdir(os.path.join(ROOT, "tools"))
@@ -322,7 +342,7 @@ def main():
             bad("every line of CONTRIBUTING's step list agrees with ci.yml",
                 "; ".join(f"{t}: doc says {'in CI' if c else 'local only'}, "
                           f"ci.yml says {'in CI' if t in keys else 'not in CI'}"
-                          for _, t, c, _ in mismatched))
+                          for _, t, c in mismatched))
 
     # 5. the *second* statement of which steps are in CI must agree with the block's own markers.
     #    The block above carries the truth (one `— in CI` marker per line, already cross-checked
@@ -360,6 +380,105 @@ def main():
             ok("CONTRIBUTING's prose cites no step number the block marks local-only",
                f"{'no bare step numbers' if not cited else sorted(cited)}; block's in-CI steps "
                f"{sorted(in_ci_steps)}")
+
+    # 6. the ORDER of the in-CI block entries == the order ci.yml runs them in. Only the entries the
+    #    block marks `— in CI` are ordered against the workflow: the local-only lines are interleaved
+    #    for reading, and their position says nothing about CI. A block reordered by hand, or a
+    #    ci.yml step moved, now fails here even though every label and command is still correct.
+    #
+    #    NOTE (three bugs, each found by mutating and reading the PASS/FAIL detail):
+    #    1. the first version compared `keys` filtered BY `block_ci_order`'s own membership — a
+    #       tautology that could only detect a duplicate, never a reordering;
+    #    2. the second filtered the ci.yml side by NON_CHECKERS, the *block's* labels for its three
+    #       non-checker lines. Applied to ci.yml's keys that deleted three of the four real steps, so
+    #       a one-element list was compared to another and nearly anything passed;
+    #    3. the third compared `block_ci_order` (block keys, which by construction EXCLUDE those
+    #       three names) to the full ci.yml key list, so the honest tree failed with
+    #       "block: check_self_contained | ci.yml: py_compile → install.sh → ...".
+    #    The two sides use different vocabularies and neither is a subset of the other, so this now
+    #    compares positions: every entry the block marks `— in CI` must appear in ci.yml in the same
+    #    relative order as it appears in the block. That is exactly the drift this claim exists for.
+    block_in_ci = [t for _, t, c, _ in entries if c]
+    ci_pos = {k: i for i, k in enumerate(keys)}
+    misplaced = [t for t in block_in_ci if t not in ci_pos]
+    block_ci_order = [t for t in block_in_ci if t in ci_pos]
+    if misplaced:
+        bad("CONTRIBUTING's in-CI step order == ci.yml's order",
+            f"block marks {misplaced} `— in CI` but ci.yml has no such step")
+    elif block_ci_order != sorted(block_ci_order, key=ci_pos.get):
+        ci_seq = sorted(block_ci_order, key=ci_pos.get)
+        bad("CONTRIBUTING's in-CI step order == ci.yml's order",
+            f"block: {' → '.join(block_ci_order)} | ci.yml runs them: {' → '.join(ci_seq)}")
+    else:
+        ok("CONTRIBUTING's in-CI step order == ci.yml's order",
+           f"{' → '.join(block_ci_order)}" if block_ci_order else "— the block marks no check in CI")
+
+    # 7. the one place CONTRIBUTING quotes a value *inside* a ci.yml step: the `python-version`
+    #    floor the parked workflow patch would add. The sentence names it, so the workflow must still
+    #    be below it — the day someone bumps ci.yml to the floor, the sentence becomes a no-op promise
+    #    and nothing else here would notice.
+    m = re.search(r"`python-version` floor of `([\d.]+)`", prose)
+    m_ver = re.search(r"python-version:\s*[\"']?([\d.x]+)", open(CI, encoding="utf-8").read())
+    if not m:
+        bad("CONTRIBUTING's `python-version` floor sentence is still present",
+            "sentence not found (it was reworded — update this tool)")
+    elif not m_ver:
+        bad("ci.yml still sets a python-version this tool can read", "no `python-version:` in ci.yml")
+    else:
+        doc_floor, ci_ver = m.group(1), m_ver.group(1)
+        try:
+            ci_tuple = tuple(int(x) for x in ci_ver.split("."))
+            floor_tuple = tuple(int(x) for x in doc_floor.split("."))
+        except ValueError:
+            ok("CONTRIBUTING's `python-version` floor is consistent with ci.yml",
+               f"ci.yml sets {ci_ver!r} (not a numeric version — compared at ref time, not here)")
+        else:
+            if ci_tuple < floor_tuple:
+                ok("CONTRIBUTING's `python-version` floor is consistent with ci.yml",
+                   f"ci.yml sets {ci_ver}, doc says the patch floors it at {doc_floor} — true")
+            else:
+                bad("CONTRIBUTING's `python-version` floor is consistent with ci.yml",
+                    f"ci.yml already sets {ci_ver} ≥ the {doc_floor} floor the doc says it would add")
+
+    # 8. prose paragraphs that say "Step N checks ..." must agree with the block's number for the
+    #    checker the sentence is about. That checker is the FIRST tool named after the step number,
+    #    not every tool in the paragraph: "Step 5 reads the README's Prerequisites block ... It reads
+    #    the installer and the tree" mentions install.sh as an object, not as the step's subject, and
+    #    a first draft of this claim flagged it as "install.sh: prose says step 6, block says 2".
+    #    This is the drift the 2026-11-05 20:00 run recorded and left in place: the startup-config
+    #    paragraph began "Step 7 checks ..." while the block lists the checker it describes at 8,
+    #    because the list gained an entry and the prose numbers were never re-read.
+    tool_step = {t: n for _, t, _, n in entries if n is not None}
+    prose_steps, offenders = [], []
+    for para in re.split(r"\n\s*\n", prose):
+        m_s = re.search(r"\b[Ss]teps? (\d+)\b", para)
+        if not m_s:
+            continue
+        # The subject is the checker the paragraph names, if it names one; a bare `install.sh` is
+        # only the subject when no checker is named at all (e.g. "install.sh copies the project
+        # into /opt/aegis (Step 6)"). Two paragraphs here are *about* check_install_narrative and
+        # check_lab_assets and merely use install.sh as the thing under test — matching install.sh
+        # first flagged both, which is how that distinction got made explicit.
+        after = para[m_s.end():]
+        subject = re.search(r"`(check_[a-z_]+\.py)`", after) or re.search(r"`(install\.sh)`", after)
+        if not subject:
+            continue
+        t = subject.group(1)
+        t = t[:-3] if t.startswith("check_") else t
+        if t not in tool_step:
+            continue
+        n = int(m_s.group(1))
+        prose_steps.append((t, n))
+        if tool_step[t] != n:
+            offenders.append(f"{t}: prose says step {n}, the block lists it as step {tool_step[t]}")
+    if offenders:
+        bad("CONTRIBUTING's prose step numbers agree with the block's numbering",
+            "; ".join(offenders))
+    else:
+        ok("CONTRIBUTING's prose step numbers agree with the block's numbering",
+           f"{len(prose_steps)} citation(s) checked, all matching: "
+           + (", ".join(f"{t}=step {n}" for t, n in prose_steps)
+              if prose_steps else "no single-tool step citations to compare"))
 
     info("NOT checked here", "that CI passed (the API's word), and whether each step's command "
                              "is a good check — this tool reads the workflow, it does not run it")

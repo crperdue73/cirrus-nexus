@@ -52,23 +52,23 @@ Steps 4–11 are the claim checkers, and they are the fragile ones: each audits 
 while the tree still builds. Each one exits 2 if its target paragraph is gone, rather than passing
 silently.
 
-Step 5 reads the README's **Prerequisites** block, which makes claims that are *negative* — the
+Step 6 reads the README's **Prerequisites** block, which makes claims that are *negative* — the
 installer does **not** check the Python version, does **not** add an Ubuntu Docker repository, does
 **not** pin a base image by digest. A note like that is the most fragile claim in the repo, because the
 day someone fixes the hazard, the README starts warning about something that no longer exists and
 nothing notices. `check_prerequisites.py` runs one targeted search per claim, in both directions, and
 fails on either drift. It reads the installer and the tree; it does not install anything.
 
-Step 4 checks the record of what github.com *says* about this repo (description, topics, license — none
+Step 5 checks the record of what github.com *says* about this repo (description, topics, license — none
 of which are files here) against the tree it describes. See the README's *Repository metadata* section.
 
-Step 6 checks the paragraph that follows Prerequisites: the one-sentence account of what `install.sh`
+Step 7 (`check_install_narrative.py`) checks the paragraph that follows Prerequisites: the one-sentence account of what `install.sh`
 does — which deps it pip-installs, where the app is copied, which image it builds and which it
 pre-pulls, which systemd unit it registers. Every verb there is a claim about a shell script that
 changes without the README; the checker looks for each step in `install.sh` and compares the names
 (install directory, image tag, unit name) against the prose. Nothing checked that sentence before.
 
-Step 7 checks the paragraph after that one — the per-lab startup-config promise. It verifies that
+Step 8 (`check_lab_assets.py`) checks the paragraph after that one — the per-lab startup-config promise. It verifies that
 `install.sh` defines **and calls** a function copying each `lab-definitions/<lab>/assets/` into the
 installed tree, that the sweep really reads `startup-config:` out of the *installed* topologies and
 warns by path when one is missing, and that every `startup-config:` a shipped topology names is a
@@ -112,13 +112,13 @@ committed. The two commands answer different questions: the `grep` form is "is m
 right now, in the suffixes we ship most of", the `git grep` form is "is the whole tracked tree clean,
 no suffix filter". Zero output from each is the pass.
 
-Step 10 checks the *counts of CI steps* that this file, `README.md` and `SECURITY.md` all state — "four
+Step 11 checks the *counts of CI steps* that this file, `README.md` and `SECURITY.md` all state — "four
 checks in CI", "seven claim checkers", "steps 4–11" — against `.github/workflows/ci.yml` and
 against the checker files that actually exist. It exists because those counts are prose about a file in
 the tree, edited by hand every time one is added, and on the day it was written one of them was already
 wrong. It reads the workflow; it does not run it, and it says nothing about whether CI passed.
 
-Step 9 checks `docs/API.md` against the route table the app actually serves. The page opens by
+Step 10 checks `docs/API.md` against the route table the app actually serves. The page opens by
 claiming a route count, prints a summary table, and offers a recipe to re-derive every row from
 `main.app.openapi()` — and until this tool existed, nothing ran that recipe. `check_api_doc.py` runs
 the same call at import time and compares: the headline count, one row per operation and no phantom
@@ -177,7 +177,7 @@ not a clean pass.
 
 ## Where to develop (the clone is not the tree that gets served)
 
-`install.sh` **copies** the project into `/opt/aegis` (Step 6) and the systemd unit runs *that* copy:
+`install.sh` **copies** the project into `/opt/aegis` (see step 2) and the systemd unit runs *that* copy:
 `WorkingDirectory=/opt/aegis`, `ExecStart=/usr/bin/python3 /opt/aegis/backend/main.py`, `User=aegis`
 (Step 8). So the two trees answer different questions:
 

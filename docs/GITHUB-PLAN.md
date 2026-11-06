@@ -3018,3 +3018,60 @@ still stale pending mmdc.
 
 next= teach `check_ci_doc` to compare `ci.yml`'s step *order* against the block's numbering,
 so the two files can't drift in sequence the way they just drifted in labels.
+
+## 2026-11-06 20:00 — Order drift and step-number drift are now witnesses (check_ci_doc 14 → 17)
+
+**The item:** the `next=` from 2026-11-05 20:00 — teach `check_ci_doc` that the block's `— in CI`
+lines and `ci.yml`'s steps have to be in the *same sequence*, not merely present. Two claims added,
+and a third fell out of the work.
+
+**Claim 6 — order.** Every entry CONTRIBUTING marks `— in CI` must appear in `ci.yml` in that same
+relative order. This took **three** attempts, and the first two are the reason it is worth writing
+down: a checker that passes on a mutated tree is not a checker, it is decoration.
+
+1. First version compared `keys` filtered *by* `block_ci_order`'s own membership. That can only
+   ever detect a duplicate; it cannot see a reorder. Mutation said PASS.
+2. Second version filtered the `ci.yml` side by `NON_CHECKERS` — the block's labels for its three
+   non-checker lines (`py_compile`, `install.sh`, `secrets-grep`). Applied to the workflow's step
+   keys that deleted three of the four real steps, leaving `['check_self_contained']`, so one
+   element was being compared to four. Mutation still said PASS, and the PASS detail line — a single
+   item where four should have been — is what gave it away.
+3. Third version compared the block's checker keys against the full workflow key list. The honest
+   tree then *failed*: `block: check_self_contained | ci.yml: py_compile → install.sh → …`. The two
+   sides name different things; neither is a subset of the other. So it now compares **positions**:
+   each `— in CI` entry must occur in `ci.yml` in the order the block lists it, and an entry marked
+   in CI with no corresponding step is its own failure with its own message.
+
+**Claim 7 — `python-version` floor.** CONTRIBUTING says the parked workflow patch would add a floor
+of `3.10`. `ci.yml` currently sets `3.x`, which is *below* that floor; if the workflow ever gains
+`3.10` the sentence quoting it must change too. Compares at ref time when the value is non-numeric.
+
+**Claim 8 — prose step numbers**, which was not planned. While mutation-testing, a check on the
+step list crashed with `ValueError: not enough values to unpack (expected 4, got 3)` — claim 4's
+`mismatched` list holds 3-tuples and the *error branch* unpacked 4. So the one situation that claim
+exists for (block and workflow disagreeing) killed the tool with a traceback instead of reporting
+the drift. Fixed. Teaching the tool to read prose step numbers then found **six stale numbers in
+CONTRIBUTING**: the paragraphs described as "Step 5 / 4 / 6 / 7 / 10 / 9" were describing steps
+6 / 5 / 7 / 8 / 11 / 10, and the line "`install.sh` copies the project into `/opt/aegis` (Step 6)"
+pointed at a step that does something else entirely. Every one is a number a reader would follow.
+Corrected, and the two paragraphs that were about a checker but never named it now name it
+(`check_install_narrative.py`, `check_lab_assets.py`) so the number has something to anchor to.
+
+**Mutation-tested, because the point of the run was a checker I had watched lie.**
+Order: move self-contained above the byte-compile in `ci.yml` → FAIL; move the secrets grep to the
+top → FAIL; swap lines 1 and 2 in the block → FAIL; move the secrets line to position 2 in the
+block → FAIL; mark a local-only line `— in CI` → three FAILs (steps 4, 5 and 6, including the
+"no such step" branch). Step numbers: restore the original `Step 7 (check_lab_assets)` bug → FAIL;
+`api_doc` → step 11 → FAIL; `prerequisites` → step 12 → FAIL. `python-version` → `3.10` → FAIL;
+drop the `setup-python` step → FAIL. Every mutation restored and verified with `sha256sum -c`.
+
+**Verified:** 9/9 checkers rc=0 — `check_ci_doc` **17/17** (was 14), api_doc 11, operations_doc 50,
+self_contained 14/1/2, rest quiet; `py_compile backend/main.py` rc=0; `bash -n install.sh` rc=0.
+
+**Still not fixed, and now recorded twice so it is not mistaken for done:** `ci.yml` remains
+uneditable from this token (no `workflow` scope), so the parked patch — the four extra CI steps and
+the `3.10` floor — is still unshipped, and claims 6 and 7 are watching a workflow that is not the
+one they were written for. `docs/assets/architecture-components.png` still stale pending mmdc.
+Screenshots still need a live AEGIS host.
+
+NOT COMPLETE — Dad's word alone.
