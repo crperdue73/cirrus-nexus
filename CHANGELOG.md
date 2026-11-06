@@ -5,6 +5,83 @@ All notable changes to AEGIS are recorded here. This project ships two labs
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — week of 2026-11-06
+
+This week changed **no shipped behaviour**: every commit below is a document made to match the tree, or a
+checker added to keep a document matching the tree. The week's theme is one thing — *claims that were
+never executed*. Nine claim checkers now run against reader-facing docs; four of them are in CI, five are
+run by hand because this repo's automation token is refused on `.github/workflows/`.
+
+Measured on the base commit (`c80c99d`, 2026-11-06):
+
+```
+git describe --tags                  → v0.2.0-56-gc80c99d
+git rev-list --count v0.2.0..HEAD    → 56   (28 non-merge this week)
+git diff --stat v0.2.0..HEAD         → 99 files, +5311 / −6108
+tools/check_*.py (all 9)             → rc=0
+```
+
+**No tag was cut and no GitHub Release was published for this window.** Notes are drafted in
+[`docs/RELEASE-NOTES-v0.3.1-draft.md`](docs/RELEASE-NOTES-v0.3.1-draft.md) and await the operator's call.
+A tag is **defensible but not urgent** this week: nothing a learner runs has changed, so a tag would
+freeze documentation corrections rather than ship new behaviour.
+
+### Added
+- **`tools/check_api_doc.py`** — the witness `docs/API.md` was missing. The page claimed 11 routes,
+  printed a table, and told the reader to trust `/openapi.json` over itself, with nothing executing that
+  recipe. The tool imports `backend/main.py` and compares the page to `main.app.openapi()`: headline
+  count, one row per operation in both directions, each row's method, path and parameters, zero
+  request bodies, and that the page still makes the claims it is checked against. Verified 11/11 claims
+  hold — the page was accurate and was left as written. Ten hand mutations all caught, including adding a
+  real route to `main.py`. The status-code table, ttyd port range and `/docs` exposure notes are not
+  carried by the OpenAPI document; the tool prints them as **out of scope** rather than scoring them.
+- **`tools/check_ci_doc.py`** — parses `ci.yml`'s steps and cross-checks what three docs say about them:
+  the counts in README, CONTRIBUTING and SECURITY, the "plus the N claim checkers" complement sentences,
+  and CONTRIBUTING's hand-run block line by line (each line's "in CI" / "local only" note must match the
+  workflow, and every checker in the tree must have a line). It reads the workflow; it does **not** run
+  it and does not claim CI passed. 17/17 claims hold; 11 of 12 mutation tests exit nonzero, the twelfth
+  deletes `ci.yml` → rc=2.
+- **`docs/RELEASE-NOTES-v0.3.1-draft.md`** — this window's notes, drafted and unpublished.
+
+### Fixed
+- **`CONTRIBUTING.md`'s step numbering contradicted itself.** The prose cited step numbers that did not
+  line up with its own step list, and one checker had silently dropped out of the list entirely — a
+  checker that no longer appears in the hand-run block is a checker nobody runs. Both corrected, and
+  `check_ci_doc.py` now holds the numbering: four citations verified (`check_prerequisites`=step 6,
+  `check_install_narrative`=7, `check_lab_assets`=8, `check_api_doc`=10).
+- **Two docs were found miscounting the CI checkers by hand** — README said three claim checkers where
+  six existed; CONTRIBUTING said five where its own step list listed six. Neither count is typed by hand
+  any more; `check_ci_doc.py` derives both from the tree and fails the check if either drifts.
+- **`docs/architecture.md` measured against the tree**, not against memory: the three-state grading path
+  is now described as it is, a file that is gone is out of Components, and the pin row is corrected.
+- **`docs/OPERATIONS.md` measured against the tree**, with a checker (`tools/check_operations_doc.py`)
+  to keep it measured rather than re-audited from scratch next month.
+- **`docs/architecture.md`'s PNG re-measured** against the current block — identical sha256 to the
+  diagram already in the tree, so the file was left alone rather than regenerated for the look of it.
+- **README** now records two things a re-install will do to you: re-running `install.sh` **nests the app
+  tree** inside the previous one, and the SR Linux image is **3.2 GB on disk** (0.75 GB compressed — the
+  on-disk figure is the one that fills your disk).
+- **The "not yet in CI" notes in README, CONTRIBUTING, SECURITY and `docs/SELF-CONTAINED.md` now say
+  what actually blocks them**: the write, not the step. The workflow patch
+  (`.nexus/WORKFLOW-PATCH-2026-11-06-1200.patch`, the 3.10 floor plus seven steps) applies cleanly and
+  has been re-parked; it must land together with the prose update, and it needs a human with `workflow`
+  scope.
+- **`docs/GITHUB-PLAN.md`** records the refused `ci.yml` push and what it taught: *write ≠ step*. Adding
+  the file and getting it into a workflow are two separate permissions.
+
+### Documentation
+- The week's rule, stated once: a document is not corrected until a tool can fail on it. Nine checkers,
+  four in CI, five by hand — the split is named in the docs rather than implied.
+- `docs/README` metadata re-measured against the live GitHub repo (description, topics, license) instead
+  of against the record.
+
+### Known, not fixed
+- **The CI workflow patch is still not applied.** It applies cleanly; it has not been pushed, because this
+  token is refused on `.github/workflows/`. What CI runs today is unchanged at four checks.
+- **Cold install still serves zero labs** unless per-lab assets are placed manually (carried forward).
+- **The grader default derived from `metadata.id` still does not resolve** for at least one lab
+  (carried forward; proof under `.nexus/proofs/`).
+
 ## [Unreleased] — week of 2026-10-30
 
 25 non-merge commits on `main` since `v0.2.0` (measure it: `git rev-list --count v0.2.0..HEAD` — a

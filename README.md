@@ -384,10 +384,11 @@ platform for its two shipped labs; it is not a finished product. What that means
 
 - **`v0.2.0` is the newest numbered release.** Tagged 2026-10-25 and published as a GitHub Release;
   see [`docs/RELEASE-NOTES-v0.2.0.md`](docs/RELEASE-NOTES-v0.2.0.md). There is **no** release for
-  anything after it: no `v0.2.1`, no `v0.3.0`, no tag and no GitHub Release. The release notes for
-  what came next exist only as a draft in this tree
-  ([`docs/RELEASE-NOTES-v0.3.0-draft.md`](docs/RELEASE-NOTES-v0.3.0-draft.md)) and are explicitly
-  **not published**.
+  anything after it: no `v0.2.1`, no `v0.3.0`, no `v0.3.1`, no tag and no GitHub Release. The release
+  notes for what came next exist only as drafts in this tree —
+  [`docs/RELEASE-NOTES-v0.3.0-draft.md`](docs/RELEASE-NOTES-v0.3.0-draft.md) for the week of 2026-10-30 and
+  [`docs/RELEASE-NOTES-v0.3.1-draft.md`](docs/RELEASE-NOTES-v0.3.1-draft.md) for the week of 2026-11-06,
+  which changed no shipped behaviour — and are explicitly **not published**.
 - **So `v0.2.0` and `main` are not the same product, and the difference is not cosmetic.** Two paths
   left the tree after the tag: the 46 files under `lab-definitions-quarantine-2026-09-30/` and
   `Dockerfile.frr-bgp` (47 deletions). `backend/main.py`, `start_server.py`, `install.sh`,
