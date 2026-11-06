@@ -2981,3 +2981,40 @@ NOT COMPLETE — Dad's word alone. | proof=the tool's 50 PASS lines, the six mut
 **DOC SYNC (so nothing over- or under-counts).** `CONTRIBUTING.md`: step 9 added to the before-you-push list (secret grep renumbered to 10), "four claim checkers / steps 4–8" corrected to **five / steps 4–9** in all three places, and a paragraph on what step 9 does and does not cover. `SECURITY.md`: "Five further claim checkers" → **six**, with the new one described. `README.md`: the local-only-checker list in the Repository-metadata note now names it (and `check_operations_doc.py`, which that note had also been missing). **Not fixed, and flagged rather than touched:** `CONTRIBUTING.md`'s prose still calls the secrets grep "Step 7" while the list has it at 10, and says "the four checks CI enforces are steps 1–3 and 8" while 8 is `check_operations_doc` — both were already inconsistent before this run, the list in the code block is correct, and renumbering someone else's numbering is a separate edit that deserves its own measurement.
 
 **VERIFIED after:** `py_compile` 0 · `bash -n` 0 · `check_self_contained` 0 (14/1/2) · `check_repo_metadata` 0 (27) · `check_prerequisites` 0 (36) · `check_install_narrative` 0 (12) · `check_self_contained_doc` 0 (17) · `check_lab_assets` 0 (19) · `check_operations_doc` 0 (50) · `check_api_doc` 0 (**11/11**, 1 out of scope). Backups: `/tmp/API.md.bak`, `/tmp/main.py.bak`, `/tmp/GITHUB-PLAN.md.bak-20261106-0200`. NOT COMPLETE — Dad's word alone. | proof=the tool's PASS lines, the ten mutation results above, and `main.app.openapi()`'s 11 operations | next=take the `CONTRIBUTING.md` numbering inconsistency named above (it is small, it is purely a docs edit, and it is now the only place where two correct things in this repo disagree about their own labels) — re-measure the four/eight/step-7 references, fix them to match the code-block list, and add a one-line check to `check_api_doc.py`'s sibling set only if it can be done without inventing a prose parser. Do NOT re-audit `docs/API.md` this month; it now has a witness. STILL BLOCKED ON DAD, unchanged: the `ci.yml` patches (needs a `workflow`-scoped token — **five** parked checkers would now ride on it), v0.3.0 tag / GitHub Release (`v0.2.0` 41+ commits behind), Screenshots (needs a live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP `10-archive/` and the three empty `lab-definitions` dirs, `check_self_contained.py` into a release, published security contact, making `install.sh`'s Step 6 idempotent, the two grading-behaviour items from 2026-10-31, and whether this worklog ships publicly.
+
+## Run 2026-11-06 14:00 UTC — CONTRIBUTING's step numbering vs. itself
+
+Item: CONTRIBUTING.md disagreed with itself about which checks CI runs. Line 31 said
+"steps 4–7, 9 or 10"; line 134 said "steps 1–3 and 8", whose step 8 is `check_operations_doc`
+— the tool the same block marks `— local only`. Both were green: no checker read either sentence.
+
+Two further problems surfaced only after fixing that one, and are the more interesting find:
+
+- `STEP_LIST` hard-coded the secrets-grep line as `#\s*10\.`. The 12:00 run renumbered it to
+  **11**. The line silently stopped matching, the block parsed 10 entries instead of 11, and
+  step 11 dropped out of every claim that walks the list. The 12:00 run's "55/54/1" was
+  measured against a list that was already one line short.
+- `len(entries) != n_ci + len(not_in_ci)` compared block lines (11) to `ci.yml` steps (4).
+  It only ever passed because the parse was short by exactly one.
+
+Fixed by comparing against `tools/check_*.py` read from the tree instead of two hand-kept
+counts, and by adding a claim that every checker `ci.yml` does not run is named local-only in
+the docs. That claim found `check_self_contained_doc`: in `tools/`, in the docs' tool lists,
+but with no step line and no statement anywhere of where it runs. Added.
+
+Witness added: `check_ci_doc` now parses CONTRIBUTING's "what CI actually enforces" sentence
+and requires it to name exactly the checkers the block marks `— in CI`. Reverting the sentence
+to its old wording fails it (verified in a scratch copy).
+
+Verified: 9/9 checkers rc=0 — check_ci_doc 14/14 (was 12), self_contained_doc 17,
+lab_assets 19, install_narrative 12, operations_doc 50, rest quiet; `py_compile` 0;
+`bash -n install.sh` 0. HEAD == origin/main before this push.
+
+Not fixed, recorded: `check_ci_doc.py` still checks that `ci.yml` contains the commands it
+expects, but not that the *order*/step numbers in `ci.yml` match the block's — a reordering in
+`ci.yml` would go unnoticed. And `ci.yml` itself is still uneditable here: `origin`'s token has
+no `workflow` scope (Dad-gated; see 2026-11-05 20:00). `docs/assets/architecture-components.png`
+still stale pending mmdc.
+
+next= teach `check_ci_doc` to compare `ci.yml`'s step *order* against the block's numbering,
+so the two files can't drift in sequence the way they just drifted in labels.
