@@ -10,24 +10,25 @@ write the claim.
 
 ## Before you push
 
-Run the same checks CI runs (`.github/workflows/ci.yml` — four of them), plus the six claim
-checkers that are written and verified but **not yet in the workflow** (steps 4–7 and 9–10; see below):
+Run the same checks CI runs (`.github/workflows/ci.yml` — four of them), plus the eight claim
+checkers that are written and verified but **not yet in the workflow** (the lines marked `— local only`; see below):
 
 ```bash
 python3 -m py_compile backend/main.py     # 1. backend compiles                     — in CI
 bash -n install.sh                        # 2. installer is valid shell            — in CI
 python3 tools/check_self_contained.py     # 3. a bare clone is installable         — in CI
-python3 tools/check_repo_metadata.py      # 4. published repo metadata vs the tree  — local only
-python3 tools/check_prerequisites.py      # 5. README's Prerequisites vs install.sh — local only
-python3 tools/check_install_narrative.py  # 6. README's account of install.sh       — local only
-python3 tools/check_lab_assets.py         # 7. per-lab startup-configs: copied+found — local only
-python3 tools/check_operations_doc.py     # 8. OPERATIONS.md's claims vs the tree    — local only
-python3 tools/check_api_doc.py            # 9. docs/API.md's route table vs the app   — local only
-python3 tools/check_ci_doc.py             # 10. the docs' count of CI steps vs ci.yml — local only
-# 11. no obvious secrets committed — CI greps the tree for token/key patterns    — in CI
+python3 tools/check_self_contained_doc.py # 4. docs/SELF-CONTAINED.md vs the tool    — local only
+python3 tools/check_repo_metadata.py      # 5. published repo metadata vs the tree  — local only
+python3 tools/check_prerequisites.py      # 6. README's Prerequisites vs install.sh — local only
+python3 tools/check_install_narrative.py  # 7. README's account of install.sh       — local only
+python3 tools/check_lab_assets.py         # 8. per-lab startup-configs: copied+found — local only
+python3 tools/check_operations_doc.py     # 9. OPERATIONS.md's claims vs the tree    — local only
+python3 tools/check_api_doc.py            # 10. docs/API.md's route table vs the app   — local only
+python3 tools/check_ci_doc.py             # 11. the docs' count of CI steps vs ci.yml — local only
+# 12. no obvious secrets committed — CI greps the tree for token/key patterns    — in CI
 ```
 
-**CI does not run steps 4–7, 9 or 10 yet.** Adding them means a `ci.yml` change, and this repo's automation token
+**CI does not run steps 4–11 yet.** Adding them means a `ci.yml` change, and this repo's automation token
 has no `workflow` scope — GitHub answers `404` to a write under `.github/workflows/` with this token
 (re-measured 2026-11-03; re-confirmed 2026-11-05, `x-oauth-scopes` = `delete:packages, repo,
 write:discussion, write:packages`), so it takes a human with that scope (see *Changing CI*). Run the local-only steps by
@@ -46,7 +47,7 @@ git apply .nexus/WORKFLOW-PATCH-2026-11-05-2000.patch   # then review, commit, p
 re-generated, not stored, and the commands in the block above are the thing to trust; the token refusal
 itself was measured, not assumed.
 
-Steps 4–7 and 9–10 are the claim checkers, and they are the fragile ones: each audits English prose in
+Steps 4–11 are the claim checkers, and they are the fragile ones: each audits English prose in
 `README.md` against the code or the record it describes, so the sentence and the fact can drift apart
 while the tree still builds. Each one exits 2 if its target paragraph is gone, rather than passing
 silently.
@@ -112,7 +113,7 @@ right now, in the suffixes we ship most of", the `git grep` form is "is the whol
 no suffix filter". Zero output from each is the pass.
 
 Step 10 checks the *counts of CI steps* that this file, `README.md` and `SECURITY.md` all state — "four
-checks in CI", "six claim checkers", "steps 4–7 and 9–10" — against `.github/workflows/ci.yml` and
+checks in CI", "seven claim checkers", "steps 4–11" — against `.github/workflows/ci.yml` and
 against the checker files that actually exist. It exists because those counts are prose about a file in
 the tree, edited by hand every time one is added, and on the day it was written one of them was already
 wrong. It reads the workflow; it does not run it, and it says nothing about whether CI passed.
@@ -131,8 +132,10 @@ The status codes in the page's `404`/`409`/`422`/`500` table, the ttyd port rang
 rather than counting them as passes — they are claims about handler bodies and environment, and the
 OpenAPI document does not carry them. Read them by hand.
 
-The four checks CI actually enforces are steps 1–3 and 8 — on **one** interpreter, the newest `3.x` the
-runner offers, because `ci.yml` asks for `python-version: "3.x"`. The 3.10 floor the README states is
+The four checks CI actually enforces are the ones marked `— in CI` in the block above: the byte-compile,
+the shell lint, `check_self_contained.py` and the secrets grep. CI does not run `check_operations_doc.py`,
+even though it is numbered 8 — the numbering is this page's, and `ci.yml` has its own. On **one**
+interpreter, the newest `3.x` the runner offers, because `ci.yml` asks for `python-version: "3.x"`. The 3.10 floor the README states is
 therefore not exercised by CI (see *Changing CI* below for why the matrix that would fix this is not in
 place). Four further tools exist for lab authors and maintainers, and are **not** part of CI:
 

@@ -158,12 +158,15 @@ LOCAL_ONLY = [
     (README, "check_prerequisites"), (README, "check_install_narrative"),
     (README, "check_lab_assets"), (README, "check_api_doc"),
     (README, "check_operations_doc"), (README, "check_repo_metadata"),
+    (README, "check_self_contained_doc"), (README, "check_ci_doc"),
     (CONTRIBUTING, "check_prerequisites"), (CONTRIBUTING, "check_install_narrative"),
     (CONTRIBUTING, "check_lab_assets"), (CONTRIBUTING, "check_operations_doc"),
     (CONTRIBUTING, "check_api_doc"), (CONTRIBUTING, "check_repo_metadata"),
+    (CONTRIBUTING, "check_self_contained_doc"), (CONTRIBUTING, "check_ci_doc"),
     (SECURITY, "check_prerequisites"), (SECURITY, "check_install_narrative"),
     (SECURITY, "check_lab_assets"), (SECURITY, "check_api_doc"),
     (SECURITY, "check_operations_doc"), (SECURITY, "check_repo_metadata"),
+    (SECURITY, "check_self_contained_doc"), (SECURITY, "check_ci_doc"),
 ]
 
 # The complement sentence each doc uses to say "these are the rest, and they are not in CI".
@@ -180,7 +183,7 @@ COMPLEMENTS = [
 ]
 
 STEP_LIST = re.compile(
-    r"^(python3 -m py_compile backend/main\.py|bash -n install\.sh|python3 tools/(\w+)\.py|#\s*10\.)"
+    r"^(python3 -m py_compile backend/main\.py|bash -n install\.sh|python3 tools/(\w+)\.py|#\s*\d+\.\s*no obvious secrets committed)"
 )
 
 
@@ -272,30 +275,91 @@ def main():
             continue
         if in_block and STEP_LIST.search(line.strip()):
             cmd = line.strip()
+            # the leading "N." of the line is the step number the prose talks about
+            m_num = re.match(r"(?:python3|bash|#)\s.*?#\s*(\d+)\.", cmd)
+            step_no = int(m_num.group(1)) if m_num else None
             tool = "py_compile" if cmd.startswith("python3 -m py_compile") else (
                 "install.sh" if cmd.startswith("bash -n") else (
-                    "secrets-grep" if re.match(r"#\s*10\.", cmd) else STEP_LIST.search(cmd).group(2)))
+                    "secrets-grep" if re.search(r"#\s*\d+\.\s*no obvious secrets committed", cmd)
+                    else STEP_LIST.search(cmd).group(2)))
             claims_ci = "— in CI" in line
-            entries.append((cmd, tool, claims_ci))
+            entries.append((cmd, tool, claims_ci, step_no))
     if len(entries) < 5:
         bad("CONTRIBUTING's step list is still parseable", f"{len(entries)} entries found")
     else:
-        mismatched = [(c, t, claims_ci) for c, t, claims_ci in entries
+        mismatched = [(c, t, claims_ci) for c, t, claims_ci, _ in entries
                       if t not in ("unrecognised",) and claims_ci != (t in keys)]
-        if len(entries) != n_ci + len(not_in_ci):
+        # The block has one line per tool plus the py_compile / shell-lint / secrets-grep lines, so the
+        # count to agree with is the *tools* (ci.yml's checker steps + every checker not in it), not
+        # ci.yml's total step count — the two differ by the three lines that are not checkers. This
+        # comparison had been `n_ci + len(not_in_ci)`, which only equalled the block's length while the
+        # secrets-grep line failed to parse (see STEP_LIST): 11 lines vs. 10 could never have passed.
+        NON_CHECKERS = {"py_compile", "install.sh", "secrets-grep"}
+        checker_lines = [t for _, t, _, _ in entries if t not in NON_CHECKERS]
+        # every checker this repo has = every tools/check_*.py, read from the tree, not from a list here
+        repo_checkers = sorted(os.path.splitext(f)[0] for f in os.listdir(os.path.join(ROOT, "tools"))
+                               if f.startswith("check_") and f.endswith(".py"))
+        if sorted(set(checker_lines)) != repo_checkers:
             bad("CONTRIBUTING's step list has a line for every checker in this repo",
-                f"{len(entries)} entries, but ci.yml has {n_ci} and {len(not_in_ci)} local-only "
-                f"tool(s) are described elsewhere — a checker with no line here will never be run by hand")
+                f"block lines {sorted(set(checker_lines))} vs. tools/check_*.py {repo_checkers}; "
+                f"differing: {sorted(set(checker_lines) ^ set(repo_checkers))}")
         else:
-            ok("CONTRIBUTING's step list has a line for every checker in this repo", f"{len(entries)}")
+            ok("CONTRIBUTING's step list has a line for every checker in this repo",
+               f"{len(repo_checkers)} checker(s), {len(entries)} entries incl. 3 non-checker steps")
+        # and the docs that name local-only checkers must name all of the ones ci.yml does not run
+        named_local = {t for _, t in LOCAL_ONLY}
+        unnamed = [t for t in repo_checkers if t not in keys and t not in named_local]
+        if unnamed:
+            bad("every checker not in ci.yml is named as local-only in the docs",
+                f"never mentioned as local-only: {unnamed}")
+        else:
+            ok("every checker not in ci.yml is named as local-only in the docs",
+               f"{len([t for t in repo_checkers if t not in keys])} local-only tool(s)")
         if not mismatched:
             ok("every line of CONTRIBUTING's step list agrees with ci.yml",
-               f"{len(entries)} entries, {sum(1 for _, t, _ in entries if t in keys)} in CI")
+               f"{len(entries)} entries, {sum(1 for e in entries if e[1] in keys)} in CI")
         else:
             bad("every line of CONTRIBUTING's step list agrees with ci.yml",
                 "; ".join(f"{t}: doc says {'in CI' if c else 'local only'}, "
                           f"ci.yml says {'in CI' if t in keys else 'not in CI'}"
-                          for _, t, c in mismatched))
+                          for _, t, c, _ in mismatched))
+
+    # 5. the *second* statement of which steps are in CI must agree with the block's own markers.
+    #    The block above carries the truth (one `— in CI` marker per line, already cross-checked
+    #    against ci.yml in step 4). Later prose restates it in words, and until 2026-11-06 two
+    #    sentences contradicted each other about the same fact while both doc and tree stayed green:
+    #    "CI does not run steps 4–7, 9 or 10" and "The four checks CI actually enforces are steps
+    #    1–3 and 8" — the second naming step 8, which is check_operations_doc, a local-only line.
+    #    A number is not a name; the prose now names the checks, and this checks the names.
+    in_ci_steps = {no for _, _, c, no in entries if c and no is not None}
+    ck_tools_all = {t for _, t, _, _ in entries}
+    ck_tools_in_ci = {t for _, t, c, _ in entries if c}
+    prose = open(CONTRIBUTING, encoding="utf-8").read()
+    m = re.search(r"The (?:\w+) checks CI actually enforces are (.{0,400}?)\.\s", prose, re.S)
+    if not m:
+        bad("CONTRIBUTING's 'what CI actually enforces' sentence is still present",
+            "sentence not found (it was reworded — update this tool)")
+    else:
+        sentence = re.sub(r"\s+", " ", m.group(1))
+        named = {n[:-3] for n in re.findall(r"`(check_[a-z_]+\.py)`", sentence)}
+        block_tools = ck_tools_in_ci - {"py_compile", "install.sh", "secrets-grep"}
+        if named != block_tools:
+            bad("CONTRIBUTING's prose names exactly the checkers the block marks in CI",
+                f"prose names {sorted(named) or 'none'}, block marks {sorted(block_tools)}")
+        else:
+            ok("CONTRIBUTING's prose names exactly the checkers the block marks in CI",
+               f"{len(named)} checker(s): " + (", ".join(sorted(named)) or "— the block marks none"))
+        # any "step N" the sentence offers must be a step the block marks in CI
+        cited = {int(n) for n in re.findall(r"steps? (\d+)", sentence)}
+        cited |= {int(n) for n in re.findall(r"step (\d+)", sentence)}
+        stray = sorted(n for n in cited if n not in in_ci_steps)
+        if stray:
+            bad("CONTRIBUTING's prose cites no step number the block marks local-only",
+                f"cited step(s) {stray} are not marked `— in CI`")
+        else:
+            ok("CONTRIBUTING's prose cites no step number the block marks local-only",
+               f"{'no bare step numbers' if not cited else sorted(cited)}; block's in-CI steps "
+               f"{sorted(in_ci_steps)}")
 
     info("NOT checked here", "that CI passed (the API's word), and whether each step's command "
                              "is a good check — this tool reads the workflow, it does not run it")
