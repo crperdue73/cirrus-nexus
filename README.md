@@ -543,7 +543,9 @@ Change a claim in the tree and change the JSON in the same commit. Unlike
 `tools/check_self_contained.py`, this tool is **not** yet a CI step: the `ci.yml` diff that adds it (and
 the other local-only claim checkers — `tools/check_prerequisites.py` for this README's Prerequisites
 block, `tools/check_install_narrative.py` for the paragraph after it, `tools/check_lab_assets.py` for
-the per-lab startup-config promise) is written, applies cleanly to `main`, and is not pushed, because
+the per-lab startup-config promise, `tools/check_api_doc.py` for the route table in
+`docs/API.md` and `tools/check_operations_doc.py` for `docs/OPERATIONS.md`) is written, applies cleanly
+to `main`, and is not pushed, because
 this repo's automation token is refused on workflow paths, so it needs a human with `workflow` scope
 (re-measured 2026-11-05; as of that date the token cannot push the patch and nothing in CI invokes this
 tool). Until then this is a manual re-check for

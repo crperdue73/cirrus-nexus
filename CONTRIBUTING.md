@@ -10,8 +10,8 @@ write the claim.
 
 ## Before you push
 
-Run the same checks CI runs (`.github/workflows/ci.yml` — four of them), plus the four claim
-checkers that are written and verified but **not yet in the workflow** (steps 4–8; see below):
+Run the same checks CI runs (`.github/workflows/ci.yml` — four of them), plus the five claim
+checkers that are written and verified but **not yet in the workflow** (steps 4–9; see below):
 
 ```bash
 python3 -m py_compile backend/main.py     # 1. backend compiles                     — in CI
@@ -22,13 +22,14 @@ python3 tools/check_prerequisites.py      # 5. README's Prerequisites vs install
 python3 tools/check_install_narrative.py  # 6. README's account of install.sh       — local only
 python3 tools/check_lab_assets.py         # 7. per-lab startup-configs: copied+found — local only
 python3 tools/check_operations_doc.py     # 8. OPERATIONS.md's claims vs the tree    — local only
-# 9. no obvious secrets committed — CI greps the tree for token/key patterns     — in CI
+python3 tools/check_api_doc.py            # 9. docs/API.md's route table vs the app   — local only
+# 10. no obvious secrets committed — CI greps the tree for token/key patterns    — in CI
 ```
 
-**CI does not run steps 4–8 yet.** Adding them means a `ci.yml` change, and this repo's automation token
+**CI does not run steps 4–9 yet.** Adding them means a `ci.yml` change, and this repo's automation token
 has no `workflow` scope — GitHub answers `404` to a write under `.github/workflows/` with this token
 (re-measured 2026-11-03; re-confirmed 2026-11-05, `x-oauth-scopes` = `delete:packages, repo,
-write:discussion, write:packages`), so it takes a human with that scope (see *Changing CI*). Run steps 4–8 by
+write:discussion, write:packages`), so it takes a human with that scope (see *Changing CI*). Run steps 4–9 by
 hand until a job has them.
 
 The step list and the file write are two different obstacles, and it is worth not conflating them: a
@@ -44,7 +45,7 @@ git apply .nexus/WORKFLOW-PATCH-2026-11-05-2000.patch   # then review, commit, p
 re-generated, not stored, and the commands in the block above are the thing to trust; the token refusal
 itself was measured, not assumed.
 
-Steps 4–8 are the claim checkers, and they are the fragile ones: each audits English prose in
+Steps 4–9 are the claim checkers, and they are the fragile ones: each audits English prose in
 `README.md` against the code or the record it describes, so the sentence and the fact can drift apart
 while the tree still builds. Each one exits 2 if its target paragraph is gone, rather than passing
 silently.
@@ -108,6 +109,20 @@ files, so it misses a secret in a file you have not staged yet — which is exac
 committed. The two commands answer different questions: the `grep` form is "is my working tree clean
 right now, in the suffixes we ship most of", the `git grep` form is "is the whole tracked tree clean,
 no suffix filter". Zero output from each is the pass.
+
+Step 9 checks `docs/API.md` against the route table the app actually serves. The page opens by
+claiming a route count, prints a summary table, and offers a recipe to re-derive every row from
+`main.app.openapi()` — and until this tool existed, nothing ran that recipe. `check_api_doc.py` runs
+the same call at import time and compares: the headline count, one row per operation and no phantom
+rows, each row's method and path, each row's parameters against the document's parameters (names,
+location, requiredness), and the "no route takes a request body" claim. It fails in both directions:
+a route added to `backend/main.py` and left out of the page fails, and so does a row for a route that
+no longer exists.
+
+The status codes in the page's `404`/`409`/`422`/`500` table, the ttyd port range and the
+`/docs`/`/redoc` exposure notes are **not** covered by this tool, and it prints them as out of scope
+rather than counting them as passes — they are claims about handler bodies and environment, and the
+OpenAPI document does not carry them. Read them by hand.
 
 The four checks CI actually enforces are steps 1–3 and 8 — on **one** interpreter, the newest `3.x` the
 runner offers, because `ci.yml` asks for `python-version: "3.x"`. The 3.10 floor the README states is
