@@ -161,6 +161,60 @@ unverifiable claims, no screenshots of a build that isn't here.
       green run covers for a *runtime* — there is no smoke test that boots the app, and that is a
       test-suite decision, not a polish one.
 
+## Run 2026-11-06 12:00 UTC — the docs' counts of CI steps are prose about a file, and two of them were wrong
+
+- [x] **A group of counts no checker read.** `README.md`, `CONTRIBUTING.md` and `SECURITY.md` each state,
+      in words, how many checks `.github/workflows/ci.yml` runs and how many claim checkers are *not* in
+      it — "four run in CI, three are claim checkers run by hand", "plus the five claim checkers", "the
+      four checks CI actually enforces", "Six further claim checkers". Eight checkers exist in `tools/`;
+      every one of those numbers was typed by hand, and the 2026-11-05 12:00 run had already found the
+      group inconsistent (five vs. "steps 4–9" = six) but stopped, because there was no way to *know*
+      the right number rather than pick one.
+      **Measured first**, at `9f5535d` (`git status` clean apart from the in-progress edits): all eight
+      checkers rc=0, `py_compile` OK, `bash -n install.sh` OK. `ci.yml` at HEAD: four steps, one job,
+      `python-version: "3.x"`.
+      **The item: `tools/check_ci_doc.py`** — a checker for the counts, in the same shape as the eight
+      that already exist. It parses `ci.yml`'s steps (steps whose name is not the tool name — the
+      byte-compile, the shell lint, the secrets grep — are anchored by their commands, so a renamed
+      step fails loudly rather than silently uncounting), then:
+      1. every step parses to a check it can classify (an unclassified step would silently shift a count);
+      2. every stated number of CI checks in the three docs equals `ci.yml`'s count;
+      3. every checker the docs call "not yet in the workflow" is genuinely absent from `ci.yml`, and the
+         *complement* sentences — "plus the N claim checkers", "M are claim checkers run by hand" —
+         equal the number of `tools/check_*.py` files not invoked by it;
+      4. `CONTRIBUTING.md`'s ten-line hand-run block agrees with itself and with `ci.yml` line by line:
+         the `— in CI` / `— local only` comment on each line must match whether the workflow runs that
+         tool, and every checker in the repo must have exactly one line there.
+      It reads the workflow. It does not run it, and it says nothing about whether CI passed — that is
+      the API's word, and the report names it as out of scope.
+      **What it found, immediately:** two real drifts in doc text that no existing checker read —
+      `README.md:474` said "three are claim checkers run by hand" where the tree has **six**, and
+      `CONTRIBUTING.md:13` said "the five claim checkers … (steps 4–9" where five contradicted both its
+      own step list and the six tools that exist. Fixed both to six; `SECURITY.md` still said "Six
+      further claim checkers" (correct), which is now consistent instead of coincidentally so. Two
+      knock-on corrections in `CONTRIBUTING.md`: the numbered block gained a line (the new checker is
+      step 10, the secrets grep moved to 11), and the "does not run steps 4–9" / "steps 4–9 are the
+      claim checkers" sentences were renumbered to 4–7 and 9–10. The false claim that the secrets grep
+      was "step 7" is gone — it was never step 7 in the current block.
+      **Verified by breaking it, twelve ways** (each in a throwaway copy): five→six in CONTRIBUTING (rc=1,
+      complement); 4→5 in "CI actually enforces" (rc=1); six→three in README (rc=1); four→three in SECURITY
+      (rc=1); a fifth real step added to `ci.yml` (rc=1, all four counts); a step list line flipped to
+      `— in CI` (rc=1); a step list line deleted (rc=1, "a checker with no line here"); a `ci.yml` step
+      renamed (rc=1, unclassified); a count sentence reworded (rc=1, "sentence not found — update this
+      tool"); `ci.yml` deleted (rc=2, cannot run); the byte-compile step removed (rc=1); an `— in CI`
+      flipped to `— local only` on step 3 (rc=1). All eleven non-deletion mutations exit nonzero; the
+      tree verifies clean at rc=0 after every restore.
+      **The `ci.yml` write is still the blocker, and this does not pretend otherwise.** The patch is
+      re-parked as `.nexus/WORKFLOW-PATCH-2026-11-06-1200.patch`: `python-version: "3.10"` plus **seven**
+      steps. It applies cleanly to `9f5535d`, and applying it produces exactly the intended file
+      (`diff` against a separately-built target: no difference). One honest note recorded there:
+      applying it *today* makes `check_ci_doc` fail 10 of 11 claims, and that is correct — the three docs
+      still describe a four-step workflow. The patch and the prose corrections have to land with the
+      `workflow`-scoped token in the same hand, or the first green CI run after the write would be
+      green with docs that lie about it. Six of those seven steps were verified rc=0 in the applied tree
+      (`check_ci_doc` itself is the deliberate exception, per the last sentence).
+      Token re-measured once more this run: `x-oauth-scopes` unchanged, no `workflow` scope.
+
 ## Backlog (one item per polish run)
 
 - [x] **Four docs said the CI matrix was "written and ready but not pushed". It is neither written nor

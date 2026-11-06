@@ -471,7 +471,7 @@ platform for its two shipped labs; it is not a finished product. What that means
 | [`docs/RELEASE-NOTES-v0.1.0-draft.md`](docs/RELEASE-NOTES-v0.1.0-draft.md) | release notes for `v0.1.0` — **historical draft**; the tag exists, its GitHub Release was never published (see `v0.2.0`) |
 | [`CONFERENCE.md`](CONFERENCE.md) | booth-operator cheat sheet (install, ports, troubleshooting, reset) — **draft / not maintained**; install & lab-catalog sections corrected to this tree |
 | [`HANDOFF-2026-09-22.md`](HANDOFF-2026-09-22.md) | dated handoff note from a 2026-09-22 demo drive — **historical / not maintained**; counts and lab names in it describe a wider tree than this release (see the banner in the file) |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | the ground rules, and the checks to run before pushing (four run in CI, three are claim checkers run by hand) |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | the ground rules, and the checks to run before pushing (four run in CI, six are claim checkers run by hand) |
 | [`SECURITY.md`](SECURITY.md) | how to report a vulnerability privately, the threat model (unauthenticated by design), what's in scope, and the automated checks that exist (four in CI, three by hand, and no more) |
 | [`CHANGELOG.md`](CHANGELOG.md) | what changed, newest first |
 | [`10-archive/topology-audit-2026-06-09.md`](10-archive/topology-audit-2026-06-09.md) | dated 2026-06-09 topology audit — **historical**, describes a pre-release layout (see `docs/OPERATIONS.md` → Archive). Renamed from `SUMMARY-for-Dad.md` on 2026-10-30 |
@@ -544,7 +544,8 @@ Change a claim in the tree and change the JSON in the same commit. Unlike
 the other local-only claim checkers — `tools/check_prerequisites.py` for this README's Prerequisites
 block, `tools/check_install_narrative.py` for the paragraph after it, `tools/check_lab_assets.py` for
 the per-lab startup-config promise, `tools/check_api_doc.py` for the route table in
-`docs/API.md` and `tools/check_operations_doc.py` for `docs/OPERATIONS.md`) is written, applies cleanly
+`docs/API.md`, `tools/check_operations_doc.py` for `docs/OPERATIONS.md`, and `tools/check_ci_doc.py`
+for the count of CI steps stated here, in `CONTRIBUTING.md` and in `SECURITY.md`) is written, applies cleanly
 to `main`, and is not pushed, because
 this repo's automation token is refused on workflow paths, so it needs a human with `workflow` scope
 (re-measured 2026-11-05; as of that date the token cannot push the patch and nothing in CI invokes this
