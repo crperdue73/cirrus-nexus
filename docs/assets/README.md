@@ -48,6 +48,14 @@ Re-measured 2026-11-05 at `331dda3` (after the architecture.md and OPERATIONS.md
 same block re-renders to the **identical** file — same sha256, same 1568×1646, same 110243 bytes —
 so the PNG is still the current block, not an October render of an older one.
 
+Re-measured 2026-11-07 at `110b4ec`: **identical again** — sha256
+`5b0d87e74ef6a67ca81a0393ab07ade2cb59cc49a88cdf89bb2a47806c5dacfe`, 1568×1646, 110243 bytes. This
+resolves the standing "PNG stale" note this worklog carried from 2026-11-04 to 2026-11-06: that note
+was an assumption (nobody had re-rendered), not a measurement, and the re-render says the file was
+never out of sync — the 2026-11-04 architecture edit changed prose below the diagram, not the block.
+Rendering here needed the `-p puppeteer.json` (`--no-sandbox`) workaround noted below, because this
+box renders as `root`.
+
 > Rendering as `root` needs Chromium's sandbox off. `mermaid-cli` takes a puppeteer config; with
 > `{"args":["--no-sandbox"]}` in a JSON file passed as `-p puppeteer.json`, the command above
 > works in a root shell. Rendering as a normal user needs no such flag.

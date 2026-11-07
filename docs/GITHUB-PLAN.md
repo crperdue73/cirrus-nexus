@@ -3074,4 +3074,46 @@ the `3.10` floor — is still unshipped, and claims 6 and 7 are watching a workf
 one they were written for. `docs/assets/architecture-components.png` still stale pending mmdc.
 Screenshots still need a live AEGIS host.
 
+## 2026-11-07 02:00 — the PNG was never stale; five runs assumed it instead of rendering it
+
+**The item:** the one thing four consecutive runs recorded as "not fixed": `docs/assets/architecture-components.png`
+"still stale pending mmdc". Measured, it was not stale. Re-rendered the first `mermaid` fence in
+`docs/architecture.md` exactly as `docs/assets/README.md` prescribes (`npx -y @mermaid-js/mermaid-cli@12
+-i arch.mmd -o /tmp/arch-render.png -b white -s 2`, plus the documented `-p puppeteer.json`
+`{"args":["--no-sandbox"]}` because this box renders as root — first attempt without it failed with the
+recorded Chromium-sandbox error) at HEAD `110b4ec` (clean, == origin/main 0/0):
+
+- re-render: `5b0d87e74ef6a67ca81a0393ab07ade2cb59cc49a88cdf89bb2a47806c5dacfe`, 1568×1646, 110243 bytes
+- committed: `5b0d87e74ef6a67ca81a0393ab07ade2cb59cc49a88cdf89bb2a47806c5dacfe`, 1568×1646, 110243 bytes
+
+**Identical.** Same hash as the 2026-10-26 and 2026-11-05 measurements, so the block has not changed
+since then either — the `architecture.md` commit `b2c699b` edited prose *below* the diagram (grading
+path, components table), and the 2026-11-04 run's "they now disagree — the diagram gained a branch and
+a note" was wrong about the block; the branch-and-note is in the **sequenceDiagram** in the Lab
+lifecycle section, which was never rendered to a PNG and is not what the README embeds.
+
+**The defect is in the record, not the image.** `docs/GITHUB-PLAN.md` says "stale pending mmdc" in
+this run line's own `next=`/blocked lists (2026-11-05 20:00, 2026-11-06 20:00) and the 2026-11-04
+20:00 entry recorded the assumed drift as a finding. Nobody re-rendered between 11-04 and 11-07; the
+claim propagated on its own authority. That is exactly the self-citing pattern this file is supposed to
+catch in others: an entry saying a thing is true because the previous entry said so.
+
+**Fixed (docs only — no image bytes changed, because none needed to):** `docs/assets/README.md` gains
+the 2026-11-07 dated re-measurement, which is the one place a reader can file a claim about this PNG;
+this entry retracts the "stale" wording for the states it was written about and names why it was wrong.
+The image itself is untouched (`git diff --stat docs/assets/architecture-components.png` empty).
+
+**Limit, named:** this proves the PNG is the current block. It says nothing about whether the diagram
+describes a working product — that is what the lab and grading measurements elsewhere cover, and
+Screenshots remain blocked on a live AEGIS host this box is not.
+
+**Verified:** `py_compile backend/main.py` rc=0 · `bash -n install.sh` rc=0 · all nine claim checkers
+rc=0 (`check_self_contained` 14/1/2, `check_repo_metadata` 27, `check_prerequisites` 36,
+`check_install_narrative` 12, `check_self_contained_doc` 17, `check_lab_assets` 19,
+`check_operations_doc` 50, `check_api_doc` 11/11, `check_ci_doc` 17/17). Backups in `/tmp`
+(`GITHUB-PLAN.md.bak-20261107-0200`, `assets-README.md.bak-20261107-0200`).
+
 NOT COMPLETE — Dad's word alone.
+
+
+next=run: stop re-listing the PNG as blocked. `docs/benchmarks` does not exist here (measured 2026-11-07), so take `docs/ADDING-A-LAB.md`'s claims against `backend/main.py`'s loader (`_discover_labs`, grader import rules) and `tools/lint_lab_pack.py`; the README Quick start stays unexecuted because it needs a disposable host where re-running install.sh is free — not this box. STILL BLOCKED ON DAD, unchanged: the `ci.yml` patches (needs a `workflow`-scoped token — five parked checkers ride on it), v0.3.0 tag / GitHub Release (`v0.2.0` 41+ commits behind), Screenshots (needs a live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP `10-archive/` and the three empty `lab-definitions` dirs, `check_self_contained.py` into a release, published security contact, making `install.sh`'s Step 6 idempotent, the two grading-behaviour items from 2026-10-31, and whether this worklog ships publicly.
