@@ -258,10 +258,17 @@ If you run it (see above), read the output as **green means "no pre-solved lab w
 present in the topology, so the grader would pass with zero student work. Exit status is `0` when nothing
 was flagged and `1` when at least one lab was — its final line is the verdict, not the per-lab rows.
 
-Exit **2** means the tool never ran (PyYAML missing). Treat that as no result at all, and do not
-check the box on the checklist. Rows marked `NO-EXPECTED` mean the grader exposed no address map to
-read, so that lab's pre-solved status is **unknown** — the tool prints a `NOT CHECKED` line for
-these and deliberately does not count them as a pass.
+Exit **2** means the run could not complete: PyYAML missing, or at least one lab it could not classify
+at all (an `ERROR` row — an unparseable topology, or a grader that raised on import; the reason is
+printed on the row). Treat that as no result at all, and do not check the box on the checklist. A red
+flag outranks it: a tree with both a `SOLVED` lab and an `ERROR` exits **1**.
+
+Rows marked `NO-EXPECTED` and `NO-GRADER` are different: they describe a lab (no address map to read,
+or no grader module by that name) and do not by themselves make the run incomplete, so they exit 0.
+That is a real limit, stated rather than hidden: a pack made only of `NO-EXPECTED` labs reports
+`labs scanned: N, SOLVED: 0` with exit 0 having read no expectation at all. `NO-EXPECTED` prints a
+`NOT CHECKED` line saying so; `NO-GRADER` prints nothing beyond its row. Neither is a pass
+anywhere on this page.
 
 ## Commits
 
@@ -313,8 +320,8 @@ A precise bug report is as useful as a patch. Use the issue templates (`.github/
 whether it was a pass, a fail, or a **refusal**. `lab_request.md` is for proposing a new lab: it asks
 for the topology, the gradeable outcomes, the substrate check, and the file layout per
 [`docs/ADDING-A-LAB.md`](docs/ADDING-A-LAB.md). Its checklist treats `lint_lab_pack.py` exit **2** as
-*no result* — that exit means PyYAML was missing and no lab was examined, so it cannot be ticked as a
-pass (same rule as *What `lint_lab_pack.py` answers* above). Neither template claims anything about
+*no result* — that exit means PyYAML was missing or a lab could not be classified at all, so no
+truthful verdict can be ticked (same rule as *What `lint_lab_pack.py` answers* above). Neither template claims anything about
 the substrate that this tree does not contain: the pinned containerlab `0.75.0` lives in `install.sh`
 (with the reason in the comment above the pin), and the templates just ask a reporter for their
 version.

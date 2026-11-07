@@ -25,10 +25,17 @@ when deciding "solved".
   UNSOLVED— no PC/router addresses pre-applied (the student does the work)
 
 Non-verdicts (nothing was actually examined — never read these as a pass):
-  NO-GRADER   — the lab names a grader module that does not exist
-  NO-EXPECTED — grader exposes no EXPECTED/literal node->IP map to read
+  NO-GRADER   — the lab names a grader module that does not exist. This is a
+                property of the lab and still exits 0 (the run completed).
+  NO-EXPECTED — grader exposes no EXPECTED/literal node->IP map to read. Also
+                exits 0, but prints its own NOT CHECKED line. LIMIT, named on
+                purpose: a pack made only of such labs reports
+                `labs scanned: N, SOLVED: 0` rc=0 having read no expectation at
+                all. Making it fatal would retroactively flag the two shipped
+                demo labs' profile, so that call is Dad's, not a polish run's.
   ERROR       — the lab could not be classified at all (unparseable topology,
-                a grader that raised on import). The reason is printed.
+                or a grader that raised on import — fixed 2026-11-07, which
+                used to print as NO-GRADER). The reason is printed. Exits 2.
   UNAVAILABLE — PyYAML is missing, so the topology could not be parsed at all
 
 UNAVAILABLE is a hard stop, not a per-lab finding: it is checked once, up
@@ -48,7 +55,9 @@ nobody could classify is not evidence that the pack is clean.
 Usage:  python3 tools/lint_lab_pack.py [--json]
 Exit code 1 if any lab is SOLVED or models a switch as a Linux PC (a lab-pack
 red flag), 2 if the run could not complete (PyYAML missing, or any lab ERROR),
-else 0. This is NOT a CI step; run it by hand.
+else 0. A red flag outranks an incomplete run: a tree with both exits 1.
+NO-GRADER and NO-EXPECTED rows exist but do not by themselves make the run
+incomplete — see the LIMIT note above. This is NOT a CI step; run it by hand.
 """
 
 import argparse
@@ -84,15 +93,31 @@ def _require_yaml() -> bool:
     return True
 
 
-def load_grader(module_name: str):
+def load_grader(module_name: str, problems: dict | None = None):
+    """Import a lab's grader module, or None if it is missing / will not import.
+
+    `problems` (optional) records WHICH of the two happened. Since 2026-11-07
+    that distinction matters: a grader file that exists but raises on import is
+    a lab nobody could examine (`ERROR`, exit 2), while a grader file that is
+    simply absent is a property of that lab (`NO-GRADER`, exit 0). Before this,
+    both collapsed into NO-GRADER, so a broken grader was reported as a missing
+    one and the run exited 0 — measured with a canary whose module raised
+    ZeroDivisionError at import: `NO-GRADER - canary-raise`, rc=0, with the only
+    trace on stderr. The docstring above already listed "a grader that raised on
+    import" as an ERROR case; it was not true of the code.
+    """
     path = LABS_DIR / f"{module_name}.py"
     if not path.exists():
+        if problems is not None:
+            problems["missing"] = True
         return None
     spec = importlib.util.spec_from_file_location(f"_lint_{module_name}", path)
     mod = importlib.util.module_from_spec(spec)
     try:
         spec.loader.exec_module(mod)
     except Exception as e:  # pragma: no cover - defensive
+        if problems is not None:
+            problems["raised"] = f"{type(e).__name__}: {e}"
         print(f"  ! could not import {module_name}: {e}", file=sys.stderr)
         return None
     return mod
@@ -261,7 +286,8 @@ def switch_authenticity(yml_path: Path) -> dict:
 def classify(lab_dir: Path, yml_path: Path) -> dict:
     meta = parse_metadata(yml_path)
     grader_name = meta.get("grader") or f"grader_{meta.get('id','')}"
-    mod = load_grader(grader_name)
+    problems: dict = {}
+    mod = load_grader(grader_name, problems)
     result = {
         "lab": meta.get("id", yml_path.stem),
         "topology": str(yml_path.relative_to(BASE)),
@@ -271,7 +297,13 @@ def classify(lab_dir: Path, yml_path: Path) -> dict:
         "student_nodes": {},
     }
     if mod is None:
-        result["status"] = "NO-GRADER"
+        if "raised" in problems:
+            # The module is there and broken: a lab this run could not
+            # examine, i.e. ERROR (exit 2), not a lab without a grader.
+            result["status"] = "ERROR"
+            result["error"] = f"grader {grader_name} raised on import: {problems['raised']}"
+        else:
+            result["status"] = "NO-GRADER"
         return result
 
     sv = student_values(mod)
