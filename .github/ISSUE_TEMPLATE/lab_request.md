@@ -70,7 +70,9 @@ Per `docs/ADDING-A-LAB.md`, a lab is:
 - [ ] `python3 tools/check_self_contained.py` exits **0** (it resolves every
       `startup-config:` and every named grader, and byte-compiles the shipped graders)
 - [ ] `python3 tools/lint_lab_pack.py` exits **0**, or **2** with a stated reason —
-      **2 means PyYAML was missing and nothing was examined, so it is not a pass**
-      (exit 1 is the red flag: a lab that grades with zero student work)
+      **2 means the run could not complete: PyYAML was missing, or at least one lab
+      could not be classified (an `ERROR` row), so it is not a pass**
+      (exit 1 is the red flag: a lab that grades with zero student work, or a switch
+      modelled as a Linux PC)
 - [ ] you started it on a real host, followed your own guide, and confirmed the session
       reaches `submitted`

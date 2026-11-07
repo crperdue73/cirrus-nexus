@@ -1,0 +1,93 @@
+AEGIS — tools/lint_lab_pack.py: does it examine anything, and does 'I could not look' read as a pass?
+Run 2026-11-07 14:00 UTC. Tree 69b6860, clean, HEAD==origin/main 0/0.
+Method: canary labs planted ONLY in copies of lab-definitions under /tmp. The tree was never
+mutated to test itself. PyYAML 6.0.3 is installed.
+
+=== BASELINE — the shipped tree
+$ python3 tools/lint_lab_pack.py
+STATUS    SEEDED   LAB
+----------------------------------------------------------------------
+UNSOLVED  0/2      demo-01-two-pcs-and-a-real-switch-unsolved
+UNSOLVED  0/2      demo-02-two-switches-one-router-unsolved
+----------------------------------------------------------------------
+labs scanned: 2   SOLVED (red flag): 0
+RC=0
+
+=== CASE A — a genuinely PRE-SOLVED lab must be caught (expect 1)
+canary: copy of demo-01 with 'ip addr add 10.0.1.X/24' moved into real node exec:
+STATUS    SEEDED   LAB
+----------------------------------------------------------------------
+SOLVED    2/2      canary-solved
+UNSOLVED  0/2      demo-01-two-pcs-and-a-real-switch-unsolved
+UNSOLVED  0/2      demo-02-two-switches-one-router-unsolved
+----------------------------------------------------------------------
+labs scanned: 3   SOLVED (red flag): 1
+RED FLAG — these labs grade with zero student work:
+   canary-solved  (grader grader_demo_01_srl)
+RC=1
+=> SOLVED 2/2, named, with the grader that would have passed it. Correct (unchanged).
+
+=== CASE B — grader names a module that does not exist (expect 0, NO-GRADER)
+STATUS    SEEDED   LAB
+----------------------------------------------------------------------
+NO-GRADER -        canary-nograder  (NO-GRADER)
+----------------------------------------------------------------------
+labs scanned: 1   SOLVED (red flag): 0
+RC=0
+=> NO-GRADER, rc=0. By design and left alone: that is a property of the lab, printed
+   in the STATUS column, not a failure of the run.
+
+=== CASE C — grader exposes no EXPECTED map (expect 0, NO-EXPECTED + NOT CHECKED)
+NO-EXPECTED -        canary-noexp  (NO-EXPECTED)
+NOT CHECKED — pre-solved status UNKNOWN for 1 lab(s) (grader exposes no EXPECTED map; this is not a pass):
+   canary-noexp  (grader grader_noexp)
+RC=0
+=> says NOT CHECKED in words. Honest. Unchanged.
+
+=== CASE D — FINDING: a lab that could not be classified at all
+canary: id canary-badyaml, topology YAML truncated mid flow-sequence
+SHIPPED BEHAVIOUR (before this run):
+  STATUS    SEEDED   LAB
+  ERROR     -        canary-badyaml  (while parsing a flow sequence ...)
+  labs scanned: 3   SOLVED (red flag): 0
+  RC=0        <-- green, and no line anywhere said the lab was skipped
+AFTER this run's fix:
+    ^)
+UNSOLVED  0/2      demo-01-two-pcs-and-a-real-switch-unsolved
+UNSOLVED  0/2      demo-02-two-switches-one-router-unsolved
+----------------------------------------------------------------------
+labs scanned: 3   SOLVED (red flag): 0
+NOT CHECKED — 1 lab(s) could not be classified at all (see the ERROR rows above; this is not a pass):
+   canary-badyaml
+RC=2
+=> rc=2 and a named NOT CHECKED line.
+
+=== CASE E — ORDER: a red flag must still outrank an incomplete run (expect 1)
+tree: canary-badyaml (ERROR) + canary-solved (SOLVED) together
+----------------------------------------------------------------------
+labs scanned: 4   SOLVED (red flag): 1
+RED FLAG — these labs grade with zero student work:
+   canary-solved  (grader grader_demo_01_srl)
+NOT CHECKED — 1 lab(s) could not be classified at all (see the ERROR rows above; this is not a pass):
+   canary-badyaml
+RC=1
+=> 1, RED FLAG printed first, ERROR row still visible above it. A verdict beats a non-verdict.
+
+=== CASE F — PyYAML absent (expect 2; fixed 2026-10-21, re-checked here)
+RC=2
+
+=== SUMMARY OF EXIT PATHS
+  0  every lab examined, none SOLVED, no fake switch, no ERROR
+  1  a lab is SOLVED, or a switch is a Linux PC   (red flag: inspect the pack)
+  2  the run did not complete: PyYAML missing, or >=1 lab ERROR   (not a pass)
+
+=== LIMITS, named
+1. These are static probes. A canary classified SOLVED or UNSOLVED here was not graded
+   live; confirming grade behaviour needs a host with docker + containerlab, which this
+   box is not.
+2. NO-GRADER and NO-EXPECTED still exit 0. A pack consisting ENTIRELY of such labs
+   would report 'labs scanned: N, SOLVED: 0' rc=0 having read no expectation at all.
+   The NOT CHECKED line is printed for NO-EXPECTED, so the words are there -- but the
+   exit code is still green. NOT fixed here: making it exit 2 would flag the two
+   shipped demo labs' profile retroactively, and that is a decision about the gate's
+   contract, not a bug fix to slip into a docs run. Logged as the next item.

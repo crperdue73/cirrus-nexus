@@ -27,6 +27,8 @@ when deciding "solved".
 Non-verdicts (nothing was actually examined — never read these as a pass):
   NO-GRADER   — the lab names a grader module that does not exist
   NO-EXPECTED — grader exposes no EXPECTED/literal node->IP map to read
+  ERROR       — the lab could not be classified at all (unparseable topology,
+                a grader that raised on import). The reason is printed.
   UNAVAILABLE — PyYAML is missing, so the topology could not be parsed at all
 
 UNAVAILABLE is a hard stop, not a per-lab finding: it is checked once, up
@@ -34,12 +36,19 @@ front, and exits 2 with one message on stderr. Before 2026-10-21 the missing
 import surfaced inside the per-lab loop instead, so a box without PyYAML got
 one `ERROR` row per lab under a header called STATUS and never saw the
 NOT CHECKED line below — a worker following the PR-template checklist could
-read that as a completed run. Exit 2 distinguishes "could not run" from the
-red-flag exit 1 and the clean exit 0.
+read that as a completed run.
+
+ERROR rows had the same hole and were left open (found 2026-11-07): a lab with
+an unparseable topology classified as ERROR, printed under STATUS, and the run
+still exited **0** — green, with no NOT CHECKED line, in a run where that lab
+was never examined. Only SOLVED (exit 1) and UNAVAILABLE (exit 2) were
+counted. Now any ERROR row also exits 2: the run did not complete. A lab
+nobody could classify is not evidence that the pack is clean.
 
 Usage:  python3 tools/lint_lab_pack.py [--json]
-Exit code 1 if any lab is SOLVED (a lab-pack red flag), 2 if it could not run
-(PyYAML missing), else 0. This is NOT a CI step; run it by hand.
+Exit code 1 if any lab is SOLVED or models a switch as a Linux PC (a lab-pack
+red flag), 2 if the run could not complete (PyYAML missing, or any lab ERROR),
+else 0. This is NOT a CI step; run it by hand.
 """
 
 import argparse
@@ -347,6 +356,16 @@ def main() -> int:
             print(f"RED FLAG — these labs model a switch as a Linux PC ({len(fake)}):")
             for r in fake:
                 print(f"   {r['lab']}  -> {', '.join(r['switch_auth']['fake_switches'])}")
+        errored = [r for r in results if r["status"] == "ERROR"]
+        if errored:
+            # Added 2026-11-07. These ran under STATUS like a verdict and the
+            # run exited 0 anyway; measured on a canary with a truncated
+            # topology YAML: one ERROR row, rc=0, no line saying anything was
+            # skipped. Exit 2 now, but also say it out loud here.
+            print(f"NOT CHECKED — {len(errored)} lab(s) could not be classified at all"
+                  " (see the ERROR rows above; this is not a pass):")
+            for r in errored:
+                print(f"   {r['lab']}")
         if unchecked:
             # Honesty line: NO-EXPECTED means the pre-solved check could not
             # read this grader's expectations (they are not a literal
@@ -364,7 +383,13 @@ def main() -> int:
     red = any(r["status"] == "SOLVED" for r in results) or any(
         (r.get("switch_auth") or {}).get("fake_switches") for r in results
     )
-    return 1 if red else 0
+    if red:
+        return 1
+    # A red flag is reported first: it is a verdict about the pack. Otherwise a
+    # lab nobody could examine means the run is incomplete (2), not clean (0).
+    if any(r["status"] == "ERROR" for r in results):
+        return 2
+    return 0
 
 
 if __name__ == "__main__":
