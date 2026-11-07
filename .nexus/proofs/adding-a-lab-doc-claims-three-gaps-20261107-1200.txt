@@ -1,0 +1,63 @@
+RUN 277 — docs/ADDING-A-LAB.md measured against the loader it documents
+2026-11-07 12:00 UTC
+Tree: projects/aegis, git clean at 43e21e8, HEAD==origin/main 0/0.
+Method: imported backend/main.py in /tmp/apivenv (pyyaml+fastapi) and CALLED the loader
+(_reload_labs, _guide_path_for, _capability_refusal) instead of replaying source by eye.
+
+BASELINE (unmodified tree)
+  _reload_labs() -> rejected=[] ; serving demo-01-...-unsolved (grader_demo_01_srl),
+  demo-02-...-unsolved (grader_demo_02). No stderr refusal/warning lines.
+
+GAP 1 (REAL FINDING) — "it validates each lab" is true of metadata, NOT of the topology it will run
+  Canaries written into a COPY of lab-definitions (LABS_DIR retargeted; real tree untouched):
+   a) lab whose topology_file names a file that is not there
+      -> _topology_node_names returns None -> documented refusal would be
+         "topology unreadable: <file>"  (main.py:632)
+      MEASURED: NOT refused. main.py:516-521 catches OSError/yaml error and returns {} -
+      the startup-config scan finds nothing, gradeable_nodes <= empty set holds, and the lab
+      LOADS. Serving after reload: ['canary-missing-topo', 'demo-02-...'].
+      It is only stopped later at deploy time (FileNotFoundError, main.py:1317-1318).
+      So the refusal path main.py:631-633 exists but the earlier except-swallow makes it dead
+      code for this input: the doc's own table row ("the topology file cannot be read") does
+      not happen.
+   b) lab whose document does not parse (flow sequence)
+      -> refused by FILE, named as unparseable - matches the doc's last table row. PASS.
+
+GAP 2 — the guide-lookup order is right BY RUNNING IT, and branch 2 shadows branch 3
+  Doc: "the _GUIDE_MAP table, then lab-definitions/<id>.md, then lab-definitions/<topology-dir>/<id>.md".
+  Measured against a copy of lab-definitions, with a DECOY written at lab-definitions/<id>.md while
+  the real guide sat in the topology dir (branch 3):
+   - decoy present  -> resolved to the DECOY (branch 2 wins). Doc's order CONFIRMED by execution.
+   - decoy removed  -> resolved to <topology-dir>/<id>.md (branch 3). CONFIRMED.
+   - a _GUIDE_MAP id whose mapped file is absent -> returns None (map does not fall back to
+     branch 2/3 silently); it is the caller that then applies the guide-warning path.
+  Doc text is accurate. The unstated hazard, named here for the next author: branch 2 is
+  `lab-definitions/<id>.md`, so a stray guide at the top level SHADOWS the one that ships inside
+  the lab folder, with no warning. Not a defect in the doc; a foot-gun it never mentions.
+
+GAP 3 — reload does pick up an added or edited .yml; grader modules are process-cached
+  _reload_labs() -> _discover_labs() re-globs every call (the canaries in GAP 1 appeared with no
+  restart), and _GRADER_CACHE holds modules for the life of the process - which is what the doc's
+  "cached in memory ... does nothing until you reload" says. PASS.
+
+GAP 4 — "requires_daemons is enforced at deploy time against the substrate's own /etc/frr/daemons"
+  Direction 1 (bgpd on a substrate without bgpd): refusal sentence naming the missing daemon and
+  the daemons actually enabled. PASS.
+  Direction 2 (garbage name, "notadaemon"): refused too. PASS - and note the doc never says an
+  unknown name is caught, though it is.
+  Direction 3 (good name, substrate image that cannot be inspected): "substrate capability
+  unknown ... refusing to deploy". PASS.
+  Direction 4 (empty list): None (no gate). PASS.
+  Measured via _capability_refusal(lab) on the loaded demo-01 LabDef, image aegis/frr:latest:
+    bgpd        -> requires ['bgpd'], enables only ['mgmtd','staticd','vtysh_enable','zebra']
+    notadaemon  -> same shape, refused
+    unknown img -> capability unknown, refused
+    []          -> None
+
+WHAT THIS RUN DID NOT DO: no product change. Gap 1 is a loader-ordering bug (swallowed
+topology read error turns a documented refusal into a deploy-time 500) and fixing it changes
+product behaviour, which is Dad's call under the standing rules. Gaps 2-4 are the doc being
+correct; recorded so the next run does not re-measure them.
+
+VERIFIED after (no tree change): git status clean at 43e21e8.
+NOT COMPLETE — Dad's word alone.
