@@ -3265,3 +3265,72 @@ no `workflow` scope on this token, unchanged since 2026-10-26. It stays parked.
 next=run: `docs/OPERATIONS.md` reload/cache/bundle statements against the real `_GRADER_CACHE`/`_reload_labs` code, which `check_operations_doc` 50/50 structurally cannot see (a checker that reads a doc cannot see whether the doc matches the code). Then: re-run the canary gate under `NO-GRADER`/`NO-EXPECTED` canaries to pin those two rows' text as well. STILL BLOCKED ON DAD, unchanged: `ci.yml` patches (five parked checkers + this gate), v0.3.0 tag / GitHub Release, Screenshots (needs a live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP `10-archive/` and the three empty `lab-definitions` dirs, published security contact, `install.sh` Step 6 idempotence, the dead `topology unreadable` guard, the two grading-behaviour items from 2026-10-31, and whether `NO-GRADER`/`NO-EXPECTED` should become fatal.
 
 STATUS: NOT COMPLETE — only Dad calls it.
+
+## Run 2026-11-08 14:00 UTC — `docs/OPERATIONS.md` claimed a restart always clears a stale grader; measured, it does not
+
+Picked up the `next=` line from the 2026-11-08 run: *"`docs/OPERATIONS.md` reload/cache/bundle statements
+against the real `_GRADER_CACHE`/`_reload_labs` code, which `check_operations_doc` 50/50 structurally cannot
+see (a checker that reads a doc cannot see whether the doc matches the code)."* Measured live first:
+`git status` clean, `HEAD...origin/main = 0 0`, CI checks green.
+
+**The doc's cache section was half-right, and wrong in the direction that costs a debugging operator an
+hour.** It said: definitions are cached, edit → re-grade will not pick up your change, `POST
+/api/labs/reload` fixes it, and (my emphasis) *"the same edit applied immediately in a fresh process."*
+That last clause is the one an operator acts on — it says a restart is a reliable fallback.
+
+**Measured against the code and against a scratch tree** (`/tmp/meas-grader`, a venv with this tree's
+`backend/` on `sys.path`, a throwaway `LABS_DIR`):
+
+- The caches are **two**, and the doc named neither: `LABS` (parsed YAML metadata) and `_GRADER_CACHE`
+  (imported `grader_*.py` modules, `backend/main.py:684`). `/api/labs/reload` clears **both**
+  (`backend/main.py:1801-1805`), so a reload genuinely does cover graders, not just topologies.
+- Caching is not the only layer. Python writes `lab-definitions/__pycache__/*.pyc`, and
+  `importlib`'s source loader reuses that `.pyc` when the source's **size and whole-second mtime** both
+  still match. Measured on a fixed-length grader, all three cases:
+  `THRESHOLD = 2` → `THRESHOLD = 3` **in the same second at the same byte length → served 2 (stale)**;
+  same second but **+1 byte → served 30 (fresh)**; **next second, same size → served 3 (fresh)**.
+  So the stale window is exactly same-second + same-size rewrites — which is what a one-character
+  debugging fix and every scripted rewrite looks like.
+- **A restart does not clear it.** Measured across two separate processes: process 1 loads and writes the
+  `.pyc`; edit same-second/same-size; **process 2 loads and still returns the old value.** The `.pyc` is
+  on disk, so the doc's "fresh process" escape hatch fails in the exact case that needs it.
+- Neither layer is discoverable from the doc: `__pycache__/` is git-ignored (`.gitignore:20`) so it never
+  ships, and `aegis.service` installs with no `PYTHONDONTWRITEBYTECODE` (`install.sh:528-533`), so the
+  `.pyc` is written by default on the host.
+
+**FIXED** — doc-only, no code touched, no behaviour changed. The section now states there are two caches
+(and where each lives), documents the real `{"status":"reloaded with skips", "skipped":[...]}` response the
+doc had never mentioned, and adds a **"A restart is not always enough — the `.pyc` case"** subsection with
+the measured boundary, the plain statement that a restart does **not** clear it, and the concrete remedy
+(`find /opt/aegis/lab-definitions /opt/aegis/backend -name __pycache__ -type d -exec rm -rf {} +` then the
+reload). Filed under `[Unreleased] → Fixed` in `CHANGELOG.md`.
+
+**VERIFIED (all rc=0):** `py_compile backend/main.py` · `bash -n install.sh` · `check_self_contained`
+(14/1/2) · `check_operations_doc` **50/50** · `check_repo_metadata` · `check_prerequisites` ·
+`check_install_narrative` · `check_self_contained_doc` · `check_lab_assets` · `check_api_doc` (11/11) ·
+`check_ci_doc` (17/17) · canary gate (5/5) · secret scan clean (only the scan's own regex). **No shipped
+lab's verdict changed; no code changed.**
+
+**NOT claimed:** that there is no third layer. I tested the source-loader `.pyc` path and the in-memory
+caches; I did not instrument a live `aegis.service` on a host, because this box has no route to one. The
+sequencing above is measured in-process with the tree's real code, not observed on a running unit — which
+is also why Screenshots stays blocked.
+
+Backups: `.nexus/bundle-archive/OPERATIONS.md.2026-11-08` and `GITHUB-PLAN.md.2026-11-08` (git-ignored at
+`.gitignore:48`, verified with `check-ignore` and `git status`, so they do not ship).
+
+**Cleaner:** the doc now says something checkable by execution rather than assertion, but
+`check_operations_doc` still cannot verify it — adding a check that imports a grader twice around a
+same-second rewrite is the obvious witness, and it is the next thing worth building rather than another
+paragraph.
+next=run: build that witness — a checker that reproduces the same-second/same-size `.pyc` staleness and
+fails if `OPERATIONS.md`'s pycache section stops describing what the loader actually does (the doc's
+claims about two caches and the restart caveat are currently unexecuted, i.e. exactly the class this
+week has been closing). Then: re-run the canary gate under `NO-GRADER`/`NO-EXPECTED` canaries to pin those
+two rows' text. STILL BLOCKED ON DAD, unchanged: `ci.yml` patches (five parked checkers + canary gate +
+this witness), v0.3.0 tag / GitHub Release, Screenshots (needs a live host), `.nexus/` public-shipping
+policy, DELETE-OR-KEEP `10-archive/` and the three empty `lab-definitions` dirs, published security
+contact, `install.sh` Step 6 idempotence, the dead `topology unreadable` guard, the two grading-behaviour
+items from 2026-10-31, and whether `NO-GRADER`/`NO-EXPECTED` should become fatal.
+
+STATUS: NOT COMPLETE — only Dad calls it.

@@ -44,6 +44,18 @@ freeze documentation corrections rather than ship new behaviour.
 - **`docs/RELEASE-NOTES-v0.3.1-draft.md`** — this window's notes, drafted and unpublished.
 
 ### Fixed
+- **`docs/OPERATIONS.md` said a restart always cleared a stale grader; it does not.** The cache section
+  claimed an edited grader "applied immediately in a fresh process" after a reload. Measured: Python
+  writes `lab-definitions/__pycache__/*.pyc`, and a later load reuses that `.pyc` when the source's **size
+  and whole-second mtime** still match. A one-character fix in the same second at the same byte length
+  (e.g. `THRESHOLD = 2` → `THRESHOLD = 3`) therefore serves the **old** value, and because the `.pyc` is
+  on disk **a server restart does not clear it** — measured, a fresh process still loaded the old value.
+  Byte-boundary measured all three ways: same second + same size → stale; same second + different size →
+  fresh; next second + same size → fresh. The section now names **both** caches (`LABS` and
+  `_GRADER_CACHE`, both cleared by `/api/labs/reload`), the `.pyc` layer the endpoint does not touch, and
+  the `find … -name __pycache__ -exec rm -rf` step plus reload. Also documents the
+  `reloaded with skips` response, which the doc had never mentioned. Doc-only: no code, no shipped
+  behaviour, and no lab's verdict changed. `check_operations_doc` still 50/50.
 - **`tools/lint_lab_pack.py` never looked at Demo 2's router.** The tool finds student work by reading
   the grader's expectation map, and it read a map named `ROUTER_EXPECTED` — a name no grader in this tree
   uses. Demo 2 exposes `ROUTERS = {"r1": [(dev, ip), ...]}`, so the router's link addresses were invisible

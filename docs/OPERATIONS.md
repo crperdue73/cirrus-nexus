@@ -57,22 +57,53 @@ directory.
 
 ---
 
-## Lab definitions are cached — reload after editing
+## Lab definitions and graders are cached — reload after editing
 
-Lab definitions are loaded from disk **once**, then **cached in memory** for the life of the server
-process. Editing `lab-definitions/grader_*.py` (or a topology `.yml`) and re-grading a node **will
-not pick up your change**.
+**Two separate caches**, cleared together by `/api/labs/reload`:
 
-**Reload without a restart:**
+| Cache | Holds | Cleared by |
+|---|---|---|
+| `LABS` (in `main.py`) | the parsed `lab-definitions/**/*.yml` metadata | `/api/labs/reload` |
+| `_GRADER_CACHE` (in `main.py`) | imported `grader_*.py` modules | `/api/labs/reload` |
+
+So editing a topology `.yml` **or** a grader `.py` and re-grading **will not pick up your change** until
+you reload. Reload without a restart:
 
 ```bash
 curl -X POST http://localhost:8000/api/labs/reload
-# -> {"status":"reloaded","count":2}   (the labs on THIS host)
+# -> {"status":"reloaded","count":2}              (the labs on THIS host)
+# -> {"status":"reloaded with skips", ...}         (a definition was refused; see "skipped")
 ```
 
 *Why this note exists:* verifying a grader fix without reloading looks like the fix did nothing.
 Measured 2026-09-28: with the cache warm, an edited grader kept returning the old score until
-`/api/labs/reload` was called; the same edit applied immediately in a fresh process.
+`/api/labs/reload` was called.
+
+### A restart is not always enough — the `.pyc` case
+
+**Corrected 2026-11-08.** This section used to end "the same edit applied immediately in a fresh
+process." Measured, that is usually true but **not always**, and the exception is the one an operator
+hits while debugging: Python writes a bytecode cache next to the module (`lab-definitions/__pycache__/`),
+and on a later load it will reuse that `.pyc` if the source's **size and mtime (whole seconds)** still
+match. Rewrite a grader within the **same second** at the **same byte length** — a one-character fix
+such as `THRESHOLD = 2` → `THRESHOLD = 3`, or any scripted rewrite — and the stale `.pyc` wins. Measured
+in this tree: same second + same size → old value served; same second + different size → new value;
+next second + same size → new value.
+
+Because the `.pyc` is **on disk**, a **server restart does not clear it**: measured, a fresh process
+started after such an edit still loaded the old value. The cache the reload endpoint clears is the
+in-memory `_GRADER_CACHE`; the `.pyc` is a second, persistent layer it does not touch.
+
+If a reload appears not to take effect after a same-second edit, clear the bytecode cache:
+
+```bash
+find /opt/aegis/lab-definitions /opt/aegis/backend -name __pycache__ -type d -exec rm -rf {} +
+curl -X POST http://localhost:8000/api/labs/reload
+```
+
+`__pycache__/` is git-ignored (`.gitignore:20`), so none of this ships in the repo — it is created on the
+host at first import. The `aegis.service` unit installs without `PYTHONDONTWRITEBYTECODE`, so the `.pyc`
+is written by default (`install.sh:528-533`).
 
 ---
 
