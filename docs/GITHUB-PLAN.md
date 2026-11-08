@@ -3334,3 +3334,78 @@ contact, `install.sh` Step 6 idempotence, the dead `topology unreadable` guard, 
 items from 2026-10-31, and whether `NO-GRADER`/`NO-EXPECTED` should become fatal.
 
 STATUS: NOT COMPLETE — only Dad calls it.
+
+STATUS: NOT COMPLETE — only Dad calls it.
+
+## Run 2026-11-08 20:00 UTC — the witness for the `.pyc` claim, built; and it immediately falsified half the doc it was built to defend
+
+Picked up the `next=` line from the 14:00 run: *"build that witness — a checker that reproduces the
+same-second/same-size `.pyc` staleness and fails if `OPERATIONS.md`'s pycache section stops describing what
+the loader actually does (the doc's claims about two caches and the restart caveat are currently
+unexecuted, i.e. exactly the class this week has been closing)."* Measured before touching anything:
+`git status` clean, `HEAD...origin/main = 0 0`.
+
+**Item done — two pieces, both static-checkable, neither executable on a real host:**
+
+1. **`tools/check_pyc_staleness.py`** (new) — executes the claim instead of reading it. It writes a throwaway
+   grader in the system temp dir, imports it with the *same two calls* `_load_grader` makes
+   (`spec_from_file_location` → `module_from_spec` → `exec_module`), and engineers the same-second case by
+   sleeping to a whole-second boundary rather than hoping for one. Five PASS claims: same second + same size
+   serves the old value; a `.pyc` is really written; the stale value survives in the same process; same
+   second + different size is fresh; and the doc's `rm -rf __pycache__` remedy actually clears it. It never
+   touches `lab-definitions/`.
+2. **`tools/check_operations_doc.py` 50 → 62 checks** — the doc's cache narrative against the code it
+   describes: `_GRADER_CACHE` declared as a dict and written on load, the top-level `LABS` cache the doc
+   names, `_GRADER_CACHE.clear()` on reload, graders loaded through `importlib.util.spec_from_file_location`,
+   `PYTHONDONTWRITEBYTECODE` absent from `install.sh` (the doc's reason the `.pyc` exists), `__pycache__/` in
+   `.gitignore`, and the doc naming both caches, the restart caveat and the remedy — plus running the new
+   witness as one of its checks, so the behavioural claim cannot drift away from the doc again.
+
+**What the witness found, which is the reason to build witnesses:** the 14:00 run's doc sentence **"next
+second + same size → new value"** is **false of this loader**; the new tool failed on it in every run until
+the doc was corrected — and only the doc, not the tool, was wrong.
+Re-measured by hand in a clean scratch tree, no harness trickery, the stale edit made first and in its own
+second:
+
+- same process, same second → `2`; same process, **next second** → `2`; **several seconds later** → `2`;
+  **fresh process**, same second → `2`; fresh process, next second → `2`; `importlib.invalidate_caches()`
+  between every load → `2`.
+- After that, the `.pyc` header is byte-identical across all of it — flags `0` (timestamp mode), the source's
+  mtime **second** (`1794168154`), the source **size** (`48`) — and the 247-byte file is unchanged. The loader
+  is not revalidating and finding a match; it is not re-reading the source at all in a way that moves the
+  verdict.
+- The stale value clears when the source's **size** changes (measured: a longer constant → fresh) or its
+  **mtime second** changes — which normally means the *next edit* lands in a later second, not that time
+  simply passed.
+
+Where the wrong sentence came from is worth writing down, because it is the whole failure mode: my 14:00
+harness **waited for a fresh second before making the edit**. That is not the case the sentence describes
+(edit *within* the second that the module was loaded, then let time pass) — it is a different experiment that
+happens to answer "fresh". The earlier run then wrote down the result of the experiment it ran as if it
+answered the question it meant to ask. Same class as the 2026-11-07 02:00 run ("the PNG was never stale"),
+one step smaller: not a claim nobody measured, a claim measured by the wrong measurement.
+
+**Fixed rather than argued with.** `docs/OPERATIONS.md` now states the measured rule (clears on a size change
+or an mtime-second change, not on elapsed time), keeps the correction dated inside the section, and points at
+the witness. `CHANGELOG.md`: the wrong half of the 14:00 entry is annotated in place — the worklog and the
+changelog keep the error and its correction together rather than editing the old line into agreement with the
+new one. The tool's Case 3 is now the positive claim the measurement supports ("neither the next second nor
+a later wait clears it"), plus a Case 3b for the size change that does — 7/7, rc=0. Its first version encoded
+the *old, wrong* sentence, and a witness that agrees with a broken doc is worth nothing; it earns its keep
+only by being rewritten to the measurement, with the measurement recorded.
+
+VERIFIED after: `check_pyc_staleness.py` **7 PASS, 0 FAIL** (rc=0); `check_operations_doc.py` **62 PASS,
+0 FAIL**; `check_ci_doc.py` 17/17; `check_api_doc.py` 11/11;
+`check_prerequisites.py` rc=0; `check_self_contained.py` rc=0; canary gate 5/5; `py_compile backend/main.py`
+rc=0; `bash -n install.sh` rc=0; secret scan clean. No application code changed, no lab-000 ladder rerun, no
+shipped lab's verdict changed. Rollback point: `git show HEAD^:docs/OPERATIONS.md`.
+
+next=wire `check_pyc_staleness.py` into CI's parked set once Dad opens the workflow (it is local-only
+today, like the other five); then the two unexercised rows in the canary gate (`NO-GRADER` / `NO-EXPECTED`) and the 14:00 run's remaining
+`next=` item, re-running the gate under those canaries. STILL BLOCKED ON DAD, unchanged: `ci.yml` patches
+(the parked checkers, the canary gate, this witness), v0.3.0 tag / GitHub Release, Screenshots (needs a live
+host), `.nexus/` public-shipping policy, DELETE-OR-KEEP `10-archive/` and the three empty `lab-definitions`
+dirs, published security contact, `install.sh` Step 6 idempotence, the dead `topology unreadable` guard, the
+two grading-behaviour items from 2026-10-31, and whether `NO-GRADER`/`NO-EXPECTED` should become fatal.
+
+STATUS: NOT COMPLETE — only Dad calls it.

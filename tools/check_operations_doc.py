@@ -155,6 +155,42 @@ def main() -> int:
                   re.search(rf"{label}[^.\n]*?\b{got}\b", ops) is not None,
                   f"the guide's own rows give {label} = {got}")
 
+    # ---- Reload / cache section --------------------------------------------
+    # These tie the doc's cache narrative to the code that implements it. Each
+    # token below is a thing main.py must actually do, not a paraphrase. Added
+    # 2026-11-08 after the doc claimed a restart always clears a stale grader
+    # and the measured loader wrote/reused a .pyc that a restart does not clear;
+    # the behavioural part (same-second + same-size -> stale) is reproduced by
+    # tools/check_pyc_staleness.py, because reading files cannot prove it.
+    main_py_src = read("backend/main.py")
+    check("main.py keeps a module-level _GRADER_CACHE dict",
+          re.search(r"^_GRADER_CACHE\s*(?::\s*dict)?\s*=\s*\{\}", main_py_src, re.M) is not None)
+    check("main.py caches a loaded grader in _GRADER_CACHE",
+          re.search(r"_GRADER_CACHE\[module_name\]\s*=\s*mod", main_py_src) is not None)
+    check("main.py has a top-level LABS cache the doc promises",
+          re.search(r"^LABS\b\s*(?::[^=]+)?=", main_py_src, re.M) is not None)
+    reload_m = re.search(r"_GRADER_CACHE\.clear\(\)", main_py_src)
+    check("main.py clears _GRADER_CACHE (the doc's 'cleared by reload')", reload_m is not None)
+    check("main.py loads graders through importlib's loader (writes a .pyc)",
+          "importlib.util.spec_from_file_location" in main_py_src)
+    check("install.sh does NOT set PYTHONDONTWRITEBYTECODE (the .pyc is written by default)",
+          "PYTHONDONTWRITEBYTECODE" not in install)
+    check(".gitignore ignores __pycache__/ (none of it ships)",
+          re.search(r"^__pycache__/", read(".gitignore"), re.M) is not None)
+    check("OPERATIONS names both caches",
+          "`LABS`" in ops and "`_GRADER_CACHE`" in ops)
+    check("OPERATIONS says a restart does not clear the .pyc",
+          re.search(r"restart does not clear it", ops) is not None)
+    check("OPERATIONS gives a remedy that removes __pycache__",
+          re.search(r"-name __pycache__ -type d -exec rm -rf", ops) is not None)
+    pyc_tool = ROOT / "tools" / "check_pyc_staleness.py"
+    check("the witness tools/check_pyc_staleness.py exists (the behaviour claim has a witness)",
+          pyc_tool.exists())
+    if pyc_tool.exists():
+        got = subprocess.run([sys.executable, str(pyc_tool)], capture_output=True, text=True)
+        check("check_pyc_staleness.py passes (stale case still reproduces)", got.returncode == 0,
+              (got.stdout + got.stderr).strip()[-600:])
+
     # ---- Archive -----------------------------------------------------------
     arch = ROOT / "10-archive"
     check("10-archive exists", arch.is_dir())

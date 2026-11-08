@@ -51,11 +51,21 @@ freeze documentation corrections rather than ship new behaviour.
   (e.g. `THRESHOLD = 2` → `THRESHOLD = 3`) therefore serves the **old** value, and because the `.pyc` is
   on disk **a server restart does not clear it** — measured, a fresh process still loaded the old value.
   Byte-boundary measured all three ways: same second + same size → stale; same second + different size →
-  fresh; next second + same size → fresh. The section now names **both** caches (`LABS` and
+  fresh; next second + same size → fresh (21:00 same day: **that last one was wrong** — see below).
+  The section now names **both** caches (`LABS` and
   `_GRADER_CACHE`, both cleared by `/api/labs/reload`), the `.pyc` layer the endpoint does not touch, and
   the `find … -name __pycache__ -exec rm -rf` step plus reload. Also documents the
   `reloaded with skips` response, which the doc had never mentioned. Doc-only: no code, no shipped
   behaviour, and no lab's verdict changed. `check_operations_doc` still 50/50.
+- **…and the "next second → fresh" half of that was wrong.** Re-measured at 20:00 with the witness tool
+  below and the import calls `_load_grader` actually makes: after a same-second, same-size rewrite the old
+  value is served on the **next second** too, and after a several-second wait, in the same process and in a
+  fresh one, with `importlib.invalidate_caches()` making no difference — the `.pyc` header (timestamp mode,
+  source mtime second, source size) and the file bytes are identical across those reloads, so the loader
+  reused the bytecode instead of revalidating. The stale value clears when the source's **size** or **mtime
+  second** changes, not merely because time passed. `docs/OPERATIONS.md` corrected in the same commit; the
+  sentence had come from a harness that waited for a fresh second *before* the edit, which quietly avoided
+  the case it was trying to describe.
 - **`tools/lint_lab_pack.py` never looked at Demo 2's router.** The tool finds student work by reading
   the grader's expectation map, and it read a map named `ROUTER_EXPECTED` — a name no grader in this tree
   uses. Demo 2 exposes `ROUTERS = {"r1": [(dev, ip), ...]}`, so the router's link addresses were invisible

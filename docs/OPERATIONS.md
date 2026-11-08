@@ -87,8 +87,18 @@ hits while debugging: Python writes a bytecode cache next to the module (`lab-de
 and on a later load it will reuse that `.pyc` if the source's **size and mtime (whole seconds)** still
 match. Rewrite a grader within the **same second** at the **same byte length** — a one-character fix
 such as `THRESHOLD = 2` → `THRESHOLD = 3`, or any scripted rewrite — and the stale `.pyc` wins. Measured
-in this tree: same second + same size → old value served; same second + different size → new value;
-next second + same size → new value.
+in this tree: same second + same size → old value served; same second + different size → new value.
+
+**How far the staleness reaches — corrected again 2026-11-08 (second measurement).** An earlier revision of
+this paragraph said the stale value cleared on "the next second". It does not. Measured with the import
+calls `_load_grader` actually makes: after a same-second, same-size rewrite, the **old value is still served
+on the following second and after a several-second wait**, in the same process and in a fresh one, and
+`importlib.invalidate_caches()` changes nothing. The `.pyc` (header flags `0` = timestamp mode, the source's
+mtime second and size) is byte-identical across those reloads — the loader reuses it rather than
+revalidating it. The stale value clears when the source's **size** changes, or when its **mtime second**
+changes — normally because the next edit happens in a later second, not because time simply passed.
+`tools/check_pyc_staleness.py` reproduces every case in this section, including the failure of this
+sentence in its previous form.
 
 Because the `.pyc` is **on disk**, a **server restart does not clear it**: measured, a fresh process
 started after such an edit still loaded the old value. The cache the reload endpoint clears is the
