@@ -1,0 +1,7 @@
+metadata:
+  id: broken-grader
+  grader: grader_canary_raises
+name: canary
+topology:
+  nodes:
+    pc-a: {kind: linux, image: alpine:latest}

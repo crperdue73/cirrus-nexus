@@ -180,6 +180,36 @@ Both shipped graders wrap `grade` with a `_self_identifying` decorator that stam
 
 ---
 
+## What the pre-solved linter can see
+
+`tools/lint_lab_pack.py` judges a lab by comparing **the IPs your grader expects the
+student to apply** against **the IPs already in the topology's `exec:` lines**. That
+makes the grader's expectation map a contract with the linter, not just with the
+backend:
+
+| The linter reads | Shape | Notes |
+|---|---|---|
+| `EXPECTED` | `{node: {"ip": ..., "dev": ...}}` or `{node: ip}` | legacy/PC expectations |
+| `ROUTER_EXPECTED`, `ROUTERS`, `ROUTER`, `ROUTER_IPS` (first that exists) | `{node: [(dev, ip), ...]}` | router interface addresses, also student work |
+| module AST fallback | string→IPv4 dict literals | used only when no map above is found |
+
+Switch-management addresses are **not** read: a switch ships with its IRB seeded by
+design, and counting it would manufacture false red flags.
+
+Two consequences worth knowing:
+
+- A grader that keeps its expectations in some other shape is judged by the AST
+  fallback or not at all. The tool does not guess: an unreadable grader is reported
+  as such. **Until 2026-11-08 it looked for `ROUTER_EXPECTED` alone** — a name no
+grader in this tree uses — so Demo 2's router was never examined, and a lab with the
+router's whole answer key pre-applied read as `PARTIAL`, never as the red flag.
+- The linter is regression-tested against canary labs in
+  `tools/canaries/lab-pack/`: `sh tools/canaries/check_lint_canaries.sh` asserts one
+expected verdict per canary. Add a canary when you find a shape the tool misreads —
+a passing run over the real tree alone cannot tell you the tool still reads anything.
+
+---
+
 ## After you edit a lab: reload
 
 Lab definitions and graders are **cached in memory for the life of the process**.

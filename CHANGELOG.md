@@ -44,6 +44,30 @@ freeze documentation corrections rather than ship new behaviour.
 - **`docs/RELEASE-NOTES-v0.3.1-draft.md`** — this window's notes, drafted and unpublished.
 
 ### Fixed
+- **`tools/lint_lab_pack.py` never looked at Demo 2's router.** The tool finds student work by reading
+  the grader's expectation map, and it read a map named `ROUTER_EXPECTED` — a name no grader in this tree
+  uses. Demo 2 exposes `ROUTERS = {"r1": [(dev, ip), ...]}`, so the router's link addresses were invisible
+  to it. Measured with canary labs built to Demo 2's shape: a lab whose router had `10.0.1.253` on `eth1`
+  pre-applied read `PARTIAL 1/4`, and one with **both** router addresses pre-applied read `PARTIAL 2/4` —
+  the lab's entire router answer key was baked into the topology and the linter's verdict never said so.
+  Over the shipped tree the same run was rc 0 and reported `0/4` seeded. The tool now reads every
+  node→`[(dev, ip)]` map a grader exposes (`ROUTER_EXPECTED`, `ROUTERS`, `ROUTER`, `ROUTER_IPS`); switch
+  management IPs stay excluded, since those ship seeded by design. No shipped lab's verdict changed —
+  both real labs were genuinely `UNSOLVED`, and still are.
+- **`ERROR` and the red flag were ranked backwards.** A lab the run could not examine said the run was
+  incomplete; a `SOLVED` lab said the pack was bad. Exit 1 was returned for both, so an `ERROR` row's
+  meaning (part of this run never happened) was the lower-priority signal. Order is now
+  `ERROR` (rc 2) > red flag (rc 1) > clean (rc 0); `.github/ISSUE_TEMPLATE/lab_request.md` said the
+  opposite and is corrected.
+- **`tools/lint_lab_pack.py` now takes `--labs-dir`,** because the alternative was copying the tool into
+  `/tmp` to measure it. A path outside the tree reports absolute rather than raising on
+  `relative_to(BASE)` before the lab is classified.
+- **Added `tools/canaries/`, a canary pack plus gate** (`sh tools/canaries/check_lint_canaries.sh`): five
+  labs — unsolved, partial, fully solved, fake switch, broken grader — each named `<label>__<EXPECTED>`,
+  asserted one verdict each. A clean run over the real two labs cannot tell you the linter still reads
+  anything; this can. The three shell bugs found while writing that gate (a `$pack` path resolved one
+  directory too high, a positional-args clash, a `[ -f ] &&` loop body) are the reason it is a gate and
+  not a claim.
 - **`CONTRIBUTING.md`'s step numbering contradicted itself.** The prose cited step numbers that did not
   line up with its own step list, and one checker had silently dropped out of the list entirely — a
   checker that no longer appears in the hand-run block is a checker nobody runs. Both corrected, and

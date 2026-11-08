@@ -72,8 +72,8 @@ Per `docs/ADDING-A-LAB.md`, a lab is:
 - [ ] `python3 tools/lint_lab_pack.py` exits **0**, or **2** with a stated reason —
       **2 means the run could not complete: PyYAML was missing, or at least one lab
       could not be classified (an `ERROR` row — unparseable topology, or a grader that
-      raised on import), so it is not a pass.** (A red flag still outranks it: `SOLVED` +
-      `ERROR` exits 1. The `NO-GRADER` and `NO-EXPECTED` rows exist but do **not** make the
+      raised on import), so it is not a pass.** (`ERROR` outranks a red flag: `SOLVED` +
+      `ERROR` exits 2. The `NO-GRADER` and `NO-EXPECTED` rows exist but do **not** make the
       run incomplete — they mean that lab was not fully read, and exit 0 does not assert
       otherwise.)
       (exit 1 is the red flag: a lab that grades with zero student work, or a switch

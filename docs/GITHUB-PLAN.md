@@ -3187,3 +3187,81 @@ install.sh` rc=0 · 9/9 checkers rc=0 (`check_self_contained` 14/1/2, `check_rep
 rc=0. Backups: `/tmp/lint_lab_pack.py.bak-20261107-2000`, `/tmp/CONTRIBUTING.md.bak-20261107-2000`,
 `/tmp/lab_request.md.bak-20261107-2000`. NOT COMPLETE — Dad's word alone.
 next=run: build a canary that *does* read SOLVED (the `canary-solved` probe read UNSOLVED 0/1 and I did not chase it), so rc 1 is measured rather than assumed — a red flag that never fires is the same hole one layer out. Then: `docs/OPERATIONS.md` reload/cache/bundle statements against `_GRADER_CACHE`/`_reload_labs`, which `check_operations_doc` 50/50 structurally cannot see. STILL BLOCKED ON DAD, unchanged: `ci.yml` patches (no `workflow` scope on this token), v0.3.0 tag / GitHub Release, Screenshots (needs a live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP `10-archive/` and the three empty `lab-definitions` dirs, published security contact, `install.sh` Step 6 idempotence, the dead `topology unreadable` guard, the two grading-behaviour items from 2026-10-31, and whether `NO-GRADER`/`NO-EXPECTED` should become fatal.
+
+
+---
+
+# 2026-11-08 02:00 — the red flag now fires, and the linter can see the router
+
+Picked up 11-07's `next=`: "build a canary that *does* read SOLVED … a red flag that never fires is the
+same hole one layer out." Chased it. The canary wasn't the bug — **the linter was.**
+
+**MEASURED, before any change.** Canary built to Demo 2's real shape (`ROUTERS = {"r1": [(dev, ip)]}`),
+run against the pre-change tool:
+
+| canary lab | router `exec:` pre-applies | verdict (before) |
+|---|---|---|
+| demo2-shape UN SOLVED | nothing | `UNSOLVED` 0/4 |
+| demo2-shape PARTIAL | `10.0.1.253/24 eth1` | `PARTIAL` 1/4 |
+| demo2-shape **SOLVED** | `10.0.1.253/24 eth1` **+** `10.0.2.253/24 eth2` | `PARTIAL` **2/4** — never `SOLVED`, rc 0 |
+
+So: a lab whose entire router answer key is baked into its topology read as *partially seeded*, and the
+tool exited 0. Cause, read off the source rather than guessed: `student_values()` looked for a module
+attribute called `ROUTER_EXPECTED`. `grep -rn ROUTER_EXPECTED` over the tree: no grader in it has that
+name. Demo 2 exposes `ROUTERS`. The router branch of the red-flag path was never exercised by anything
+this repo ships — 11-07's unexplained `canary-solved → UNSOLVED 0/1` was this same hole, seen from the
+one angle where the AST fallback happened to hide it.
+
+**FIXED.** `student_values()` reads every node→`[(dev, ip)]` map a grader exposes
+(`ROUTER_EXPECTED`, `ROUTERS`, `ROUTER`, `ROUTER_IPS`; first one found wins, ROUTER_EXPECTED kept first
+only as an alias). Switch management IPs stay excluded — a switch ships seeded by design and counting them
+would manufacture false red flags. `ADDING-A-LAB.md` now documents this as a **contract**, because a
+convention that lives only in a docstring is how it went unnoticed: the docstring *described* a map that
+no grader had.
+
+**MEASURED, after.** Same canary pack, unchanged:
+
+```
+  ok  broken-grader__ERROR: expected ERROR, got ERROR
+  ok  demo2-shape__PARTIAL: expected PARTIAL, got PARTIAL
+  ok  demo2-shape__SOLVED: expected SOLVED, got SOLVED      <- the red flag fires
+  ok  demo2-shape__UNSOLVED: expected UNSOLVED, got UNSOLVED
+  ok  fake-switch__SOLVED: expected SOLVED, got SOLVED      <- fake-switch red flag fires
+canary gate OK: every canary lab got its expected verdict.   rc=0
+```
+
+Demo 2's router now counts as student work: the UNSOLVED canary reads 0/4 and the SOLVED one read 4/4.
+
+**Second fix, found by the first.** `ERROR` and the red flag were ranked backwards: rc 1 for both, so an
+`ERROR` row — the one signal that says *part of this run never happened* — was the lower-priority one.
+Precedence is now `ERROR` (rc 2) > red flag (rc 1) > clean (rc 0). `.github/ISSUE_TEMPLATE/lab_request.md`
+asserted the old order in writing ("A red flag still outranks it: `SOLVED` + `ERROR` exits 1") and is
+corrected.
+
+**Added, so this is checkable next time:** `tools/canaries/lab-pack/` (five labs, each named
+`<label>__<EXPECTED VERDICT>`) and `tools/canaries/check_lint_canaries.sh`, which asserts one verdict per
+canary and exits nonzero otherwise. `tools/lint_lab_pack.py` grew `--labs-dir` so the pack can be
+measured without copying the tool to `/tmp`. `architecture.md` lists both; the PR template names the gate.
+Writing the gate found three of its own bugs by running it — a `$pack` path resolved one directory too
+high (it declared its own full pack empty), a `set --` that clobbered its positional args, and a
+`[ -f ] && assign` loop body whose exit status poisoned the follow-on test. That is the argument for a
+gate over a claim, in miniature.
+
+**VERIFIED (all rc=0, after the edits):** `py_compile backend/main.py` · `py_compile
+tools/lint_lab_pack.py` · `bash -n install.sh` · `sh -n tools/canaries/check_lint_canaries.sh` ·
+`check_self_contained` (14/1/2) · `check_repo_metadata` · `check_prerequisites` · `check_install_narrative`
+· `check_self_contained_doc` · `check_lab_assets` · `check_operations_doc` (50/50) · `check_api_doc`
+(11/11) · `check_ci_doc` (17/17) · canary gate (5/5) · `lint_lab_pack.py` on the real tree (2 labs,
+`UNSOLVED` 0/2 and 0/4 — unchanged, both were genuinely unsolved). **No shipped lab's verdict changed and
+no shipped behaviour changed.**
+
+**NOT claimed:** that no other grader shape is misread. This fix covers the four attribute names above and
+the AST fallback; a grader that hides its expectations in some fifth shape is still unread, and the tool
+says so with `NO-EXPECTED` rather than guessing. Backups: `/tmp/lint_lab_pack.py.bak-20261108`,
+`/tmp/bak-20261108-lint/`.
+
+**Cleaner:** `ci.yml` now has a tenth thing worth running (the canary gate) and still cannot be edited —
+no `workflow` scope on this token, unchanged since 2026-10-26. It stays parked.
+next=run: `docs/OPERATIONS.md` reload/cache/bundle statements against the real `_GRADER_CACHE`/`_reload_labs` code, which `check_operations_doc` 50/50 structurally cannot see (a checker that reads a doc cannot see whether the doc matches the code). Then: re-run the canary gate under `NO-GRADER`/`NO-EXPECTED` canaries to pin those two rows' text as well. STILL BLOCKED ON DAD, unchanged: `ci.yml` patches (five parked checkers + this gate), v0.3.0 tag / GitHub Release, Screenshots (needs a live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP `10-archive/` and the three empty `lab-definitions` dirs, published security contact, `install.sh` Step 6 idempotence, the dead `topology unreadable` guard, the two grading-behaviour items from 2026-10-31, and whether `NO-GRADER`/`NO-EXPECTED` should become fatal.
+
+STATUS: NOT COMPLETE — only Dad calls it.

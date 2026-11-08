@@ -1,0 +1,11 @@
+metadata:
+  id: fake-switch
+  grader: grader_demo_02
+name: canary
+topology:
+  nodes:
+    pc-a: {kind: linux, image: alpine:latest, exec: ["ip addr add 10.0.1.1/24 dev eth1"]}
+    pc-b: {kind: linux, image: alpine:latest, exec: ["ip addr add 10.0.2.1/24 dev eth1"]}
+    r1:   {kind: linux, image: alpine:latest, exec: ["ip addr add 10.0.1.253/24 dev eth1", "ip addr add 10.0.2.253/24 dev eth2"]}
+    sw1:  {kind: linux, image: alpine:latest, exec: ["ip link add br0 type bridge"]}
+    sw2:  {kind: nokia_srlinux, image: ghcr.io/nokia/srlinux:latest}

@@ -1,0 +1,11 @@
+metadata:
+  id: demo2-shape
+  grader: grader_demo_02
+name: canary
+topology:
+  nodes:
+    pc-a: {kind: linux, image: alpine:latest, exec: ["ip link set eth1 up"]}
+    pc-b: {kind: linux, image: alpine:latest, exec: ["ip link set eth1 up"]}
+    r1:   {kind: linux, image: alpine:latest, exec: ["sysctl -w net.ipv4.ip_forward=1"]}
+    sw1:  {kind: nokia_srlinux, image: ghcr.io/nokia/srlinux:latest}
+    sw2:  {kind: nokia_srlinux, image: ghcr.io/nokia/srlinux:latest}

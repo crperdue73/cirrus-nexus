@@ -11,7 +11,9 @@ deploy, so "shipped solved" can't slip through unnoticed.
 Method (static, no containers):
   1. For each lab YAML, find its grader module (metadata.grader).
   2. Import the grader and read its EXPECTED map (node -> {ip, dev}) plus any
-     switch-IRB / router expectations the module exposes.
+     switch-IRB / router expectations the module exposes. (Router maps were
+     read under one assumed attribute name until 2026-11-08, so Demo 2's
+     router was never examined -- see student_values().)
   3. Scan the lab's topology YAML for those IPs appearing in node `exec:` or
      `startup-config` files.
   4. Classify each lab.
@@ -93,7 +95,8 @@ def _require_yaml() -> bool:
     return True
 
 
-def load_grader(module_name: str, problems: dict | None = None):
+def load_grader(module_name: str, problems: dict | None = None,
+                lab_dir: Path | None = None, grader_search: list | None = None):
     """Import a lab's grader module, or None if it is missing / will not import.
 
     `problems` (optional) records WHICH of the two happened. Since 2026-11-07
@@ -106,7 +109,17 @@ def load_grader(module_name: str, problems: dict | None = None):
     trace on stderr. The docstring above already listed "a grader that raised on
     import" as an ERROR case; it was not true of the code.
     """
-    path = LABS_DIR / f"{module_name}.py"
+    # The grader may sit next to its lab YAML OR at lab-definitions/ root: that is
+    # where both shipped graders live, and a sub-directory lab names them by bare
+    # module name. Searching the lab's own directory alone is why every lab in
+    # this tree read NO-GRADER on 2026-11-08 (measured: 2/2 labs NO-GRADER,
+    # rc 0) -- the lint reported that it had examined no expectation at all.
+    candidates = [((lab_dir or LABS_DIR) / f"{module_name}.py")]
+    if lab_dir is not None and Path(lab_dir).resolve() != LABS_DIR.resolve():
+        candidates.append(LABS_DIR / f"{module_name}.py")
+    for extra in (grader_search or []):
+        candidates.append(Path(extra) / f"{module_name}.py")
+    path = next((c for c in candidates if c.exists()), candidates[0])
     if not path.exists():
         if problems is not None:
             problems["missing"] = True
@@ -148,12 +161,18 @@ def switch_ips_from_grader(mod) -> dict:
     return out
 
 
+# Node->[(dev, ip), ...] maps a grader may expose for a ROUTER's interfaces.
+# Demo 2 uses ROUTERS; the plural ROUTER_EXPECTED is kept first only as an alias
+# because this function used to look for that name alone (see the note below).
+ROUTER_MAPS = ("ROUTER_EXPECTED", "ROUTERS", "ROUTER", "ROUTER_IPS")
+
+
 def student_values(mod) -> dict:
     """node -> list of IPs the STUDENT is expected to apply.
 
-    PCs come from EXPECTED. A router's addresses (if the grader exposes a
-    ROUTER_EXPECTED map of node -> [(dev, ip), ...]) are also student work.
-    Switch IRBs are deliberately seeded and excluded.
+    PCs come from EXPECTED. A router's addresses (from any map in ROUTER_MAPS,
+    in the node -> [(dev, ip), ...] shape Demo 2 actually uses) are also student
+    work. Switch IRBs are deliberately seeded and excluded.
     """
     vals = {}
     exp = getattr(mod, "EXPECTED", {}) or {}
@@ -162,10 +181,33 @@ def student_values(mod) -> dict:
             # 'switch' node in the plains lab is the switch mgmt IP: it IS
             # student work there (no separate switch grader map). Keep it.
             vals.setdefault(node, []).append(spec["ip"])
-    rt = getattr(mod, "ROUTER_EXPECTED", {}) or {}
-    for node, pairs in rt.items():
-        for _dev, ip in pairs:
-            vals.setdefault(node, []).append(ip)
+    # Router expectations are read from EVERY map a shipped grader actually uses,
+    # because no shipped grader calls it ROUTER_EXPECTED. Found 2026-11-08 by
+    # measuring a canary that copies Demo 2's real shape (`ROUTERS = {"r1":
+    # [(dev, ip), ...]}`): the lint reported PARTIAL 1/4 for a lab whose router
+    # link had 10.0.1.253 pre-applied in node `exec:`, and PARTIAL 2/4 for one
+    # that pre-applied BOTH addresses -- i.e. a lab whose entire answer key was
+    # baked in read as a partial, never as SOLVED, and the run stayed rc 0. The
+    # attr name this code looked for appears in no grader in this tree; it was
+    # an assumption about a convention, not a measurement of the code.
+    # Demo 2 exposes ROUTERS (node -> [(dev, ip), ...]); IRB/mgmt maps are
+    # deliberately NOT read here, since a switch's management IP ships seeded
+    # by design and counting it would manufacture false red flags.
+    for attr in ROUTER_MAPS:
+        rt = getattr(mod, attr, {}) or {}
+        if not isinstance(rt, dict):
+            continue
+        for node, pairs in rt.items():
+            for item in pairs if isinstance(pairs, (list, tuple)) else []:
+                # ("eth1", "10.0.1.253") or, tolerantly, a bare address string.
+                if isinstance(item, (list, tuple)) and len(item) >= 2:
+                    ip = item[1]
+                elif isinstance(item, str):
+                    ip = item
+                else:
+                    continue
+                if isinstance(ip, str) and _ipv4(ip) and ip not in vals.get(node, []):
+                    vals.setdefault(node, []).append(ip)
     return vals
 
 
@@ -283,14 +325,25 @@ def switch_authenticity(yml_path: Path) -> dict:
     return {"fake_switches": fake, "real_switches": real}
 
 
-def classify(lab_dir: Path, yml_path: Path) -> dict:
+def _rel_or_abs(path: Path) -> Path:
+    """`path` relative to BASE when it is inside the tree, else as given."""
+    try:
+        return path.resolve().relative_to(BASE)
+    except ValueError:
+        return path
+
+
+def classify(lab_dir: Path, yml_path: Path, grader_search: list | None = None) -> dict:
     meta = parse_metadata(yml_path)
     grader_name = meta.get("grader") or f"grader_{meta.get('id','')}"
     problems: dict = {}
-    mod = load_grader(grader_name, problems)
+    mod = load_grader(grader_name, problems, lab_dir, grader_search)
     result = {
         "lab": meta.get("id", yml_path.stem),
-        "topology": str(yml_path.relative_to(BASE)),
+        # A lab outside this tree (a canary in /tmp) has no path relative to
+        # BASE; reporting its absolute path is the truthful label, and printing
+        # it beats raising before the lab is classified at all (2026-11-08).
+        "topology": str(_rel_or_abs(yml_path)),
         "switch_auth": switch_authenticity(yml_path),
         "grader": grader_name,
         "status": "UNKNOWN",
@@ -336,10 +389,17 @@ def classify(lab_dir: Path, yml_path: Path) -> dict:
     return result
 
 
-def discover_labs() -> list:
+def discover_labs(labs_dir: Path | None = None) -> list:
+    """Lab YAMLs to examine. `labs_dir` defaults to this tree's lab-definitions.
+
+    The argument exists so the lint can be measured against canary labs in /tmp
+    without a copy of the whole tool -- and so a caller cannot silently measure
+    a different directory: LABS_DIR is only the default.
+    """
     out = []
-    cands = list(LABS_DIR.glob("*.yml"))
-    for sub in sorted(p for p in LABS_DIR.iterdir() if p.is_dir()):
+    root = labs_dir or LABS_DIR
+    cands = list(root.glob("*.yml"))
+    for sub in sorted(p for p in root.iterdir() if p.is_dir()):
         cands.extend(sorted(sub.glob("*.yml")))
     for yml in sorted(cands):
         # only real labs: a metadata block with an id
@@ -352,15 +412,25 @@ def discover_labs() -> list:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--labs-dir", type=Path, default=None,
+                    help="lab-definitions directory to examine (default: this tree's)")
     args = ap.parse_args()
 
     if not _require_yaml():
         return 2
 
+    lancet = args.labs_dir
+    grader_search = None
+    if lancet is not None:
+        # Measuring a canary pack: its own directory is searched for graders
+        # FIRST, this tree's lab-definitions second, so a canary can supply a
+        # deliberately broken module without shadowing the shipped ones.
+        grader_search = [str(lancet), str(LABS_DIR)]
+
     results = []
-    for yml in discover_labs():
+    for yml in discover_labs(lancet):
         try:
-            results.append(classify(yml.parent, yml))
+            results.append(classify(yml.parent, yml, grader_search))
         except Exception as e:
             results.append({"lab": yml.stem, "status": "ERROR", "error": str(e)})
 
@@ -412,15 +482,19 @@ def main() -> int:
             for r in unchecked:
                 print(f"   {r['lab']}  (grader {r['grader']})")
 
+    # A lab this run could NOT examine is an incomplete run, not a verdict about
+    # anything -- so it outranks the red flag. Measured 2026-11-08 on the canary
+    # pack: a SOLVED canary beside a grader that raises at import exited 1, which
+    # reads as "I found the answer key" while the ERROR row (the one thing that
+    # says part of the run never happened) was the lower-priority signal. Order
+    # now: ERROR (2) > red flag (1) > clean (0).
+    if any(r["status"] == "ERROR" for r in results):
+        return 2
     red = any(r["status"] == "SOLVED" for r in results) or any(
         (r.get("switch_auth") or {}).get("fake_switches") for r in results
     )
     if red:
         return 1
-    # A red flag is reported first: it is a verdict about the pack. Otherwise a
-    # lab nobody could examine means the run is incomplete (2), not clean (0).
-    if any(r["status"] == "ERROR" for r in results):
-        return 2
     return 0
 
 

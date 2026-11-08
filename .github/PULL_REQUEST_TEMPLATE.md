@@ -29,6 +29,7 @@ The same checks CI runs:
 - [ ] `bash -n install.sh`
 - [ ] `python3 tools/check_self_contained.py`
 - [ ] `python3 tools/lint_lab_pack.py`  (if labs changed)
+- [ ] `sh tools/canaries/check_lint_canaries.sh`  (if the linter or the canary pack changed)
 
 ## If this touches a served lab
 
