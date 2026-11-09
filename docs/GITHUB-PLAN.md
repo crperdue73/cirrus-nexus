@@ -3556,3 +3556,59 @@ lint-covered** but still not fixed in the loader — Dad's call.
 
 STATUS: NOT COMPLETE — only Dad calls it.
 
+
+## 2026-11-09 20:00 — "logs" pointed at an empty journal; the checker endorsed the wrong half
+
+Measured live before acting: `git status` clean, `HEAD...origin/main = 0 0`, ten claim checkers rc=0,
+canary gate 8/8, shipped lint rc=0, `py_compile` OK, `bash -n install.sh` OK.
+
+**The claim.** `docs/OPERATIONS.md:18` — the first thing an operator reads when AEGIS misbehaves — said
+`journalctl -u aegis -f   # logs (also written to /var/log/aegis.log)`. Both halves asserted: the journal
+has the server's output, and the file has it too. That is not what the unit does. `install.sh:531-532` set
+`StandardOutput=append:/var/log/aegis.log` and `StandardError=append:/var/log/aegis.log`, which tells
+systemd to write the process's output to that file **instead of** the journal; and nothing in
+`backend/main.py` or `start_server.py` opens `/dev/log` or installs a `SysLogHandler`.
+
+**Measured, on this host — which is running that installer, not a hypothetical one.** `journalctl -u aegis`
+had **7 lines, 6 of them from `systemd[1]`** (Started/Stopping/Deactivated/Stopped and the CPU-memory
+accounting). `/var/log/aegis.log` had **123 lines** at the same moment, carrying request lines and the
+backend's `[labs]` / `[grader]` / `[lab-verdict]` diagnostics — the `print(..., file=sys.stderr)` calls at
+`main.py:413/659/666/668` and friends. So an operator whose lab failed to load, following the doc, gets a
+blank stream. I rotated the file, not the diagnosis, so those 123 lines are what it was at 20:00.
+
+**Why it survived every earlier pass.** `tools/check_operations_doc.py` carried
+`check("journald + append:/var/log/aegis.log both true", "append:/var/log/aegis.log" in install)` — the name
+claims two facts, the body tests one, and the one it tests is true of the *unit*, so the false *doc*
+sentence passed. That is the third time this file has held a load-bearing sentence no checker actually read
+(after the 2026-10-30 exit-code note and the 2026-11-06 CI counts), which is why the fix is a reader, not a
+reword.
+
+**Fixed.** The doc's block now separates the two: `tail -f /var/log/aegis.log` is the log, `journalctl -u
+aegis -f` is start/stop/restart events and is labelled as such — with the reason (`append:` semantics, no
+syslog handler), the measurement, and the one-line local change (drop the two `Standard*=` lines,
+`daemon-reload`) for anyone who wants it in the journal instead. Also stated: the installer ships no
+`logrotate` and no rotation for that file, so it grows until someone rotates it. The checker now calls
+`_journald_claim_is_true(ops, install)`, reads the unit's `StandardOutput`, and requires the doc to name the
+file as the log **and** not call `journalctl` "logs". Verified by putting the old text back in a throwaway
+copy: **1 FAIL** (`journald claim matches the unit's StandardOutput`); fixed tree **62 PASS, 0 FAIL**.
+Proof: `.nexus/proofs/2026-11-09-journald-empty.txt`.
+
+Also: `.gitignore` now ignores `.nexus-bak/`, the root-owned scratch dir a hand-backup left behind this
+morning — untracked, not source, and it was showing up in `git status` next to real work.
+
+**Not done, named:** I did not change the unit (Dad's call — `append:` vs. the journal is a deployment
+decision, and switching it would move a school's logs out from under their existing habits); I did not add
+rotation (that means a `logrotate.d` file the installer would have to own); and I confirmed the file is
+`root`-owned at `0644`, so `User=aegis` writes it through systemd rather than by itself — worth knowing
+before anyone "fixes" the permissions. The three empty `lab-definitions/` dirs and `.nexus-bak/` both
+disappear from `git status` now; the first is still Dad's DELETE-OR-KEEP.
+next=run: the `AttributeError` in `_substrate_image_for` (`topology:` as a list, main.py:444) is still the
+one known crash and still unwritten for Dad — write the one-page repro. If that feels like a bug report
+rather than polish, the next reader-facing gap is `docs/API.md`'s error table against a live 409/502 body.
+STILL BLOCKED ON DAD, unchanged: `ci.yml` patches (twelve parked checkers), v0.3.0 tag / GitHub Release,
+Screenshots (needs a live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP `10-archive/` and the
+three empty `lab-definitions` dirs, published security contact, `install.sh` Step 6 idempotence, the two
+grading-behaviour items from 2026-10-31, whether `NO-GRADER`/`NO-EXPECTED` should become fatal, and now
+whether the unit should log to the journal instead of the file.
+
+STATUS: NOT COMPLETE — only Dad calls it.
