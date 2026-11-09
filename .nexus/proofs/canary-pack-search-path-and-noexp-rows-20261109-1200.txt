@@ -1,0 +1,82 @@
+PROOF 2026-11-09 12:00 UTC - CONTRIBUTING's tool paragraph vs the tree, then the canary gate's two unexercised rows
+
+== baseline (before any edit): tree clean at 77f436f, HEAD==origin/main 0/0 ==
+
+Claim under test (CONTRIBUTING.md:164-166): 'Only lint_lab_pack.py needs pyyaml. The other three (check_bundle_fresh.sh, check_self_contained.py, plan_status.py) run on the standard library alone ... measured on a host without pyyaml.'
+
+(1) import scan - pyyaml among module-level imports:
+--- tools/lint_lab_pack.py
+45:import surfaced inside the per-lab loop instead, so a box without PyYAML got
+65:import argparse
+66:import importlib.util
+67:import json
+68:import re
+69:import sys
+--- tools/plan_status.py
+22:from a tool whose own docs promise exit 0. The name is now looked up
+38:import json
+39:import re
+40:import sys
+41:from pathlib import Path
+--- tools/check_self_contained.py
+11:from __future__ import annotations
+13:import py_compile
+14:import re
+15:import sys
+16:import tempfile
+17:from pathlib import Path
+--- tools/plan_status.py contains no yaml reference at all:
+0
+
+(2) executed, not read: pyyaml blocked by a stub on PYTHONPATH
+$ PYTHONPATH=/tmp/blockyaml python3 tools/lint_lab_pack.py
+Install it, then re-run:
+    python3 -m pip install pyyaml
+(pyyaml is already declared in requirements.txt.)
+rc=2 (as claimed)
+$ PYTHONPATH=/tmp/blockyaml python3 tools/plan_status.py
+rc=0 (as claimed)
+$ bash tools/check_bundle_fresh.sh (no bundle on disk)
+no bundle present at frontend/nexus-release.tar.gz — nothing to check
+rc=0 (as claimed)
+
+== PART 1 CONCLUSION: the paragraph is TRUE of the tree - no defect, claim closed ==
+
+== (3) the canary gate's NO-GRADER / NO-EXPECTED rows (last run's next=) ==
+Adding a NO-GRADER canary to tools/canaries/lab-pack made the GATE fail while the tool row was right:
+  FAIL nogr__NO-GRADER: expected NO-GRADER, got SOLVED   <- lib/python3.13/json/__init__.py:346: JSONDecodeError: Unterminated string
+
+ROOT CAUSE, read off the source: lint_lab_pack.py:428 set grader_search = [pack, LABS_DIR], so a canary that names a grader it does not ship was resolved out of THIS TREE's lab-definitions/ - something the loader being modelled never does. The shipped demo-02 grader read a canary topology whose nodes it did not recognise, returned an empty expectation map, and the empty map made the canary look 100% PRE-SOLVED (SOLVED 0/0). Three separate lies from one wrong search path.
+
+FIX: load_grader/classify take ONE pack root (--labs-dir, else lab-definitions/) and resolve graders there only - the loader's rule - instead of a list with a borrowed fallback. The demo2-shape canaries now carry their own copy of grader_demo_02.py (banner says keep byte-identical).
+
+== gate AFTER (7 canaries, per-lab assertion) ==
+  ok  broken-grader__ERROR: expected ERROR, got ERROR
+  ok  demo2-shape__PARTIAL: expected PARTIAL, got PARTIAL
+  ok  demo2-shape__SOLVED: expected SOLVED, got SOLVED
+  ok  demo2-shape__UNSOLVED: expected UNSOLVED, got UNSOLVED
+  ok  fake-switch__SOLVED: expected SOLVED, got SOLVED
+  ok  noexp__NO-EXPECTED: expected NO-EXPECTED, got NO-EXPECTED
+  ok  nogr__NO-GRADER: expected NO-GRADER, got NO-GRADER
+canary gate OK: every canary lab got its expected verdict.
+gate rc=0
+
+== the two rows the gate could not reach before, now exercised ==
+noexp__NO-EXPECTED -> NO-EXPECTED row; nogr__NO-GRADER -> NO-GRADER row (both seen above)
+precedence, measured three ways on /tmp packs:
+  red flag + NO-EXPECTED in one pack -> rc=1 (red flag outranks a lab that was not fully read), NOT CHECKED line still printed
+  ERROR + anything -> rc=2 (unchanged, 2026-11-08 ordering)
+  canary pack as a whole       -> rc=2, 'labs scanned: 7  SOLVED (red flag): 2'
+
+== shipped behaviour unchanged ==
+UNSOLVED  0/2      demo-01-two-pcs-and-a-real-switch-unsolved
+UNSOLVED  0/4      demo-02-two-switches-one-router-unsolved
+----------------------------------------------------------------------
+labs scanned: 2   SOLVED (red flag): 0
+rc=0
+
+== VERIFIED, all rc=0 after the edits ==
+py_compile backend/main.py + tools/lint_lab_pack.py; bash -n install.sh; check_api_doc, check_ci_doc, check_install_narrative, check_lab_assets, check_operations_doc, check_prerequisites, check_pyc_staleness, check_repo_metadata, check_self_contained, check_self_contained_doc; check_bundle_fresh (no bundle); canary gate 7/7.
+
+== LIMIT named, not papered over ==
+The canary checks the lint's READ of a lab, not the backend's actual grading. No docker/containerlab run this hour. One residual asymmetry, deliberate: the lint resolves graders from the pack root and the lab's own folder; backend _load_grader (main.py:751-793) additionally allows backend/graders/ - a directory this tree does not contain, so it cannot hide a NO-GRADER in any tree that ships these labs.
