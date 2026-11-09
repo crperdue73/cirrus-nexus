@@ -1,0 +1,8 @@
+metadata:
+  id: noexp
+  grader: canary_no_expected
+name: canary
+topology:
+  nodes:
+    pc-a: {kind: linux, image: alpine:latest}
+    sw1: {kind: nokia_srlinux, image: ghcr.io/nokia/srlinux:latest}

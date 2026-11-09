@@ -3464,3 +3464,47 @@ live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP `10-archive/` and t
 `lab-definitions` dirs, published security contact, `install.sh` Step 6 idempotence, the dead `topology
 unreadable` guard, the two grading-behaviour items from 2026-10-31, and whether `NO-GRADER`/`NO-EXPECTED`
 should become fatal.
+
+## Run 2026-11-09 12:00 UTC — the tool paragraph was true; the canary gate's two unexercised rows were not
+
+Took the 2026-11-08 `next=` line in two halves. Half one, CONTRIBUTING's "four further tools" paragraph:
+**no defect** — measured by execution, not by reading (`PYTHONPATH` stub raising on `import yaml`):
+`lint_lab_pack.py` rc **2** with its `UNAVAILABLE … this is not a pass` line, `plan_status.py` rc 0,
+`check_bundle_fresh.sh` rc 0 with `no bundle present`. The "three of the four run on stdlib alone" claim
+is true of the tree; closed so nobody re-measures it.
+
+Half two is where the defect was. Adding the pack's missing `NO-GRADER` canary made the **gate** fail
+while the tool's row was right: `expected NO-GRADER, got SOLVED`. Root cause, read off the source:
+`--labs-dir` set `grader_search = [pack, LABS_DIR]`, so a canary naming a grader it does not ship was
+resolved out of **this tree's** `lab-definitions/` — a search the loader being modelled never performs.
+The shipped demo-02 grader then read an unfamiliar canary topology, returned an empty expectation map,
+and `0/0` made the lab read as **100% PRE-SOLVED**. One wrong search path produced three lies at once,
+and it is the same class as 11-07/11-08: what the tool looked at was not what it claimed to be looking at.
+
+**Fixed:** `load_grader`/`classify` take a single pack root (`--labs-dir`, else `lab-definitions/`) and
+resolve graders there only. The `demo2-shape` canaries carry their own copy of `grader_demo_02.py`
+(banner: keep byte-identical; the pack must carry the grader it exercises).
+
+**The two rows are now exercised, and the gate went from 5/5 to 7/7:** `noexp__NO-EXPECTED` →
+`NO-EXPECTED`, `nogr__NO-GRADER` → `NO-GRADER`. Precedence measured three ways: red flag + NO-EXPECTED
+→ rc **1** (red flag outranks a lab that was not fully read, `NOT CHECKED` still printed); ERROR +
+anything → rc **2** (11-08 ordering holds); whole canary pack → rc 2, `labs scanned: 7  SOLVED: 2`.
+Shipped tree unchanged: 2 labs, `UNSOLVED` 0/2 and 0/4, rc 0.
+
+**Verified (all rc=0 after the edits):** `py_compile` backend + tool · `bash -n install.sh` · all ten
+claim checkers · `check_bundle_fresh` · canary gate 7/7.
+**Limit, named:** the canaries check the lint's *read* of a lab, not the backend's grading; no
+docker/containerlab run this hour. Deliberate residual asymmetry: the lint searches pack root + lab
+folder, `_load_grader` also allows `backend/graders/` (absent from this tree).
+**Cleaner:** `ci.yml` now has eleven things worth running (the canary gate) and still cannot be edited —
+no `workflow` scope, unchanged since 2026-10-26. It stays parked.
+next=run: take the `topology unreadable` dead guard (found 2026-11-07 12:00 under ADDING-A-LAB) and
+measure it as a *lint-visible* fact first — can `lint_lab_pack.py` name a lab whose `topology_file` is
+absent, so a contributor hears about it before deploy, without touching backend behaviour (which is Dad's
+call). STILL BLOCKED ON DAD, unchanged: `ci.yml` patches (eleven parked checkers now), v0.3.0 tag /
+GitHub Release, Screenshots (needs a live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP
+`10-archive/` and the three empty `lab-definitions` dirs, published security contact, `install.sh`
+Step 6 idempotence, the dead `topology unreadable` guard, the two grading-behaviour items from 2026-10-31,
+and whether `NO-GRADER`/`NO-EXPECTED` should become fatal.
+
+STATUS: NOT COMPLETE — only Dad calls it.

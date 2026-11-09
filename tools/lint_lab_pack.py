@@ -96,7 +96,7 @@ def _require_yaml() -> bool:
 
 
 def load_grader(module_name: str, problems: dict | None = None,
-                lab_dir: Path | None = None, grader_search: list | None = None):
+                lab_dir: Path | None = None, pack_dir: Path | None = None):
     """Import a lab's grader module, or None if it is missing / will not import.
 
     `problems` (optional) records WHICH of the two happened. Since 2026-11-07
@@ -109,16 +109,25 @@ def load_grader(module_name: str, problems: dict | None = None,
     trace on stderr. The docstring above already listed "a grader that raised on
     import" as an ERROR case; it was not true of the code.
     """
-    # The grader may sit next to its lab YAML OR at lab-definitions/ root: that is
-    # where both shipped graders live, and a sub-directory lab names them by bare
-    # module name. Searching the lab's own directory alone is why every lab in
-    # this tree read NO-GRADER on 2026-11-08 (measured: 2/2 labs NO-GRADER,
-    # rc 0) -- the lint reported that it had examined no expectation at all.
-    candidates = [((lab_dir or LABS_DIR) / f"{module_name}.py")]
-    if lab_dir is not None and Path(lab_dir).resolve() != LABS_DIR.resolve():
-        candidates.append(LABS_DIR / f"{module_name}.py")
-    for extra in (grader_search or []):
-        candidates.append(Path(extra) / f"{module_name}.py")
+    # The grader may sit next to its lab YAML OR flat in the directory the
+    # loader globs: lab-definitions/ for this tree, or `--labs-dir` for a pack.
+    # That is where both shipped graders live, and a sub-directory lab names
+    # them by bare module name. Searching the lab's own directory alone is why
+    # every lab in this tree read NO-GRADER on 2026-11-08 (measured: 2/2 labs
+    # NO-GRADER, rc 0) -- the lint reported that it had examined no
+    # expectation at all.
+    #
+    # Measured 2026-11-09, and the reason this parameter is now ONE pack root
+    # instead of a search LIST: the old list put the pack root and
+    # LABS_DIR both in play, so a canary that supplied no grader module was
+    # resolved out of this tree's lab-definitions/ -- something the loader
+    # being modelled never does -- and a NO-GRADER canary added to the pack
+    # read as the PRE-SOLVED red flag, i.e. exit 1 instead of a browsable row.
+    # The lint now looks only where the loader would look.
+    pack = Path(pack_dir) if pack_dir is not None else LABS_DIR
+    candidates = [((lab_dir or pack) / f"{module_name}.py")]
+    if lab_dir is not None and Path(lab_dir).resolve() != pack.resolve():
+        candidates.append(pack / f"{module_name}.py")
     path = next((c for c in candidates if c.exists()), candidates[0])
     if not path.exists():
         if problems is not None:
@@ -333,11 +342,11 @@ def _rel_or_abs(path: Path) -> Path:
         return path
 
 
-def classify(lab_dir: Path, yml_path: Path, grader_search: list | None = None) -> dict:
+def classify(lab_dir: Path, yml_path: Path, pack_dir: Path | None = None) -> dict:
     meta = parse_metadata(yml_path)
     grader_name = meta.get("grader") or f"grader_{meta.get('id','')}"
     problems: dict = {}
-    mod = load_grader(grader_name, problems, lab_dir, grader_search)
+    mod = load_grader(grader_name, problems, lab_dir, pack_dir)
     result = {
         "lab": meta.get("id", yml_path.stem),
         # A lab outside this tree (a canary in /tmp) has no path relative to
@@ -420,17 +429,16 @@ def main() -> int:
         return 2
 
     lancet = args.labs_dir
-    grader_search = None
-    if lancet is not None:
-        # Measuring a canary pack: its own directory is searched for graders
-        # FIRST, this tree's lab-definitions second, so a canary can supply a
-        # deliberately broken module without shadowing the shipped ones.
-        grader_search = [str(lancet), str(LABS_DIR)]
+    # Measuring a canary pack: graders are resolved in that pack and NOWHERE
+    # else, exactly as the loader being modelled does for lab-definitions/.
+    # (Until 2026-11-09 a pack also fell back to this tree's lab-definitions/,
+    # which made "the lab names a grader that does not exist" unreachable in a
+    # canary and turned a NO-GRADER canary into a false red flag -- measured.)
 
     results = []
     for yml in discover_labs(lancet):
         try:
-            results.append(classify(yml.parent, yml, grader_search))
+            results.append(classify(yml.parent, yml, lancet))
         except Exception as e:
             results.append({"lab": yml.stem, "status": "ERROR", "error": str(e)})
 

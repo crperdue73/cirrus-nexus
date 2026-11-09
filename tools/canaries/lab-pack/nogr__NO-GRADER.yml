@@ -1,0 +1,8 @@
+metadata:
+  id: nogr
+  grader: grader_canary_absent_by_design
+name: canary
+topology:
+  nodes:
+    pc-a: {kind: linux, image: alpine:latest}
+    sw1: {kind: nokia_srlinux, image: ghcr.io/nokia/srlinux:latest}
