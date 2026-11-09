@@ -94,12 +94,39 @@ A lab is refused when:
 
 | condition | example error |
 |---|---|
-| the topology file cannot be read | `topology unreadable: <file>` |
 | a `startup-config` resolves **outside the lab's own directory** | `startup-config for sw1 resolves outside the lab directory (../../x.cfg)` |
 | a `startup-config` names a **file that does not exist** | `startup-config for sw1 names a file that does not exist: assets/sw1.cfg` |
 | `gradeable_nodes` names nodes the topology does **not** define | `gradeable_nodes names nodes the topology does not define: ghost1` |
 | a `LabDef` field has the wrong type | `1 validation error for LabDef` |
 | the YAML does not parse at all | `while parsing a flow sequence` (reported for the *file*) |
+
+### …and one row that is NOT true yet
+
+This table used to list **`topology unreadable: <file>`** as a refusal. It is
+not one — the guard is **effectively unreachable**. `backend/main.py:632` raises
+that string when `_topology_node_names()` returns `None`; but the loader stores
+a lab's `topology_file` as **the lab file's own path**, so `None` requires the
+lab *file* to be unreadable — and those are already dropped by the earlier
+unparseable-YAML guard (`RUN 240`), before this check runs.
+
+**Measured 2026-11-09** against a copy of `lab-definitions` (three shapes):
+
+| shape | measured result |
+|---|---|
+| topology parses, no `metadata:` block | never discovered — guard never runs |
+| lab file itself unreadable | refused by `RUN 240` (`UNPARSEABLE`), not by this guard |
+| `topology.nodes` is a **list** of mappings | refused by the `gradeable_nodes` guard instead |
+| `topology:` is a **list**, not a mapping | **`AttributeError` in `_substrate_image_for` (main.py:444) — discovery crashes** |
+
+The last row is a real product bug, and fixing loader behaviour is the
+operator's call, not a docs run's. Use the linter in the meantime: it now
+answers `NO-TOPOLOGY` (exit 2) for a lab whose own topology is missing,
+unparseable, or defines no nodes, instead of the green `UNSOLVED` it used to
+print for exactly those labs:
+
+```sh
+python3 tools/lint_lab_pack.py --labs-dir lab-definitions   # NO-TOPOLOGY = nothing was examined
+```
 
 The refusal is visible in the reload response:
 

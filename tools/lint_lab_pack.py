@@ -35,6 +35,28 @@ Non-verdicts (nothing was actually examined — never read these as a pass):
                 `labs scanned: N, SOLVED: 0` rc=0 having read no expectation at
                 all. Making it fatal would retroactively flag the two shipped
                 demo labs' profile, so that call is Dad's, not a polish run's.
+  NO-TOPOLOGY — the topology this lab deploys is not in the file the loader
+                will hand to containerlab. The loader sets `topology_file` to
+                the lab YAML's OWN path relative to the pack root
+                (backend/main.py:496, `rel = f.relative_to(LABS_DIR)`); it never
+                reads a `metadata.topology_file` key. So the only topology a
+                lab can have is the one inside its own YAML. Exits 2.
+                Added 2026-11-09. Before this, `classify()` read
+                `doc["topology"]` and, on a lab with no such block, found no
+                nodes -- every IP scanned nowhere, `seeded == 0` -> **UNSOLVED**,
+                green. MEASURED 2026-11-09 on a canary (valid YAML, metadata,
+                no `topology:` block): `UNSOLVED 0/2`, and rc 0 in a pack
+                without an unrelated ERROR lab. A run that examined no topology
+                reported as "the student does all the work". This is the
+                lint-side counterpart of the backend's dead `topology
+                unreadable:` guard (main.py:632): that guard looks for `None`
+                from `_topology_node_names()`, which for a lab file that
+                PARSES can only happen when `topology` is not a mapping --
+                and that same shape crashes discovery further up
+                (`_substrate_image_for`, main.py:444). MEASURED 2026-11-09,
+                four lab shapes; see docs/ADDING-A-LAB.md. The backend fix is
+                Dad's call and is NOT made here; this verdict means a
+                contributor hears about it before deploy instead of after.
   ERROR       — the lab could not be classified at all (unparseable topology,
                 or a grader that raised on import — fixed 2026-11-07, which
                 used to print as NO-GRADER). The reason is printed. Exits 2.
@@ -342,6 +364,31 @@ def _rel_or_abs(path: Path) -> Path:
         return path
 
 
+def _topology_unreadable(yml_path: Path) -> str:
+    """Why this lab has no readable topology, or "" when it has one.
+
+    The topology a lab deploys IS its own YAML (the loader stores the lab file's
+    path as `topology_file`), so "readable" means: the file parses, and it
+    carries a `topology:` block with at least one node. Anything else and the
+    scan has nothing to look at -- which is not the same as "nothing is
+    pre-applied", the verdict this used to fall through to.
+    """
+    import yaml
+    try:
+        doc = yaml.safe_load(yml_path.read_text()) or {}
+    except yaml.YAMLError as e:
+        # Unparseable lab YAML is already reported by discover_labs()/classify()
+        # as ERROR; no need to say it twice.
+        return ""
+    topo = doc.get("topology")
+    if not isinstance(topo, dict):
+        return "no `topology:` block -- nothing for containerlab to deploy"
+    nodes = topo.get("nodes")
+    if not nodes:
+        return "`topology:` block defines no nodes"
+    return ""
+
+
 def classify(lab_dir: Path, yml_path: Path, pack_dir: Path | None = None) -> dict:
     meta = parse_metadata(yml_path)
     grader_name = meta.get("grader") or f"grader_{meta.get('id','')}"
@@ -358,6 +405,13 @@ def classify(lab_dir: Path, yml_path: Path, pack_dir: Path | None = None) -> dic
         "status": "UNKNOWN",
         "student_nodes": {},
     }
+    # Added 2026-11-09. Checked BEFORE the grader: a lab whose topology cannot
+    # be read has nothing to scan, so every verdict after it would be a guess.
+    unreadable = _topology_unreadable(yml_path)
+    if unreadable:
+        result["status"] = "NO-TOPOLOGY"
+        result["error"] = unreadable
+        return result
     if mod is None:
         if "raised" in problems:
             # The module is there and broken: a lab this run could not
@@ -466,6 +520,13 @@ def main() -> int:
             print(f"RED FLAG — these labs model a switch as a Linux PC ({len(fake)}):")
             for r in fake:
                 print(f"   {r['lab']}  -> {', '.join(r['switch_auth']['fake_switches'])}")
+        notopo = [r for r in results if r["status"] == "NO-TOPOLOGY"]
+        if notopo:
+            # Added 2026-11-09. These used to print a green UNSOLVED row.
+            print(f"NOT CHECKED — {len(notopo)} lab(s) have no topology the linter could read"
+                  " (this is not a pass; nothing about their content was examined):")
+            for r in notopo:
+                print(f"   {r['lab']}  ({r.get('error')})")
         errored = [r for r in results if r["status"] == "ERROR"]
         if errored:
             # Added 2026-11-07. These ran under STATUS like a verdict and the
@@ -496,7 +557,7 @@ def main() -> int:
     # reads as "I found the answer key" while the ERROR row (the one thing that
     # says part of the run never happened) was the lower-priority signal. Order
     # now: ERROR (2) > red flag (1) > clean (0).
-    if any(r["status"] == "ERROR" for r in results):
+    if any(r["status"] in ("ERROR", "NO-TOPOLOGY") for r in results):
         return 2
     red = any(r["status"] == "SOLVED" for r in results) or any(
         (r.get("switch_auth") or {}).get("fake_switches") for r in results

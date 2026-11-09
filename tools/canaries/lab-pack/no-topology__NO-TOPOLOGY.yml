@@ -1,0 +1,9 @@
+# Added 2026-11-09. A lab whose YAML carries valid metadata and a real grader but
+# no `topology:` block. The loader stores this file's OWN path as the lab's
+# topology_file (backend/main.py:496), so this is a lab that will be served and
+# then fail at DEPLOY -- measured on a copy of lab-definitions: served, no
+# rejection. The linter used to answer UNSOLVED (green) for exactly this shape.
+metadata:
+  id: no-topology
+  grader: grader_demo_02
+name: canary-no-topology

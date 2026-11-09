@@ -3507,4 +3507,52 @@ GitHub Release, Screenshots (needs a live host), `.nexus/` public-shipping polic
 Step 6 idempotence, the dead `topology unreadable` guard, the two grading-behaviour items from 2026-10-31,
 and whether `NO-GRADER`/`NO-EXPECTED` should become fatal.
 
+## 2026-11-09 14:00 — the `topology unreadable` guard, measured (and what the lint now says)
+
+Took the item the last run parked. Measured first, as instructed; the doc was wrong in a different way
+than I had written down.
+
+**The lint had the same hole.** `lint_lab_pack.py` read `doc["topology"]` off the lab YAML. For a lab with
+no `topology:` block there are no nodes, so every IP scanned nowhere, `seeded == 0`, verdict **`UNSOLVED`**
+— green. MEASURED on a canary with valid metadata and no topology block: `UNSOLVED 0/2`, **rc 0** in a pack
+with no unrelated ERROR lab. A run that examined no topology at all reported "the student does all the
+work". Fixed: new verdict **`NO-TOPOLOGY`**, exit **2**, printed in its own `NOT CHECKED` block. It fires
+when the lab's own topology is missing, unparseable, or defines no nodes — and `classify()` reads the file
+the loader will actually deploy (the lab file itself; `main.py:496` sets `topology_file` to its own path).
+New canary `no-topology__NO-TOPOLOGY.yml`; gate now **8/8**, shipped tree **unchanged** (`UNSOLVED` 0/2 and
+0/4, rc 0). Also proved the verdict is not blanket: an empty node map → `NO-TOPOLOGY`, the control lab in
+the same pack → `UNSOLVED`.
+
+**The backend guard is worse than "unreachable".** `main.py:632` raises `topology unreadable: <file>` when
+`_topology_node_names()` returns `None`. But `topology_file` is the lab file's own path, so `None` needs the
+*lab file* unreadable — and `RUN 240` already drops those before this check. Four shapes measured on a copy
+of `lab-definitions`:
+
+| shape | measured |
+|---|---|
+| topology parses, no `metadata:` block | never discovered — guard never runs |
+| lab file unreadable | refused by `RUN 240` (`UNPARSEABLE`), not by this guard |
+| `topology.nodes` is a **list** | refused by the `gradeable_nodes` guard instead |
+| `topology:` is a **list** | **`AttributeError` in `_substrate_image_for` (main.py:444) — discovery crashes** |
+
+So the guard at :632 has no input that reaches it. **I did not touch backend behaviour** — that is Dad's
+call. `docs/ADDING-A-LAB.md` no longer lists `topology unreadable` as a refusal; it now carries the measured
+table and points contributors at the linter. Proof: `.nexus/proofs/2026-11-09-dead-topology-guard.txt`.
+(My first write-up said "served, fails later at deploy with FileNotFoundError" — that was wrong, and shape 4
+is what replaced it. Corrected in the doc to what I actually measured.)
+
+**Verified (all rc=0 after the edits):** `py_compile` tool · all ten claim checkers · canary gate 8/8 ·
+shipped lint rc 0.
+**Not verified, named:** the `AttributeError` was seen in a copy with no `frontend/`, not on a served
+`nexus.service` — I did not restart the live service this hour. Reporting it, not fixing it.
+next=run: the `AttributeError` crash is now a concrete, reproducible product bug — write it up for Dad as a
+one-page repro (shape 4, four lines) separate from this plan, since it is the first topology shape that takes
+discovery down rather than degrading one lab. STILL BLOCKED ON DAD, unchanged: `ci.yml` patches (twelve parked
+checkers now), v0.3.0 tag / GitHub Release, Screenshots (needs a live host), `.nexus/` public-shipping policy,
+DELETE-OR-KEEP `10-archive/` and the three empty `lab-definitions` dirs, published security contact,
+`install.sh` Step 6 idempotence, the two grading-behaviour items from 2026-10-31, and whether
+`NO-GRADER`/`NO-EXPECTED` should become fatal. The dead `topology unreadable` guard is now **documented and
+lint-covered** but still not fixed in the loader — Dad's call.
+
 STATUS: NOT COMPLETE — only Dad calls it.
+

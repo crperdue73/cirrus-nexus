@@ -1,0 +1,17 @@
+# MEASURED 2026-11-09T14:xxZ  dead topology-unreadable guard + NO-TOPOLOGY lint verdict
+
+## Backend (copy at /tmp/backend-copy-2026110914, lab-definitions copied)
+1) no-meta.yml (topology parses, no metadata block):
+   serving: [demo-01..., demo-02...]   rejected: []   -> lab never discovered, guard never runs
+2) lab whose own topology is unreadable (truncated flow node):
+   [labs] UNPARSEABLE canary-deadguard.yml -> refused by RUN 240 guard, not by 'topology unreadable'
+3) lab file parses, topology.nodes is a LIST of mappings:
+   REFUSED 'gradeable_nodes names nodes the topology does not define' (different guard)
+4) lab file parses, topology: is a LIST:
+   AttributeError in _substrate_image_for (main.py:444) -- discovery CRASHES
+   (that is a product bug, operator's call; NOT fixed in this run)
+
+## Lint (tools/lint_lab_pack.py)
+shipped tree: UNSOLVED 0/2, 0/4; rc=0  (unchanged)
+canary gate: 8/8 ok (7 existing + no-topology__NO-TOPOLOGY)
+empty node map (topology.nodes == {}) -> NO-TOPOLOGY; control lab in same pack -> UNSOLVED (so the verdict is not blanket)
