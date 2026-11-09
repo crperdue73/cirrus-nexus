@@ -41,6 +41,28 @@ def check(name: str, ok: bool, detail: str = "") -> None:
         failures.append(name)
 
 
+def _journald_claim_is_true(ops: str, install: str) -> bool:
+    """The unit's StandardOutput= decides where the journal is, so read both.
+
+    Measured 2026-11-09: `StandardOutput=append:` makes systemd write the process
+    output to the named file *instead of* the journal, and nothing in the backend
+    logs to syslog. The journal therefore holds only systemd's own start/stop
+    lines. A doc that offers `journalctl -u aegis` as "logs" sends an operator to
+    an empty view, so this check requires BOTH halves: the doc must name the file
+    as the log, and it must not present journalctl as carrying the server output.
+    """
+    if "append:/var/log/aegis.log" not in install:
+        return False
+    # The doc must point at the file as the place the server's output goes.
+    if "/var/log/aegis.log" not in ops:
+        return False
+    if "tail -f /var/log/aegis.log" not in ops:
+        return False
+    # And must not call journalctl the log line, in the sense of carrying output.
+    bad = re.search(r"journalctl -u aegis[^\n]*#\s*logs\b", ops)
+    return bad is None
+
+
 def main() -> int:
     if not OPS.exists():
         print(f"FAIL  docs/OPERATIONS.md missing at {OPS}")
@@ -57,7 +79,14 @@ def main() -> int:
         re.search(r"ExecStart=\S*python3 /opt/aegis/backend/main\.py", install) is not None,
         "the doc prints ExecStart=python3 /opt/aegis/backend/main.py; the unit must agree on the path",
     )
-    check("journald + append:/var/log/aegis.log both true", "append:/var/log/aegis.log" in install)
+    check(
+        "journald claim matches the unit's StandardOutput",
+        _journald_claim_is_true(ops, install),
+        "the unit sets StandardOutput=append:<file>, which sends the process output to that file "
+        "and NOT to the journal; so the doc may not present `journalctl -u aegis` as the place the "
+        "server's logs are. It must point at /var/log/aegis.log and say the journal holds only "
+        "systemd's own start/stop lines.",
+    )
 
     # ---- start_server.py behaviour -----------------------------------------
     ss = read("start_server.py")

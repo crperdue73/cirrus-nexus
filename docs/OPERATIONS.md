@@ -15,11 +15,32 @@ and run it after you change the code these notes describe.
 systemctl start aegis        # start
 systemctl enable aegis       # start at boot
 systemctl status aegis       # check
-journalctl -u aegis -f       # logs (also written to /var/log/aegis.log)
+tail -f /var/log/aegis.log   # the server's own output
+journalctl -u aegis -f       # start/stop/restart events, NOT the server's output
 ```
 
 The installer sets `User=aegis`, `WorkingDirectory=/opt/aegis`, and
 `ExecStart=python3 /opt/aegis/backend/main.py`.
+
+> **The application log is `/var/log/aegis.log`, and `journalctl` is not a second copy of it.**
+> The unit sets `StandardOutput=append:/var/log/aegis.log` and
+> `StandardError=append:/var/log/aegis.log`, which tells systemd to write the process's output to
+> that file **instead of** the journal. Nothing in `backend/main.py` or `start_server.py` opens
+> `/dev/log` or installs a syslog handler, so the journal for `aegis.service` holds only systemd's
+> own lines: `Started`, `Stopping`, `Deactivated`, and the CPU/memory accounting.
+>
+> Measured on a host running this installer (2026-11-09): the journal had **7 lines, all but one
+> from systemd itself**, while `/var/log/aegis.log` had 123 — request lines and the backend's
+> `[labs]` / `[grader]` / `[lab-verdict]` diagnostics. If you run `journalctl -u aegis -f` after a
+> lab fails to load, you will see nothing, because that output went to the file. Use `tail -f`.
+> (Proof: `.nexus/proofs/2026-11-09-journald-empty.txt` in the source repository.)
+>
+> The installer does not install `logrotate` or any rotation for this file, so it grows without
+> bound until you rotate it yourself.
+>
+> If you would rather have the output in the journal, drop the two `StandardOutput=`/`StandardError=`
+> lines from `/etc/systemd/system/aegis.service` and run `systemctl daemon-reload`. That is a local
+> choice; the shipped installer keeps the file so `python3 start_server.py` users see the same place.
 
 ### Running without the service
 

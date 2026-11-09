@@ -51,3 +51,4 @@ __pycache__/
 .nexus/*.log
 *.tar.gz.*
 *.tgz.*
+.nexus-bak/

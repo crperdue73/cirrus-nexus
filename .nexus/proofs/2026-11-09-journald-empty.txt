@@ -1,0 +1,42 @@
+OPERATIONS.md log claim vs. measured truth - 2026-11-09 20:00 UTC (host dept-dragon-tech)
+
+CLAIM (docs/OPERATIONS.md, before this run):  journalctl -u aegis -f   # logs (also written to /var/log/aegis.log)
+  -> asserts BOTH journald and the file carry the server's output.
+
+1. Unit definition (install.sh:531-532):
+     528:ExecStart=/usr/bin/python3 /opt/aegis/backend/main.py
+     531:StandardOutput=append:/var/log/aegis.log
+     532:StandardError=append:/var/log/aegis.log
+   StandardOutput=append: -> systemd writes stdout/stderr to the FILE ONLY.
+   SysLogHandler / /dev/log in backend or start_server: none
+
+2. Live journal on this host (aegis.service is installed here):
+     total lines:                 7
+     lines not from systemd[1]:   1
+     Nov 04 14:12:23 dept-dragon-tech systemd[1]: Started aegis.service - AEGIS — Academic Educational Grading & Infrastructure System.
+     Nov 08 12:00:07 dept-dragon-tech systemd[1]: Stopping aegis.service - AEGIS — Academic Educational Grading & Infrastructure System...
+     Nov 08 12:00:07 dept-dragon-tech systemd[1]: aegis.service: Deactivated successfully.
+     Nov 08 12:00:07 dept-dragon-tech systemd[1]: Stopped aegis.service - AEGIS — Academic Educational Grading & Infrastructure System.
+     Nov 08 12:00:07 dept-dragon-tech systemd[1]: aegis.service: Consumed 9min 3.178s CPU time, 73.1M memory peak, 980K memory swap peak.
+     -- Boot 3bcb2fc049194c0f9bcd1db3f4b2426e --
+     Nov 08 12:07:41 dept-dragon-tech systemd[1]: Started aegis.service - AEGIS — Academic Educational Grading & Infrastructure System.
+
+3. Same host, the file the unit appends to:
+     /var/log/aegis.log lines:    123
+     INFO:     127.0.0.1:39978 - "POST /sessions HTTP/1.1" 405 Method Not Allowed
+     INFO:     127.0.0.1:43884 - "GET / HTTP/1.1" 200 OK
+     INFO:     127.0.0.1:44376 - "GET / HTTP/1.1" 200 OK
+
+4. The backend writes its diagnostics with print(file=sys.stderr):
+     413:        print(f"[labs] UNPARSEABLE {path.name}: {str(e).splitlines()[0][:160]}", file=sys.stderr)
+     659:            print(f"[labs] REFUSED malformed lab definition {d.get('id')!r}: {e}", file=sys.stderr)
+     666:                  file=sys.stderr)
+     668:        print(f"[labs] {len(LABS_REJECTED)} definition(s) skipped; serving {len(labs)}", file=sys.stderr)
+     Those diagnostics are in the file and reachable only there.
+
+5. The checker endorsed the wrong half:
+     check("journald + append:/var/log/aegis.log both true", "append:/var/log/aegis.log" in install)
+     -> true of the unit, and says nothing about the journal; the false doc sentence passed.
+
+CONCLUSION: journalctl -u aegis shows start/stop/restart and nothing else. Following the doc
+            gives an empty view on a server whose diagnostics are in the file.
