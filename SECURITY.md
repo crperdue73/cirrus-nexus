@@ -60,7 +60,7 @@ Problems that break the design above rather than restating it. Examples:
 CI (`.github/workflows/ci.yml`) runs four checks on every push and pull request: the backend
 byte-compiles, `install.sh` is valid shell, the tree is self-contained (a bare clone is installable,
 every shipped grader byte-compiles, no absolute developer paths), and a grep for obvious committed
-secrets. Eight further claim checkers — `tools/check_prerequisites.py` (the README's Prerequisites
+secrets. Nine further claim checkers — `tools/check_prerequisites.py` (the README's Prerequisites
 against `install.sh`), `tools/check_install_narrative.py` (the README's account of what `install.sh`
 installs, builds, pre-pulls and registers, against `install.sh`), `tools/check_lab_assets.py` (the
 README's per-lab startup-config copy-and-verify promise, against `install.sh` and the shipped
@@ -71,9 +71,11 @@ semantics, the image pin, the archived labs — against the files that implement
 `tools/check_api_doc.py` (the route table in `docs/API.md` — the headline count, every row's method,
 path and parameters, and the no-request-bodies claim — against the OpenAPI document the app serves),
 `tools/check_ci_doc.py` (the number of CI checks that `README.md`, `CONTRIBUTING.md` and this file
-each state, and where each checker runs, against `.github/workflows/ci.yml` and the checker files present)
-and `tools/check_self_contained_doc.py` (the boundary claims in `docs/SELF-CONTAINED.md` against what
-`tools/check_self_contained.py` actually checks)
+each state, and where each checker runs, against `.github/workflows/ci.yml` and the checker files present),
+`tools/check_self_contained_doc.py` (the boundary claims in `docs/SELF-CONTAINED.md` against what
+`tools/check_self_contained.py` actually checks) and `tools/check_pyc_staleness.py` (the `__pycache__`
+claims in `docs/OPERATIONS.md` — that a stale grader survives a restart, and that a source size change or
+an mtime-second change is what clears it — executed rather than read)
 — are written and verified but **not yet in the workflow**:
 this repo's automation token is refused on workflow paths (re-measured 2026-11-03, re-confirmed
 2026-11-05), so adding them takes

@@ -150,6 +150,7 @@ TOOLS = [
     "check_operations_doc",
     "check_api_doc",
     "check_self_contained_doc",
+    "check_pyc_staleness",
 ]
 
 NUMBER_WORDS = {
@@ -180,14 +181,17 @@ LOCAL_ONLY = [
     (README, "check_lab_assets"), (README, "check_api_doc"),
     (README, "check_operations_doc"), (README, "check_repo_metadata"),
     (README, "check_self_contained_doc"), (README, "check_ci_doc"),
+    (README, "check_pyc_staleness"),
     (CONTRIBUTING, "check_prerequisites"), (CONTRIBUTING, "check_install_narrative"),
     (CONTRIBUTING, "check_lab_assets"), (CONTRIBUTING, "check_operations_doc"),
     (CONTRIBUTING, "check_api_doc"), (CONTRIBUTING, "check_repo_metadata"),
     (CONTRIBUTING, "check_self_contained_doc"), (CONTRIBUTING, "check_ci_doc"),
+    (CONTRIBUTING, "check_pyc_staleness"),
     (SECURITY, "check_prerequisites"), (SECURITY, "check_install_narrative"),
     (SECURITY, "check_lab_assets"), (SECURITY, "check_api_doc"),
     (SECURITY, "check_operations_doc"), (SECURITY, "check_repo_metadata"),
     (SECURITY, "check_self_contained_doc"), (SECURITY, "check_ci_doc"),
+    (SECURITY, "check_pyc_staleness"),
 ]
 
 # The complement sentence each doc uses to say "these are the rest, and they are not in CI".

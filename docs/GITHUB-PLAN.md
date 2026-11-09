@@ -3409,3 +3409,58 @@ dirs, published security contact, `install.sh` Step 6 idempotence, the dead `top
 two grading-behaviour items from 2026-10-31, and whether `NO-GRADER`/`NO-EXPECTED` should become fatal.
 
 STATUS: NOT COMPLETE — only Dad calls it.
+
+## Run 2026-11-09 02:00 UTC — the front page undercounted the repo's own checks, one run after the tool was added
+
+Measured before touching anything: `git status` clean, `HEAD...origin/main = 0 0`, all ten local checkers
+rc=0. The 20:00 run added `tools/check_pyc_staleness.py` and — by its own account — "did NOT" wire anything;
+what it also did not notice is that **four reader-facing sentences describe the set of hand-run checkers,
+and all four were now one short**. This is the drift class `check_ci_doc.py` exists to catch, and it caught
+it on the first run after the tool existed: `check_ci_doc` went **15/17 with two FAILs**, both of them the
+tree disagreeing with prose it had been green on at 20:00:
+
+- `CONTRIBUTING: 'plus the N claim checkers ... not yet in the workflow'` — doc **eight**, tree **nine**.
+- `README: 'N run in CI, M are claim checkers run by hand'` — doc **eight**, tree **nine**.
+- plus `never mentioned as local-only: ['check_pyc_staleness']` — the tool was invisible to the three docs
+  that define the set.
+
+FIXED (docs + one tool's data lists; no application code, no behaviour change, no verdict changed):
+
+1. **CONTRIBUTING.md** — the step list gains `# 12. the pycache claims in OPERATIONS.md — local only`, the
+   secrets grep renumbers to 13, "plus the **eight** claim checkers" → **nine**, "CI does not run steps
+   4–11 yet" → **4–12**, the stale enumeration in the Step-11 paragraph ("seven claim checkers",
+   "steps 4–11") → the live figures, and the sentence that cited the *old* number for the checker the
+   paragraph is about ("CI does not run `check_operations_doc.py`, even though it is numbered 8") → **9**,
+   which the paragraph-consistency claim in `check_ci_doc` could not have caught on its own — it only
+   compares prose numbers to block numbers, not to the truth of the aside around them.
+2. **README.md** — the CONTRIBUTING row ("four run in CI, eight are claim checkers run by hand") → nine,
+   and the "not yet a CI step" paragraph now names `check_pyc_staleness.py` among the parked checkers.
+3. **SECURITY.md** — "Eight further claim checkers" → nine, with the new tool described by what it *does*
+   (executes the `__pycache__` claims rather than reading them), not by its name alone.
+4. **`tools/check_ci_doc.py`** — `check_pyc_staleness` added to `TOOLS` and to all four `LOCAL_ONLY` lists.
+   That is the honest fix, not a workaround: the tool's lists are its model of which checkers exist, and the
+   model was stale. The count claims then had something true to compare against instead of being loosened.
+
+VERIFIED after: `check_ci_doc` **17/17** (was 15/17), and all nine others rc=0 —
+`check_api_doc` 11/11, `check_operations_doc` 62/62, `check_pyc_staleness` 7/7, `check_install_narrative`
+12 claims, `check_lab_assets` 19 claims, `check_prerequisites` 36 claims, `check_repo_metadata` 27 claims,
+`check_self_contained` (14 files, no path leaks), `check_self_contained_doc` 17 claims; `py_compile
+backend/main.py` rc=0, `bash -n install.sh` rc=0, secret scan clean. Backups at
+`.nexus-bak/*.2026-11-09-0200` (outside the tracked tree; `git status` shows only the four files below).
+Rollback: `git show HEAD^:CONTRIBUTING.md` etc.
+
+The lesson worth keeping: a claim checker added at 20:00 is not *done* at 20:00 — it becomes true of the
+docs only once the docs are swept against it, and the sweep is what I did not run. `check_ci_doc` did it
+for me at 02:00 because its REMIT covers counts; nothing covers "a new tool was added, who names it?" beyond
+that. That is the item this run did not create a guard for.
+
+NOT COMPLETE — Dad's word alone. | proof=none (docs + one checker's data lists) |
+next=the same sweep one level out: `tools/lint_lab_pack.py`, `check_bundle_fresh.sh` and `plan_status.py` are
+named in CONTRIBUTING's "four further tools" paragraph but are *not* in any count claim — measure whether
+that paragraph is still true of the tree (it claims three of the four run on stdlib alone), then take the
+canary gate's unexercised `NO-GRADER` / `NO-EXPECTED` rows. STILL BLOCKED ON DAD, unchanged: `ci.yml`
+patches (nine parked checkers now, including this one), v0.3.0 tag / GitHub Release, Screenshots (needs a
+live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP `10-archive/` and the three empty
+`lab-definitions` dirs, published security contact, `install.sh` Step 6 idempotence, the dead `topology
+unreadable` guard, the two grading-behaviour items from 2026-10-31, and whether `NO-GRADER`/`NO-EXPECTED`
+should become fatal.
