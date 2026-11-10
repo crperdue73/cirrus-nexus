@@ -3657,4 +3657,35 @@ three empty `lab-definitions` dirs, published security contact, `install.sh` Ste
 grading-behaviour items from 2026-10-31, whether `NO-GRADER`/`NO-EXPECTED` should become fatal, and now
 whether the unit should log to the journal instead of the file.
 
+---
+
+## 2026-11-10 12:00 — the `topology:`-as-list crash, written up for Dad
+
+Executed the item yesterday's `next=` pointed at: the one known crash is now a one-page repro,
+not a note. **Measured**, tree @ 67e36fc, clean, 0/0; real `backend/main.py` imported (fastapi +
+pyyaml present on this box), real `reload_labs` route function called.
+
+**The defect.** A lab YAML whose `topology:` is a sequence (or scalar) instead of a mapping raises
+`AttributeError: 'list' object has no attribute 'get'` at `main.py:444` inside `_substrate_image_for`,
+called from `_discover_labs` (`main.py:505`). Because it fires before `_reload_labs`' per-lab
+`try`, the run-222 guard ("one bad metadata file must not take the product down") does not catch
+it: `POST /api/labs/reload` raises with no named file and no reload, and the module-level reload at
+startup would keep the service from coming up. Control case (mapping) loads fine; scalar case fails
+the same way. Neither shipping lab is affected, and `tools/lint_lab_pack.py` already calls this
+shape ERROR — the lint knows, the backend doesn't.
+
+**Not fixed, deliberately.** The candidate fix is one isinstance check at `main.py:443-444` (two
+lines), but "return '' silently" vs. "refuse the lab by name" is the same open design call as the
+dead `topology unreadable:` guard at `main.py:632` — and the second is a behaviour change. Dad's.
+
+Proof: `.nexus/proofs/topology-as-list-crashes-lab-reload-20261110-1200.txt`.
+next=run: if Dad doesn't rule on the isinstance fix, the next reader-facing gap is `docs/API.md`'s
+error table against a live 409/502 body (needs a host where the service runs), or `install.sh`
+Step 6 idempotence measured twice in a row. Do **not** re-measure the list-vs-mapping shape.
+STILL BLOCKED ON DAD, unchanged: `ci.yml` patches (twelve parked checkers), v0.3.0 tag / GitHub
+Release, Screenshots (needs a live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP
+`10-archive/` and the three empty `lab-definitions` dirs, published security contact, `install.sh`
+Step 6 idempotence, the two 2026-10-31 grading items, `NO-GRADER`/`NO-EXPECTED` fatal or not,
+journal-vs-file logging, and now the `topology:`-type guard.
+
 STATUS: NOT COMPLETE — only Dad calls it.
