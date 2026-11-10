@@ -10,7 +10,7 @@ write the claim.
 
 ## Before you push
 
-Run the same checks CI runs (`.github/workflows/ci.yml` — four of them), plus the ten claim
+Run the same checks CI runs (`.github/workflows/ci.yml` — four of them), plus the eleven claim
 checkers that are written and verified but **not yet in the workflow** (the lines marked `— local only`; see below):
 
 ```bash
@@ -27,10 +27,11 @@ python3 tools/check_api_doc.py            # 10. docs/API.md's route table vs the
 python3 tools/check_ci_doc.py             # 11. the docs' count of CI steps vs ci.yml — local only
 python3 tools/check_pyc_staleness.py      # 12. the pycache claims in OPERATIONS.md     — local only
 python3 tools/check_release_notes.py      # 13. release notes vs. withdrawn limitations  — local only
-# 14. no obvious secrets committed — CI greps the tree for token/key patterns    — in CI
+python3 tools/check_canary_pack.py        # 14. canary pack's README.txt vs the pack    — local only
+# 15. no obvious secrets committed — CI greps the tree for token/key patterns    — in CI
 ```
 
-**CI does not run steps 4–12 yet.** Adding them means a `ci.yml` change, and this repo's automation token
+**CI does not run steps 4–14 yet.** Adding them means a `ci.yml` change, and this repo's automation token
 has no `workflow` scope — GitHub answers `404` to a write under `.github/workflows/` with this token
 (re-measured 2026-11-03; re-confirmed 2026-11-05, `x-oauth-scopes` = `delete:packages, repo,
 write:discussion, write:packages`), so it takes a human with that scope (see *Changing CI*). Run the local-only steps by

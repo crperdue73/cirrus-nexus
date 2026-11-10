@@ -156,8 +156,9 @@ TOOLS = [
 
 NUMBER_WORDS = {
     "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
-    "seven": 7, "eight": 8, "nine": 9, "ten": 10,
-}
+    "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
+}  # Twelve is far past what these sentences need; past it the doc should use digits,
+   # and num() raising KeyError is the signal to stop spelling counts out.
 
 
 def num(word):
@@ -183,16 +184,19 @@ LOCAL_ONLY = [
     (README, "check_operations_doc"), (README, "check_repo_metadata"),
     (README, "check_self_contained_doc"), (README, "check_ci_doc"),
     (README, "check_pyc_staleness"), (README, "check_release_notes"),
+    (README, "check_canary_pack"),
     (CONTRIBUTING, "check_prerequisites"), (CONTRIBUTING, "check_install_narrative"),
     (CONTRIBUTING, "check_lab_assets"), (CONTRIBUTING, "check_operations_doc"),
     (CONTRIBUTING, "check_api_doc"), (CONTRIBUTING, "check_repo_metadata"),
     (CONTRIBUTING, "check_self_contained_doc"), (CONTRIBUTING, "check_ci_doc"),
     (CONTRIBUTING, "check_pyc_staleness"), (CONTRIBUTING, "check_release_notes"),
+    (CONTRIBUTING, "check_canary_pack"),
     (SECURITY, "check_prerequisites"), (SECURITY, "check_install_narrative"),
     (SECURITY, "check_lab_assets"), (SECURITY, "check_api_doc"),
     (SECURITY, "check_operations_doc"), (SECURITY, "check_repo_metadata"),
     (SECURITY, "check_self_contained_doc"), (SECURITY, "check_ci_doc"),
     (SECURITY, "check_pyc_staleness"), (SECURITY, "check_release_notes"),
+    (SECURITY, "check_canary_pack"),
 ]
 
 # Checkers that run *in* CI rather than by hand. They must not appear in LOCAL_ONLY: that list is what

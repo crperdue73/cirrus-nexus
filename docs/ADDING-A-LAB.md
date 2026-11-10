@@ -234,6 +234,9 @@ router's whole answer key pre-applied read as `PARTIAL`, never as the red flag.
   `tools/canaries/lab-pack/`: `sh tools/canaries/check_lint_canaries.sh` asserts one
 expected verdict per canary. Add a canary when you find a shape the tool misreads —
 a passing run over the real tree alone cannot tell you the tool still reads anything.
+- The pack's own list (`tools/canaries/lab-pack/README.txt`) is checked against the pack by
+`python3 tools/check_canary_pack.py`: every canary file must have a row there whose verdict matches
+the file name. That check exists because the list fell two labs behind the pack and nothing noticed.
 
 ---
 

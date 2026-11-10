@@ -3777,3 +3777,57 @@ in Step 6 printing a success line — real, tiny, unfixed here. Screenshots stil
 
 **Honest note on scope.** The cron said "GITHUB POLISH" and this is not a badge or a diagram. It is a
 release note that says something untrue about the software, which is worse.
+
+### 2026-11-10 20:00 UTC — the canary pack's README listed six labs. There were eight.
+
+**What I measured.** `tools/canaries/lab-pack/` holds 8 `*.yml`; `tools/canaries/lab-pack/README.txt`
+described 6. `nogr__NO-GRADER.yml` and `noexp__NO-EXPECTED.yml` were added on 2026-11-09 (commit
+`0498da2`, whose message says "canary gate 5 → 7 labs") and never written into the pack's own list. The
+side effect: `sh tools/canaries/check_lint_canaries.sh` was green the whole time, because the gate
+asserts a verdict read out of each file's name and never reads README.txt. So the gate proved the linter
+still works and said nothing about the document claiming to describe it. Two canaries existed that no
+reader could find and no sentence explained.
+
+The same README was stale in two smaller ways: it said "an SOLVED canary makes that run exit 1", but the
+pack has exited 2 since the ERROR and NO-TOPOLOGY labs landed (an unexaminable lab outranks a red flag in
+the tool's ordering note) — and it read "-> RED FLAG" for `fake-switch__SOLVED.yml`, which names no verdict
+at all.
+
+**The fix, and why it is a checker and not just an edit.** Editing the list would fix it until the next
+canary. `tools/check_canary_pack.py` now holds README.txt to the pack: every `*.yml` has a row, every row's
+file exists, the row's verdict equals the verdict in the file name, and the stated pack-level exit code
+equals the code the gate says this pack produces (read from the gate's comment block — my first version
+read its `case` statement, which lists 0|1|2, and passed a README that was wrong by one; that miss is
+recorded in the tool so it isn't rebuilt). It also flags any file name asserting a verdict
+`lint_lab_pack.py` cannot print, so a typo can't become an expectation.
+
+**Negative controls, run against scratch copies (not the repo).** Pre-fix README restored → 3 fails
+(the two missing rows, the RED-FLAG row), rc=1. Verdict in a row flipped → fail. Row for a deleted canary
+→ fail. File named `typo__NO-GRADERX.yml` → fail, "cannot print". README saying "exit 1" against a gate
+that says 2 → fail.
+
+**Propagated, because the docs count checkers.** SECURITY.md "ten further claim checkers" → eleven;
+README's CONTRIBUTING row "ten … run by hand" → eleven; CONTRIBUTING gained step 14 and "steps 4–14";
+`check_ci_doc.py` learned `eleven`/`twelve` (it raised on the word) and `check_canary_pack` joined
+`LOCAL_ONLY` for all three docs. That last one is worth saying plainly: `check_ci_doc.py` **caught me**
+mid-run — I added a checker and no doc said it was local-only, and it failed rather than shrugging. The
+checker network did its job on a change I made without thinking about it.
+
+Also corrected `docs/architecture.md`: the canary-pack row listed three deliberate shapes and the `tools/`
+row omitted the `check_*.py` family entirely. Both now describe what is on disk, spelled out against the
+actual verdict table (8 labs, 7 verdicts, 2 pre-solved by design).
+
+**Sweep.** All 12 `tools/check_*.py` rc=0 (check_ci_doc 17/17). Canary gate rc=0, 8/8 expected verdicts.
+`py_compile` on backend and on all of `tools/`. `bash -n install.sh` OK.
+
+**Not touched.** Screenshots (still no live host). The `workflow`-scope blocker on `ci.yml`, unchanged —
+`check_canary_pack.py` is hand-run like the rest for now. The gate still does not assert the pack-level
+exit code; I wrote that gap into the new tool's comments rather than closing it, because it is the gate's
+design (read rows, not codes) and changing it is a separate decision.
+
+**Scope note.** The cron asked for polish. This was a document that lied about the tests. Same reason as
+last run: polish over an inaccurate claim is a nicer-looking inaccuracy.
+
+**Next:** item 1 backlog — README hardening pass on the badge row and the *What this is* section: check
+each badge target resolves and each claim maps to a file or a live measurement; drop or re-source
+anything that only a screenshot could support until a host exists.
