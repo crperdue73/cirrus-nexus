@@ -1,0 +1,68 @@
+ONE-PAGE REPRO: `topology:` written as a YAML list crashes lab reload
+Written 2026-11-10 12:00 UTC by Selina (nexus-morning-plan cron). NOT a fix — Dad's call.
+Tree: /home/selina/.openclaw/workspace-selina/projects/aegis @ 67e36fc, HEAD==origin/main 0/0, clean before/after.
+Host: dept-dragon-tech (192.168.111.40/16) — nexus.service is not a unit here, so this is a
+library-level reproduction with the real module imported (fastapi + pyyaml present here), not a live HTTP body.
+
+WHAT HAPPENS
+A lab-definitions YAML that parses fine but whose `topology:` key is a SEQUENCE (or a scalar)
+instead of a mapping raises `AttributeError` inside `_discover_labs`, which takes down the whole
+`_reload_labs()` pass — not just the offending file.
+
+    File backend/main.py:505, in _discover_labs
+        "substrate_image": _substrate_image_for(str(rel)),
+    File backend/main.py:444, in _substrate_image_for
+        nodes = (data.get("topology") or {}).get("nodes") or {}
+    AttributeError: 'list' object has no attribute 'get'
+
+EXACT REPRO (measured, output verbatim)
+    $ printf 'metadata:\n  id: _repro-topology-as-list\n  title: repro\n  description: repro\n' \
+        > lab-definitions/_repro-topology-as-list.yml
+    $ printf 'topology:\n  - nodes:\n      r1:\n        image: aegis/frr:latest\n' \
+        >> lab-definitions/_repro-topology-as-list.yml
+
+    sys.path.insert(0,'backend'); import main; main.reload_labs()   # the real @app.post route fn
+    ROUTE RAISED AttributeError 'list' object has no attribute 'get'
+    (traceback: main.py:1803 reload_labs -> main.py:625 _reload_labs -> main.py:505 _discover_labs
+     -> main.py:444 _substrate_image_for)
+    post-cleanup reload rejected: [] labs: ['demo-01-...-unsolved', 'demo-02-...-unsolved']
+
+    Also measured this run, same harness:
+      topology: "nodes: r1"  (scalar) -> RAISED AttributeError: 'str' object has no attribute 'get'
+      topology: {nodes: {r1: {image: aegis/frr:latest}}} (mapping, control) -> discover OK,
+                                                                    substrate_image='aegis/frr:latest'
+
+WHY IT MATTERS (blast radius, stated precisely)
+- `_reload_labs` (main.py:612-669) exists because "one bad metadata file must not be able to take the
+  product down" (run 222). It validates each lab inside try — but the exception here is raised in
+  `_discover_labs`, i.e. BEFORE the per-lab loop, so that guard never sees it.
+- Reachable at runtime via `POST /api/labs/reload` (main.py:1799-1812): the route calls
+  `_reload_labs()` with no try, so the client gets an unhandled AttributeError — a 500 with no
+  "reloaded with skips" body, no named file, and no reload performed.
+- Startup: `_reload_labs` is called at import (main.py:392 comment area, module-level call), so the
+  same file in the pack means the service does not come up — the exact failure class RUN 222 fixed
+  for malformed fields, re-entered through the topology's TYPE instead of its values.
+- Related, already recorded: this mirrors the dead `topology unreadable:` guard at main.py:632,
+  which can only fire for a non-mapping `topology` — and this crash happens further up, so the
+  guard is unreachable for that shape (main.py:632 comment, tools/lint_lab_pack.py ERROR docs).
+
+SCOPE OF THE DEFECT TODAY
+- Neither shipping lab is affected: both topologies are mappings; after removing the repro file,
+  `_reload_labs()` returns [] and serves demo-01 + demo-02 clean.
+- `tools/lint_lab_pack.py` already reports such a lab as ERROR (rc 2) — the lint knows, the backend
+  does not. So a contributor is warned, but a box that never runs the lint still dies.
+
+CANDIDATE FIX (NOT APPLIED — behaviour change, Dad's call)
+One line at main.py:443-444: coerce and type-check before `.get`, e.g.
+    topo = data.get("topology")
+    nodes = topo.get("nodes") if isinstance(topo, dict) else None
+    nodes = nodes or {}
+which returns "" (no aegis/frr node) and lets the per-lab guard name the file instead of the whole
+reload dying. Turning that into a named rejection rather than a silent "" is the design question —
+same open call as the dead `topology unreadable:` guard.
+
+MY ERRORS THIS RUN: (1) I first read `_reload_labs` as `_refresh_labs` and got AttributeError on
+the module — my typo, corrected by grep before any conclusion. (2) I tried starlette TestClient for a
+real HTTP status; it refuses without `httpx2`, so I called the real route function instead and have
+labelled this a library-level repro, not a measured HTTP 500 body.
+NOT COMPLETE — nothing here is done until Dad says so.
