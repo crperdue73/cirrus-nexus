@@ -79,14 +79,18 @@ The same object the catalog carries. Unknown id → `404`.
 ### `GET /api/labs/{lab_id}/guide` — the student guide
 
 The lab's Markdown guide, served **raw** (`Content-Type: text/markdown`) from the resolver the
-lab's own `guide:` field points at. A lab with no guide returns `404`. Browsers render
+lab's own `guide:` field points at. A lab with no guide returns `404`, and so does a `lab_id` the
+loader never accepted — the guide route does not consult the catalog first; it resolves the path and
+answers `404` either way. Browsers render
 `text/markdown` inconsistently — Firefox displays it, Chrome and Safari typically download it. The
 app ships no Markdown renderer; the **Lab Guide** button is a `window.open()`.
 
 ### `GET /api/labs/{lab_id}/topology` — the topology diagram
 
 A rendered diagram for the lab, generated from the lab's YAML on request. This is what the
-**Topology** button opens.
+**Topology** button opens. `404` when the lab is unknown **or** when the lab's topology file is
+missing; this is the one route whose two `404`s have different `detail` strings
+(`Lab not found` / `Topology file not found`).
 
 ### `POST /api/labs/reload` — re-read definitions
 
@@ -102,7 +106,9 @@ cache, so an edited grader takes effect here.
 
 Deploys the lab with containerlab and opens a session. `lab_id` is required; `student_name`
 defaults to `Student`. The response carries the `session_id` and a per-node `ttyd` URL — one
-terminal per container, on a port allocated from **8765–9765**.
+terminal per container, on a port allocated from **`TTYD_PORT_BASE`–`TTYD_PORT_MAX` = 8765–9765**
+(`backend/main.py:94-95`; the allocator skips ports held by live sessions or tracked ttyd processes
+and raises rather than wrapping onto one — `_allocate_port`, `backend/main.py:1203`).
 
 Deploy is serialized (concurrent starts queue) and its failure modes are separated on purpose:
 an unknown lab is `404`, a **failed deploy is `500`** — a start that could not complete never
@@ -149,24 +155,39 @@ a stop was about to release.
 
 ## Status codes
 
-| code | when |
-|------|------|
-| `200` | the request was answered truthfully |
-| `404` | unknown lab, or a session record that does not exist (`GET`/`submit`/`stop` on an unknown session id) |
-| `409` | **refusal**: the system could not make a truthful statement (node down, substrate changed since start, no grader, or a node the lab does not have) — never a silent pass |
-| `422` | a required query parameter is missing (`lab_id` on `start`, `node` on `submit`) — FastAPI validation, returned before the handler runs |
-| `500` | a deploy failed, **or** a teardown could not complete |
+| code | raised by | when |
+|------|-----------|------|
+| `200` | `GET /api`, `GET /api/labs`, `GET /api/labs/{lab_id}`, `GET /api/labs/{lab_id}/guide`, `GET /api/labs/{lab_id}/topology`, `POST /api/labs/reload`, `POST /api/sessions/start`, `GET /api/sessions`, `GET /api/sessions/{session_id}`, `POST /api/sessions/{session_id}/submit`, `POST /api/sessions/{session_id}/stop` | the request was answered truthfully |
+| `404` | `GET /api/labs/{lab_id}`, `GET /api/labs/{lab_id}/guide`, `GET /api/labs/{lab_id}/topology`, `GET /api/sessions/{session_id}`, `POST /api/sessions/start`, `POST /api/sessions/{session_id}/submit`, `POST /api/sessions/{session_id}/stop` | unknown lab (or unknown lab's guide), or a `lab_id`/`session_id` that is not in the session table |
+| `409` | `POST /api/sessions/start`, `POST /api/sessions/{session_id}/submit` | **refusal**: the system could not make a truthful statement, so it declines rather than guesses — never a silent pass |
+| `422` | every route | FastAPI validation, returned before the handler runs: a missing required query parameter (`lab_id` on `POST /api/sessions/start`, `node` on `POST /api/sessions/{session_id}/submit`), or a path `lab_id`/`session_id` that does not match the declared type (e.g. an empty segment) |
+| `500` | `POST /api/sessions/start`, `POST /api/sessions/{session_id}/stop` | a deploy failed after it was attempted (containers already created are torn down, not leaked), **or** a teardown could not complete |
+
+**What the `409` covers — all five things, and each one is a different refusal:** no `runtime_digest`
+for the session (unattributable state); the live substrate no longer matches the digest pinned at start;
+the lab has no grader module; the node is not running (torn down or service restarted mid-request); the
+node named does not belong to this lab (`detail` carries the real node list). On `start`, the `409` is a
+`CapabilityRefusal` — the system will not deploy a lab it cannot later attribute.
 
 The `409` distinction is the point of the grading model: *"nobody looked"* must never be rendered as
 *"wrong"*. A refusal's reason is the string in `detail`.
 
 A node the lab does not have is a `409`, **not** a `404`: the request was understood, and the answer is
-"that node isn't here" (`detail` carries the node list). A `404` means the lab or the session record
-itself does not exist.
+"that node isn't here". A `404` means the lab or the session record itself does not exist.
 
 A failed `stop` is `500` and is **retryable**: the session stays listed until the lab is really gone, so
 the same `stop` call can be issued again. That is deliberate — reporting `destroyed` while containers
 still run is the one outcome teardown must never produce.
+
+A **grader that raises** is not an HTTP error at all. `submit` returns `200` with `grade.status ==
+"error"` and the digest it was attempted against — an attributable read of a failure, kept distinct from
+both a verdict and a refusal.
+
+**This table is not in `/openapi.json`, and that is a known gap.** Measured on this tree: every
+operation's declared `responses` are `200` and `422` only. The 404/409/500s are raised by
+`HTTPException` inside handler bodies, which FastAPI does not turn into documented responses unless the
+route declares them. Clients get the codes — they just aren't advertised. `tools/check_api_doc.py`
+reads this table against the handlers' `raise` sites, so it cannot go stale the way the route table would.
 
 ---
 

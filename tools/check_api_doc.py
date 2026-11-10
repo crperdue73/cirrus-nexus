@@ -24,12 +24,18 @@ What it checks:
     default). "—" means the document reports no parameters;
   * the page's "No route takes a request body" claim: zero operations carry a `requestBody`;
   * the page's re-check script still prints the same route set it always did (a silently broken
-    recipe is worse than none), and it is still the plain `openapi()` call, not a hand-written list.
+    recipe is worse than none), and it is still the plain `openapi()` call, not a hand-written list;
+  * the page's "Status codes" table, in `check_status_table`: the codes the handler bodies actually
+    `raise` (`HTTPException(status_code=…)`) must all appear in the table, attributed to the routes
+    that raise them, and the table must name no code nothing raises. The OpenAPI document does not
+    carry these — measured on this tree, every operation declares only `200` and `422` — so the table
+    was prose nothing re-read. It also requires the page to say the table is not in `/openapi.json`.
 
 Fields the page states that the OpenAPI document does not carry are NOT checked here and are named
-in the tool's output as out of scope, rather than being scored as passes: the `404/409/422/500`
-table, the ttyd port range, and the `/docs` / `/redoc` exposure notes are claims about handler
-bodies and environment, and each needs its own read. Claiming "22/22" while four of those were
+in the tool's output as out of scope, rather than being scored as passes: the ttyd port range, the
+`/docs` / `/redoc` / `0.0.0.0` exposure notes, and the `refused`/`error` sub-status vocabulary are
+claims about handler bodies and environment, and each needs its own read. (The status-code table used
+to be in this list; it is now read against the raise sites.) Claiming "22/22" while four of those were
 never looked at would be the exact dishonesty this tool exists to prevent.
 
 Exit codes match the other tools in this directory:
@@ -160,6 +166,102 @@ def doc_params(cell, path):
             named.add(cell)
     named.update(re.findall(r"\{([A-Za-z0-9_]+)\}", path))
     return sorted(named)
+
+
+def check_status_table(text, ops):
+    """Read the page's Status codes table against the codes the handlers actually raise.
+
+    Why: the table is the part of docs/API.md that the OpenAPI document does NOT carry. Measured on
+    this tree (fastapi 0.162.0, OpenAPI 3.1.0): every operation's declared `responses` are `200` and
+    `422` and nothing else, because the 404/409/500s are raised as `HTTPException` inside handler
+    bodies. So the table was a promise with no witness -- the same shape as the 2026-11-09 journald
+    line, where the checker tested one half of a two-part claim.
+
+    This function walks `backend/main.py` for `@app.<method>("...")` -> handler pairs, reads each
+    handler's live code (comments stripped, so a commented-out `raise` cannot satisfy it), and builds
+    {code: {route, ...}}. The table must then name every one of those codes, on a row that names at
+    least the routes raising it, and must not name a code nothing raises. `422` is exempt from the
+    attribution half: FastAPI raises it before any handler runs, on every route.
+    """
+    src = os.path.join(BACKEND, "main.py")
+    if not os.path.isfile(src):
+        die("backend/main.py is missing")
+    source = open(src, encoding="utf-8").read()
+
+    # route -> handler name, from the decorators
+    routes = {}
+    for m in re.finditer(r'@app\.(get|post|put|patch|delete)\(\s*["\']([^"\']+)["\']\s*\)\s*\ndef\s+(\w+)', source):
+        method, path, handler = m.group(1).upper(), m.group(2), m.group(3)
+        routes.setdefault(handler, set()).add(f"{method} {path}")
+
+    raised = {}  # code -> set of routes
+    for handler, handler_routes in routes.items():
+        hm = re.search(r"\ndef\s+%s\s*\(" % re.escape(handler), source)
+        if not hm:
+            continue
+        start = hm.start()
+        nxt = re.compile(r"\n(?:@|def |class )").search(source, start + 1)
+        body = source[start: nxt.start() if nxt else len(source)]
+        live = "\n".join(l for l in body.splitlines() if not l.strip().startswith("#"))
+        for code in re.findall(r"HTTPException\(\s*status_code=(\d{3})", live):
+            raised.setdefault(code, set()).update(handler_routes)
+
+    # the page's table: | `code` | ... |
+    if "## Status codes" not in text:
+        bad("the page still has a Status codes section")
+        return
+    section = text.split("## Status codes", 1)[1]
+    section = section.split("\n## ", 1)[0]
+    table = {}
+    for line in section.splitlines():
+        m = re.match(r"^\|\s*`(\d{3})`\s*\|(.*)$", line)
+        if m:
+            table[m.group(1)] = m.group(2)
+    if not table:
+        bad("the Status codes table has rows the check can read", "no `| `code` | …` rows found")
+        return
+
+    # 1. every raised code is documented
+    missing = sorted(set(raised) - set(table))
+    if not missing:
+        ok("every status code the handlers raise is in the table", ", ".join(sorted(raised)))
+    else:
+        detail = "; ".join(f"{c} raised by {sorted(raised[c])}" for c in missing)
+        bad("every status code the handlers raise is in the table", "undocumented: " + detail)
+
+    # 2. every documented code is raised somewhere
+    phantom = sorted(set(table) - set(raised))
+    # 200 is the success path (a return, not a raise). 422 is FastAPI's own: raised inside
+    # starlette's validation before any handler body runs, so no `raise` site exists to find.
+    keeper = {"200", "422"}
+    phantom = [c for c in phantom if c not in keeper]
+    if not phantom:
+        ok("the table names no status code nothing raises")
+    else:
+        bad("the table names no status code nothing raises", "not raised anywhere: " + ", ".join(phantom))
+
+    # 3. each raised code is attributed to a route that really raises it
+    unattributed = []
+    for code, real_routes in sorted(raised.items()):
+        if code not in table or code == "422":
+            continue  # 422 is FastAPI's, raised before any handler
+        row = table[code]
+        row = row.replace("`", "")
+        if not any(r in row for r in real_routes):
+            unattributed.append(f"{code}: row names none of {sorted(real_routes)}")
+    if not unattributed:
+        ok("each raised code's row names a route that raises it")
+    else:
+        bad("each raised code's row names a route that raises it", "; ".join(unattributed))
+
+    # 4. the page admits the table is not in /openapi.json
+    if "not in `/openapi.json`" in section:
+        ok("the page says the status table is not carried by /openapi.json")
+    else:
+        bad(
+            "the page says the status table is not carried by /openapi.json",
+            "a reader who trusts Swagger is not told that 404/409/500 are undocumented there",
+        )
 
 
 def main():
@@ -293,14 +395,18 @@ def main():
             "the 'prints the same N rows' sentence is gone",
         )
 
-    # 7. out of scope, said out loud
+    # 7. the Status codes table, read against the handlers' raise sites
+    check_status_table(text, ops)
+
+    # 8. out of scope, said out loud
     info(
         "NOT checked here (stated in the page, but not carried by the OpenAPI document)",
-        "the 404/409/422/500 status table, the ttyd port range 8765-9765, and the /docs, /redoc, "
-        "0.0.0.0 exposure notes — each needs a separate read of handler bodies and environment",
+        "the ttyd port range 8765-9765, the /docs and /redoc exposure notes, and the "
+        "refused/error sub-status vocabulary — the status table is now read against handler "
+        "raise sites; these still need a separate read",
     )
 
-    # --- report ---
+# --- report ---
     width = max(len(c) for _, c, _ in results)
     fails = 0
     for status, claim, detail in results:

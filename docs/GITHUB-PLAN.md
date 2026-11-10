@@ -20,6 +20,52 @@ unverifiable claims, no screenshots of a build that isn't here.
 
 ## Backlog (one item per polish run)
 
+- [x] **`docs/API.md`'s status-code table was the one part of that page nothing re-read — it is now read
+      against the handlers' own `raise` sites, and the page was corrected where it was wrong** (2026-11-10 02:00).
+      Picked up the open thread `check_api_doc.py` left itself (its `[info]` line named four surfaces as
+      "out of scope", the status table first). Measured before touching anything: `git status` clean vs
+      `origin/main`, `check_api_doc.py` rc=0 at 11/11, all ten `tools/check_*.py` rc=0, canary gate OK.
+      **What the measurement found.** The app's OpenAPI document declares only `200` and `422` on every
+      operation (`fastapi 0.162.0`, OpenAPI `3.1.0`, `components` has no `responses`) — the 404/409/500s
+      are `HTTPException`s raised inside handler bodies, which FastAPI does not publish unless a route
+      declares them. So a reader opening `/docs` sees a two-code API while the page promises five. Reading
+      the handlers gave the true map: `stop` = 404 + 500; `start` = 404 + 409 + 500; `submit` = 409 raised
+      in the route (its two 404s live in `grade_config`, which the route calls, so they reach the wire
+      too); `GET /api/labs/{lab_id}/topology` and `/guide` = 404; `GET /api/sessions/{id}` = 404.
+      **Three claims in the page were wrong or unscoped, and are fixed.** (1) `404` was described as
+      "unknown lab, or a session record that does not exist" — but `/topology` also 404s when the lab's
+      topology *file* is missing, and `/guide` does not consult the catalog at all, so an unknown lab id
+      and an unknown guide look identical. Both now say so. (2) `422` was scoped to a missing query
+      parameter; FastAPI also 422s a path parameter that does not match its type (an empty `{session_id}`
+      segment). (3) The `409` row listed four causes; the handlers return five (no digest, substrate
+      changed, no grader, node not running, node not in this lab), and `start`'s 409 is a different thing
+      (`CapabilityRefusal`) from `submit`'s. All five are now named.
+      **And one thing the page did not say at all:** a grader that *raises* is not an HTTP error —
+      `submit` returns `200` with `grade.status == "error"` and the digest it was attempted against.
+      Now stated, because a reader trying to handle errors from the JSON API would otherwise only ever
+      see three codes.
+      **The witness.** New `check_status_table()` in `tools/check_api_doc.py`: it parses
+      `@app.<method>("/path")` → handler pairs out of `backend/main.py`, slices each handler's body,
+      strips comment lines (so a commented-out `raise` cannot satisfy it), and collects
+      `HTTPException(status_code=NNN)` into `{code: {routes}}`. It then requires (a) every raised code to
+      appear in the table, (b) no code in the table that nothing raises (`200` = return path and `422` =
+      FastAPI's pre-handler validation are exempt, both for stated reasons), (c) each raised code's row to
+      name a route that really raises it, and (d) the page to admit the table is not in `/openapi.json` —
+      a reader who trusts Swagger has to be told the 404/409/500s are not there.
+      **Negative control, run:** blanking the `409` row's route list made the checker fail
+      (`409: row names none of [...]`) at 14/15, rc=1; restoring it returns 15/15, rc=0. A check that has
+      never been seen to fail is not known to work.
+      After: all ten `tools/check_*.py` rc=0, `check_api_doc.py` 15/15, canary gate OK,
+      `py_compile backend/main.py` rc=0, `py_compile tools/check_api_doc.py` rc=0. Backend untouched —
+      every change here is a doc and its checker. The other three surfaces (`check_api_doc`'s `[info]`
+      line) remain out of scope and still said out loud: the ttyd port range, the `/docs` / `/redoc`
+      exposure notes, the `refused`/`error` sub-status vocabulary.
+      | | |
+      |---|---|
+      | run | 2026-11-10 02:00 UTC (cron nexus-github-polish) |
+      | files | `docs/API.md`, `tools/check_api_doc.py`, `docs/GITHUB-PLAN.md` |
+      | proof | `tools/check_api_doc.py` (15/15) + the recorded negative control |
+
 - [x] **`10-archive/` held a file named `SUMMARY-for-Dad.md` — a 2026-06-09 record addressing one person,
       indexed in the README as if it were a current summary. Renamed, and its own banner corrected where
       it had gone stale** (2026-10-30 19:00).
