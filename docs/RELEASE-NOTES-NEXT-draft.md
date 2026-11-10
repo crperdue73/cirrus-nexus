@@ -62,8 +62,11 @@ string, install script's per-lab asset behaviour, rendered architecture diagram)
 `CONTRIBUTING.md`, `.gitattributes` (LF/binaries pinned), and the internal worklog relabelled as internal
 where it had been presented as public docs.
 
-**Still open, same as last week:** cold-install serves zero labs unless per-lab assets are placed
-manually (`install.sh` does not copy them). Documented, not fixed. Not claimed as solved here.
+**Still open, same as last week:** ~~cold-install serves zero labs unless per-lab assets are placed
+manually (`install.sh` does not copy them).~~ **Struck 2026-11-10 — false of this tree.** `install.sh`
+has copied per-lab assets and verified every `startup-config:` since 2026-10-24 (`0c86d13`); measured by
+running its copy block on a clean tree and loading the result with the real lab loader — both shipping
+labs load, none rejected.
 
 ### Not published
 No GitHub Release exists or has been created. No tag pushed. This is text for review.

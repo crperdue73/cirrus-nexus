@@ -65,9 +65,14 @@ never tests that floor, README, `CONTRIBUTING.md`, `docs/ADDING-A-LAB.md`, `docs
 `.gitattributes`.
 
 **Still open, not claimed as solved:**
-- A cold install serves zero labs unless per-lab assets are placed manually where `install.sh` does not
-  reach them.
-- The grader default is derived from `metadata.id` and does not resolve for at least one lab.
+- ~~A cold install serves zero labs unless per-lab assets are placed manually where `install.sh` does not
+  reach them.~~ **Struck 2026-11-10 — false of this tree;** `install.sh` copies per-lab assets and verifies
+  the `startup-config:` files since `0c86d13` (2026-10-24). Kept struck rather than deleted so the
+  correction is visible.
+- ~~The grader default is derived from `metadata.id` and does not resolve for at least one lab.~~
+  **Struck 2026-11-10 — false of this tree.** Both shipping labs set `grader:` explicitly and both
+  resolve. The *default* (`grader_<metadata.id>`) is still weak for sentence-shaped ids and stays
+  documented in `docs/ADDING-A-LAB.md`; no shipping lab uses it.
 - CI's Python matrix is written but not pushable as configured.
 
 ## Verification run before drafting

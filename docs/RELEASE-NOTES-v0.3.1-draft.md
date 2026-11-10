@@ -84,8 +84,18 @@ guarded by `tools/check_operations_doc.py`), and the README's two re-install tra
 **Known, not fixed** — unchanged from `v0.2.0`, carried forward honestly:
 
 - The CI workflow patch is not applied. CI still runs four checks.
-- A cold install still serves zero labs unless per-lab assets are placed manually.
-- The grader default derived from `metadata.id` still does not resolve for at least one lab.
+- ~~A cold install still serves zero labs unless per-lab assets are placed manually.~~ **Withdrawn
+  2026-11-10 as false of this tree.** It was carried forward from before 2026-10-24 and never re-measured.
+  `install.sh` has copied each lab's `assets/` and verified every `startup-config:` it names since
+  `0c86d13` (2026-10-24). Measured 2026-11-10 by running Step 6's copy block against a clean tree and
+  then loading the result with the real `_reload_labs()`: both shipping labs load, none rejected. The
+  limitation that *is* real is narrower and is in the README: a clone that never had the asset files
+  cannot be repaired by the installer, which only warns by name.
+- ~~The grader default derived from `metadata.id` still does not resolve for at least one lab.~~
+  **Withdrawn 2026-11-10 as false of this tree.** Both shipping labs name `grader:` explicitly in their
+  YAML (`grader_demo_01_srl`, `grader_demo_02`) and both resolve through `_load_grader`. What is true is
+  the *default*: a lab that omits `grader:` gets `grader_<metadata.id>`, which for a sentence-shaped id
+  almost never resolves — still documented in `docs/ADDING-A-LAB.md`. No shipping lab relies on it.
 
 ## Verification run before drafting
 

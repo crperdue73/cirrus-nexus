@@ -60,7 +60,7 @@ Problems that break the design above rather than restating it. Examples:
 CI (`.github/workflows/ci.yml`) runs four checks on every push and pull request: the backend
 byte-compiles, `install.sh` is valid shell, the tree is self-contained (a bare clone is installable,
 every shipped grader byte-compiles, no absolute developer paths), and a grep for obvious committed
-secrets. Nine further claim checkers — `tools/check_prerequisites.py` (the README's Prerequisites
+secrets. Ten further claim checkers — `tools/check_prerequisites.py` (the README's Prerequisites
 against `install.sh`), `tools/check_install_narrative.py` (the README's account of what `install.sh`
 installs, builds, pre-pulls and registers, against `install.sh`), `tools/check_lab_assets.py` (the
 README's per-lab startup-config copy-and-verify promise, against `install.sh` and the shipped

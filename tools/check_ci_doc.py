@@ -151,6 +151,7 @@ TOOLS = [
     "check_api_doc",
     "check_self_contained_doc",
     "check_pyc_staleness",
+    "check_release_notes",
 ]
 
 NUMBER_WORDS = {
@@ -181,18 +182,28 @@ LOCAL_ONLY = [
     (README, "check_lab_assets"), (README, "check_api_doc"),
     (README, "check_operations_doc"), (README, "check_repo_metadata"),
     (README, "check_self_contained_doc"), (README, "check_ci_doc"),
-    (README, "check_pyc_staleness"),
+    (README, "check_pyc_staleness"), (README, "check_release_notes"),
     (CONTRIBUTING, "check_prerequisites"), (CONTRIBUTING, "check_install_narrative"),
     (CONTRIBUTING, "check_lab_assets"), (CONTRIBUTING, "check_operations_doc"),
     (CONTRIBUTING, "check_api_doc"), (CONTRIBUTING, "check_repo_metadata"),
     (CONTRIBUTING, "check_self_contained_doc"), (CONTRIBUTING, "check_ci_doc"),
-    (CONTRIBUTING, "check_pyc_staleness"),
+    (CONTRIBUTING, "check_pyc_staleness"), (CONTRIBUTING, "check_release_notes"),
     (SECURITY, "check_prerequisites"), (SECURITY, "check_install_narrative"),
     (SECURITY, "check_lab_assets"), (SECURITY, "check_api_doc"),
     (SECURITY, "check_operations_doc"), (SECURITY, "check_repo_metadata"),
     (SECURITY, "check_self_contained_doc"), (SECURITY, "check_ci_doc"),
-    (SECURITY, "check_pyc_staleness"),
+    (SECURITY, "check_pyc_staleness"), (SECURITY, "check_release_notes"),
 ]
+
+# Checkers that run *in* CI rather than by hand. They must not appear in LOCAL_ONLY: that list is what
+# the "not yet in the workflow" sentence counts, and a checker in both would make the docs contradict
+# themselves while the tree stayed green.
+#
+# Empty as of 2026-11-10: check_release_notes.py was written to run in CI, but the push token lacks the
+# `workflow` scope, so the ci.yml step could not be published. Until that scope is granted the checker is
+# hand-run like the rest and stays in LOCAL_ONLY. Move it here in the same commit that adds the ci.yml
+# step, and fix the four/five counts in README, CONTRIBUTING and SECURITY with it.
+IN_CI_TOOLS = []
 
 # The complement sentence each doc uses to say "these are the rest, and they are not in CI".
 # (file, regex, [(group index, what it counts)], label)

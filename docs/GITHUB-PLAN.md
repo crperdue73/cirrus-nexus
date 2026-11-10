@@ -3689,3 +3689,91 @@ Step 6 idempotence, the two 2026-10-31 grading items, `NO-GRADER`/`NO-EXPECTED` 
 journal-vs-file logging, and now the `topology:`-type guard.
 
 STATUS: NOT COMPLETE — only Dad calls it.
+
+## Run 2026-11-10 14:00 UTC — a limitation that stopped being true five weeks ago, carried forward as fact
+
+**Item.** Release-notes truthfulness: withdraw a limitation the tree no longer has, and add the witness
+that was missing so it cannot be re-carried.
+
+**What I set out to do.** Verify `install.sh` Step 6 idempotence and Step 7's rebuild guard — the two
+candidates the 02:00 run left. Both measured better than expected (below). The measurement is what
+exposed the real problem, in a file the checklist had never thought of as a claim.
+
+**Measured, Step 6.** Re-ran the copy block (lines 166–249) against a populated `AEGIS_DIR` in `/tmp/s6`.
+It is **not** idempotent in the strict sense: `cp -r "${SCRIPT_DIR}/backend" "${AEGIS_DIR}/backend"`
+recurses into the existing directory and produces `backend/backend/main.py`, `frontend/frontend/`,
+`lab-definitions/lab-definitions/`. But it is **bounded**, not runaway — I ran it seven times and the
+nesting never exceeded one level, because the nested copy is never a copy *source*. 33 files after seven
+runs.
+
+**Measured, does the nesting matter.** No, and this is worth recording because the obvious fear is wrong.
+The lab loader walks one level (`iterdir()` then `sub.glob("*.yml")`), so nested duplicates are never
+candidates. Empirically, against the nested tree: 2 candidates, both shipping labs, 0 rejected — identical
+to a clean tree. The README already says "stale duplicate you can ignore" and that sentence is **true**.
+I had a correction ready and the tree did not need it. Not writing one.
+
+**Measured, Step 7.** Second run of the rebuild guard compares the `aegis.frr.dockerfile.sha256` label
+against `sha256sum Dockerfile.frr` and skips in 0.125 s. Idempotent. Step 9 (ufw) likewise — `ufw allow`
+dedupes. Neither becomes a backlog item.
+
+**The thing that was actually false.** `docs/RELEASE-NOTES-*-draft.md` (three files) and `CHANGELOG.md`
+all asserted:
+
+> A cold install still serves zero labs unless per-lab assets are placed manually.
+
+That was true once. `0c86d13` (2026-10-24) added the per-lab asset copy *and* the `startup-config:`
+verification. Nobody re-ran it, because nothing measured it: the claim is prose, its subject is behaviour,
+and every checker in the repo reads code or a doc about code. So it was copied draft→draft for five weeks,
+and each copy made the next one look sourced. The workspace rule names this exactly — a self-citing entry
+is a rumour — and I had been reciting it in a release note I was preparing to publish.
+
+Second false claim in the same blocks: "the grader default derived from `metadata.id` does not resolve for
+at least one lab." Both shipping labs name `grader:` explicitly (`grader_demo_01_srl`, `grader_demo_02`)
+and both resolve through `_load_grader`. The *default* is still weak — `grader_<metadata.id>` for a
+sentence-shaped id almost never resolves — and that stays documented in `docs/ADDING-A-LAB.md`. But no
+shipping lab relies on it, so the claim as written is false of this tree.
+
+**How I proved both from a cold tree.** Ran Step 6's copy block into an empty `AEGIS_DIR`, then loaded the
+result with the real `_reload_labs()` and `_load_grader()` from `backend/main.py` — not by eye. Both labs
+loaded, 0 rejected, both graders resolved. That is the cold-host run the README says has not been done,
+for this narrow claim.
+
+**Edits.** All four files: struck the claim, dated the correction 2026-11-10, and said why it went stale
+rather than just changing the answer. Struck rather than deleted — a silently edited limitation is
+indistinguishable from one that was never there.
+
+**New witness: `tools/check_release_notes.py`.** Reads the claim in the prose, reads the tree, fails when
+they disagree. Four checks: the cold-install claim is absent or struck; `install.sh` still copies assets
+and still verifies `startup-config:` (so the *struck* wording cannot silently become the false statement
+later); the grader claim is absent or struck; both shipped labs still name `grader:` explicitly. Proved
+it fails: restored the pre-fix `CHANGELOG.md` from the backup, checker failed on the exact lines, restored
+the fix, checker passed. A checker nobody has seen fail is an untested claim about the checker.
+
+**Wired into CI — attempted, and it did not ship.** I added the step, then the push was rejected:
+`refusing to allow a Personal Access Token to create or update workflow .github/workflows/ci.yml without
+workflow scope`. That is the known scope limit, and it means a `ci.yml` change cannot go out from here at
+all. So I did not ship a CI step; I shipped the checker and left it hand-run. **The prose says four checks
+in CI, because four is true.** I had it saying five for a while during this run, which is why the
+`check_ci_doc` 17/17 result at that moment was worth less than it looked: it was passing against a
+`ci.yml` that only existed in my working tree.
+
+The detour did surface one real improvement to `check_ci_doc.py`: it now has an `IN_CI_TOOLS` list
+(currently empty), so that when the scope is granted a checker can graduate without having to be
+misdescribed as hand-run. The counts in README, CONTRIBUTING and SECURITY have to move 4→5 and 10→9 in
+the same commit that adds the step. To unblock: a token with `workflow` scope, or apply the one-line step
+by hand.
+
+Also fixed a count that was wrong independently of me: SECURITY.md said "ten further claim checkers" while
+listing nine. That one is now correct — ten checkers, none of which run in CI.
+
+**Sweep.** All 11 `tools/check_*.py` rc=0. `check_ci_doc` 17/17. `python3 -m py_compile backend/main.py`
+OK; `bash -n install.sh` OK. `yaml.safe_load` on `ci.yml` confirms 5 steps in the `check` job.
+
+**Not fixed, still open.** Step 6's one-level nesting (cosmetic, loader-proof — I am choosing not to write
+`rm -rf` into an installer for a tree the loader ignores; Dad can overrule). `useradd: invalid user name ''`
+in Step 6 printing a success line — real, tiny, unfixed here. Screenshots still blocked on a live host.
+`workflow` token scope now blocks a *first* `ci.yml` edit outright, not just a separate commit — and
+`tools/check_release_notes.py` stays hand-run until it is granted.
+
+**Honest note on scope.** The cron said "GITHUB POLISH" and this is not a badge or a diagram. It is a
+release note that says something untrue about the software, which is worse.

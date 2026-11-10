@@ -124,9 +124,15 @@ freeze documentation corrections rather than ship new behaviour.
 ### Known, not fixed
 - **The CI workflow patch is still not applied.** It applies cleanly; it has not been pushed, because this
   token is refused on `.github/workflows/`. What CI runs today is unchanged at four checks.
-- **Cold install still serves zero labs** unless per-lab assets are placed manually (carried forward).
-- **The grader default derived from `metadata.id` still does not resolve** for at least one lab
-  (carried forward; proof under `.nexus/proofs/`).
+- ~~**Cold install still serves zero labs** unless per-lab assets are placed manually (carried forward).~~
+  **Withdrawn 2026-11-10 — false of this tree.** Carried forward without re-measurement from before
+  `0c86d13` (2026-10-24), which made `install.sh` copy each lab's `assets/` and verify every
+  `startup-config:` it names. Re-measured by running that copy block on a clean tree and loading the
+  result with the real lab loader: both shipping labs load, none rejected.
+- ~~**The grader default derived from `metadata.id` still does not resolve** for at least one lab
+  (carried forward; proof under `.nexus/proofs/`).~~ **Withdrawn 2026-11-10 — false of this tree.** Both
+  shipping labs set `grader:` explicitly and both resolve via `_load_grader`. The weak *default* remains
+  documented in `docs/ADDING-A-LAB.md`.
 
 ## [Unreleased] — week of 2026-10-30
 
@@ -208,8 +214,9 @@ behaviour, so it is not a patch release if it is released at all.
   claims that no longer match the tree.
 
 ### Known, not fixed
-- **Cold install still serves zero labs unless per-lab assets are placed manually** where `install.sh`
-  does not reach them. Documented; not claimed as solved.
+- ~~**Cold install still serves zero labs unless per-lab assets are placed manually** where `install.sh`
+  does not reach them. Documented; not claimed as solved.~~ **Withdrawn 2026-11-10 — false of this
+  tree** (fixed 2026-10-24 by `0c86d13`; entry kept struck so the correction is visible).
 - **The grader default is derived from `metadata.id` and does not resolve** for at least one lab;
   recorded in `docs/ADDING-A-LAB.md` and the worklog, with a proof file under `.nexus/proofs/`.
 - **CI's Python matrix is written but not pushable** as configured — stated in the repo rather than
