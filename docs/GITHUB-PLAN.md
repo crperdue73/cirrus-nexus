@@ -3895,3 +3895,27 @@ names by hand, which is how this drift got past it. Make it *derive* the README'
 `tools/check_*.py` minus `ci.yml` (the check already computes that set as `repo_checkers - keys` and
 uses it for the unnamed-checker test) and then fail on a README that names fewer. It should have
 caught this run's bug, and it did not.
+
+## Today's item — 2026-11-11: install.sh Step 6 re-install idempotence (MEASURED, NOT FIXED)
+
+Executed yesterday's `next=` (the only unblocked item). Proof:
+`.nexus/proofs/step6-reinstall-nests-copies-not-idempotent-20261111-1200.txt`
+
+- **Defect:** running the Step 6 copy block twice into the same `$AEGIS_DIR` nests the
+  tree — `backend/backend/`, `frontend/frontend/`, `lab-definitions/lab-definitions/`
+  (17+4+2 = 23 new entries on run 2). Cause: `cp -r SRC/backend TGT/backend` with an
+  existing destination copies *into* it. Contents are byte-identical; nothing existing
+  is corrupted, so a first install is unaffected.
+- **Not a serving bug (measured):** `_discover_labs` (`backend/main.py:467-469`) scans
+  top level + **one** subdir level; nested copies are at depth 2, so no duplicate labs.
+- **Not applied:** fix options (`cp -r SRC/. TGT/`, refuse on non-empty target, or
+  backup-then-replace) are user-observable installer behaviour — **Dad's call**, same
+  class as the topology-type guard.
+- **Next run:** stop re-measuring install paths; the tree is clean of unblocked honesty
+  items. Take up the repair-only-if-Dad-says list instead.
+
+**Dad-gated backlog (unchanged, do not start without his word):** ci.yml patch (12
+checkers), v0.3.0 tag/Release, Screenshots (needs live host), `.nexus/` public-shipping
+policy, DELETE-OR-KEEP 10-archive/ + 3 empty lab-definitions dirs + Dockerfile.frr-bgp,
+published security contact, Step 6 idempotence fix (above), 2026-10-31 grading items,
+NO-GRADER/NO-EXPECTED fatal, journal-vs-file logging, topology-type guard.

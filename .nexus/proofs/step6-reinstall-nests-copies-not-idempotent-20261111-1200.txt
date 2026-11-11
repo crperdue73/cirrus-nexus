@@ -1,0 +1,41 @@
+STEP 6 RE-INSTALL IS NOT IDEMPOTENT (measured, not fixed)
+Run 2026-11-11 12:00 UTC | tree projects/aegis @ 6da9a8f | clean, local==origin/main 0/0
+Host: dept-dragon-tech (192.168.111.40/16). Step 6 block executed standalone into a
+temp target (/tmp/s6_probe) via /tmp/step6_probe.sh; the full installer was NOT run
+(it needs docker/containerlab on a cold host, and would touch system groups).
+
+WHAT STEP 6 DOES (install.sh:166-243): mkdir -p $AEGIS_DIR then
+  cp -r backend/ frontend/ lab-definitions/     <- INTO existing dirs
+  cp Dockerfile.frr README.md start_server.py   <- into dir
+  + assets/ and per-lab assets/ copies (mkdir -p + cp -r src/. )
+
+MEASURED (same source, same target, two runs):
+  run1: 29 entries   run2: 52 entries   NEW on run2: 23
+  nesting created: lab-definitions/lab-definitions (17), backend/backend (4),
+                   frontend/frontend (2)
+  every nested file byte-identical to its original (sha256 diff shows ONLY additions)
+  -> the first install stays correct; re-running duplicates the tree instead of
+     replacing or leaving it alone.
+
+WHY: `cp -r SRC/backend TGT/backend` when TGT/backend exists copies SRC/backend
+AS TGT/backend/backend (POSIX cp semantics: existing directory target).
+Same for frontend/ and lab-definitions/.
+
+IMPACT, measured:
+  - Serving NOT broken: _discover_labs (main.py:467-469) globs LABS_DIR/*.yml plus
+    ONE level of subdirs. Nested copies sit at depth 2 (lab-definitions/lab-definitions/*.yml)
+    so they are never enumerated -> no duplicate lab ids, no double-load.
+  - Disk/tree is wrong after a second run, and a reader or a future depth-2 scan
+    would find labs that are not the installed ones.
+  - NOT reachable on a fresh host: only a RE-INSTALL (repair/re-run, which
+    docs/OPERATIONS.md explicitly contemplates) hits it.
+
+FIX NOT APPLIED: the candidate is `cp -r SRC/backend/. TGT/backend/` for the three
+directory copies (merge semantics) or an explicit refusal/backup of a non-empty
+$AEGIS_DIR on re-run. Choosing between "silently merge", "refuse", and "back up then
+replace" changes installer behaviour a user can observe -> Dad's call, same class as
+the topology-type guard (run 2026-11-10).
+MY ERRORS: none this run (first attempt of the probe succeeded; nothing retracted).
+
+CHECKS GREEN on this tree before/after (read-only run, no product edits):
+  py_compile backend/main.py, bash -n install.sh, check_self_contained, git clean.
