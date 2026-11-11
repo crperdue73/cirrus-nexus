@@ -177,14 +177,15 @@ COUNTS = [
     (SECURITY, r"runs (\w+) checks on every push", "SECURITY: 'CI runs N checks'"),
 ]
 
-# Every checker the docs say is NOT in the workflow, and where it is said.
+# Every checker CONTRIBUTING and SECURITY say is NOT in the workflow, and where it is said.
+#
+# README used to be listed here too, name by name, and that is how its list drifted: on 2026-11-11 14:00
+# the README paragraph enumerating the local-only checkers named ten of the eleven, silently omitting
+# `check_repo_metadata.py`, and this tool passed 17/17 because the missing name was simply not on the
+# hand-kept list it compared against. A list kept by the same hand that writes the prose cannot catch the
+# prose. README's names are now DERIVED from the paragraph itself (see README_LOCAL_ONLY below) and
+# checked against the tree in both directions, so a missing name and an invented name both fail.
 LOCAL_ONLY = [
-    (README, "check_prerequisites"), (README, "check_install_narrative"),
-    (README, "check_lab_assets"), (README, "check_api_doc"),
-    (README, "check_operations_doc"), (README, "check_repo_metadata"),
-    (README, "check_self_contained_doc"), (README, "check_ci_doc"),
-    (README, "check_pyc_staleness"), (README, "check_release_notes"),
-    (README, "check_canary_pack"),
     (CONTRIBUTING, "check_prerequisites"), (CONTRIBUTING, "check_install_narrative"),
     (CONTRIBUTING, "check_lab_assets"), (CONTRIBUTING, "check_operations_doc"),
     (CONTRIBUTING, "check_api_doc"), (CONTRIBUTING, "check_repo_metadata"),
@@ -198,6 +199,16 @@ LOCAL_ONLY = [
     (SECURITY, "check_pyc_staleness"), (SECURITY, "check_release_notes"),
     (SECURITY, "check_canary_pack"),
 ]
+
+# README's enumeration of the checkers it says are NOT CI steps. Anchored on the sentence's own
+# opening and closing words so a reworded paragraph fails loudly instead of parsing as empty.
+# The span is the parenthetical of "the ci.yml diff that adds it (and the other local-only claim
+# checkers — `tools/check_x.py` for ..., and `tools/check_y.py` for ...) is written".
+README_LOCAL_ONLY = re.compile(
+    r"the `ci\.yml` diff that adds it \(\s*and\s+the\s+other\s+local-only\s+claim\s+checkers\s*—"
+    r"(?P<body>.+?)\)\s+is\s+written",
+    re.S,
+)
 
 # Checkers that run *in* CI rather than by hand. They must not appear in LOCAL_ONLY: that list is what
 # the "not yet in the workflow" sentence counts, and a checker in both would make the docs contradict
@@ -354,6 +365,41 @@ def main():
         else:
             ok("every checker not in ci.yml is named as local-only in the docs",
                f"{len([t for t in repo_checkers if t not in keys])} local-only tool(s)")
+
+        # 4b. README's own enumerated list, DERIVED rather than transcribed. Both directions:
+        #     every checker ci.yml does not run must be in the paragraph, and every name in the
+        #     paragraph must be a checker that exists and that ci.yml does not run. The hand-kept
+        #     list this replaces (`(README, "check_x")` rows above) could only ever prove that the
+        #     names it already knew about were still absent from ci.yml — a name missing from both
+        #     the list and the README was invisible, which is exactly what happened to
+        #     check_repo_metadata.py until 2026-11-11 14:00.
+        readme_text = open(README, encoding="utf-8").read()
+        m_ro = README_LOCAL_ONLY.search(readme_text)
+        expected_local = [t for t in repo_checkers if t not in keys]
+        if not m_ro:
+            bad("README enumerates the checkers it says are not CI steps",
+                "paragraph not found (it was reworded — update this tool)")
+        else:
+            body = m_ro.group("body")
+            readme_names = set(re.findall(r"`tools/(check_[a-z_]+)\.py`", body))
+            missing = [t for t in expected_local if t not in readme_names]
+            not_a_checker = sorted(
+                t for t in readme_names
+                if not os.path.isfile(os.path.join(ROOT, "tools", t + ".py")))
+            already_ci = sorted(t for t in readme_names if t in keys)
+            problems = []
+            if missing:
+                problems.append(f"README omits {missing}")
+            if not_a_checker:
+                problems.append(f"README names checker(s) not in tools/: {not_a_checker}")
+            if already_ci:
+                problems.append(f"README calls these 'local only' but ci.yml runs them: {already_ci}")
+            if problems:
+                bad("README's local-only list == the tree, both ways",
+                    "; ".join(problems) + f" (tree: {expected_local})")
+            else:
+                ok("README's local-only list == the tree, both ways",
+                   f"{len(readme_names)} name(s), derived from the paragraph not a list here")
         if not mismatched:
             ok("every line of CONTRIBUTING's step list agrees with ci.yml",
                f"{len(entries)} entries, {sum(1 for e in entries if e[1] in keys)} in CI")

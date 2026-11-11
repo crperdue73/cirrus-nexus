@@ -544,7 +544,8 @@ Change a claim in the tree and change the JSON in the same commit. Unlike
 `tools/check_self_contained.py`, this tool is **not** yet a CI step: the `ci.yml` diff that adds it (and
 the other local-only claim checkers — `tools/check_prerequisites.py` for this README's Prerequisites
 block, `tools/check_install_narrative.py` for the paragraph after it, `tools/check_lab_assets.py` for
-the per-lab startup-config promise, `tools/check_api_doc.py` for the route table in
+the per-lab startup-config promise, `tools/check_repo_metadata.py` for the repository's GitHub-side
+description, topics and license above, `tools/check_api_doc.py` for the route table in
 `docs/API.md`, `tools/check_operations_doc.py` for `docs/OPERATIONS.md`, `tools/check_ci_doc.py`
 for the count of CI steps stated here, in `CONTRIBUTING.md` and in `SECURITY.md`, and
 `tools/check_pyc_staleness.py` for the `__pycache__` behaviour `docs/OPERATIONS.md` describes,

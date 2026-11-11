@@ -3919,3 +3919,50 @@ checkers), v0.3.0 tag/Release, Screenshots (needs live host), `.nexus/` public-s
 policy, DELETE-OR-KEEP 10-archive/ + 3 empty lab-definitions dirs + Dockerfile.frr-bgp,
 published security contact, Step 6 idempotence fix (above), 2026-10-31 grading items,
 NO-GRADER/NO-EXPECTED fatal, journal-vs-file logging, topology-type guard.
+
+## Today's item — 2026-11-11 14:00: the README's local-only list is derived now, not hand-kept
+
+Executed the `next=` from the 02:00 run (make `check_ci_doc.py` derive the README's required
+local-only names instead of printing them from a table). Proof:
+`.nexus/proofs/readme-local-only-list-derived-20261111-1400.txt`
+
+- **The bug was live when I arrived.** README's paragraph enumerating the checkers it says
+  are *not* CI steps named ten of the eleven in the tree. The missing one was
+  `tools/check_repo_metadata.py`. `check_ci_doc.py` reported **17/17 PASS** while it was
+  missing, because its required-name set *was* the hand-written `LOCAL_ONLY` table — which
+  also omitted `check_repo_metadata`. The tool was comparing the prose to the same list the
+  prose was written from. A name absent from both was invisible; that is not a drifted count,
+  it is a check that could never have failed on the thing it was for.
+- **Fix, tool:** `LOCAL_ONLY` no longer carries README rows. New claim 4b parses the
+  paragraph itself (`README_LOCAL_ONLY`, whitespace-tolerant because the README is
+  hard-wrapped — my first pattern missed on the newline between `and` and `the other`,
+  which is how I found the `rc=0`-from-a-grep-pipe red herring too) and compares it to the
+  tree **both ways**: every non-CI checker named, every named checker exists in `tools/`,
+  and none of the named ones is a step `ci.yml` runs. A reworded paragraph fails loudly
+  rather than parsing as an empty set.
+- **Fix, doc:** README names `tools/check_repo_metadata.py` with its subject.
+- **Negative controls, all four observed to FAIL on a scratch copy:** drop the name →
+  `README omits [check_repo_metadata]`; invent `check_ghost_tool` → `names checker(s) not in
+  tools/`; call in-CI `check_self_contained` local-only → `ci.yml runs them`; reword the
+  anchor sentence → `paragraph not found`. The first one is the original bug reproduced.
+- **After:** 18/18 rc=0; all twelve `tools/check_*.py` rc=0; `py_compile backend/main.py`,
+  `py_compile tools/check_ci_doc.py`, `bash -n install.sh` all rc=0.
+
+- **A caution, recorded rather than tidied:** I twice read `rc=0` off a `grep` pipeline while
+  the tool itself was exiting 1. The pipeline's status is `grep`'s, not the checker's. Both
+  times I caught it by looking at the `[FAIL]` lines; grading by the exit code I *meant* to
+  read is the mistake this worklog exists to not make. Proof file used `>/dev/null` + `$?`.
+
+**Next:** `docs/API.md` / `check_api_doc.py` are in the same shape one layer down — the
+route table is checked against the handlers, but the *OpenAPI exposure* claims (`/docs` and
+`/redoc` being reachable, the ttyd port range, the `refused`/`error` sub-status vocabulary)
+are named by the tool's own `[info]` line as out of scope. Measure whether the page still
+describes `/docs` in a way a reader can verify against a running server, and whether the
+ttyd range in `docs/OPERATIONS.md` and in the frontend/backend source still agree. That is a
+doc-versus-tree claim with a real failure mode, unlike another sweep of the CI counts.
+
+**Dad-gated backlog (unchanged, do not start without his word):** ci.yml patch (11→12
+checkers), v0.3.0 tag/Release, Screenshots (needs live host), `.nexus/` public-shipping
+policy, DELETE-OR-KEEP 10-archive/ + 3 empty lab-definitions dirs + Dockerfile.frr-bgp,
+published security contact, Step 6 installer idempotence fix, 2026-10-31 grading items,
+NO-GRADER/NO-EXPECTED fatal, journal-vs-file logging, topology-type guard.
