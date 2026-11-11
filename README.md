@@ -547,8 +547,10 @@ block, `tools/check_install_narrative.py` for the paragraph after it, `tools/che
 the per-lab startup-config promise, `tools/check_api_doc.py` for the route table in
 `docs/API.md`, `tools/check_operations_doc.py` for `docs/OPERATIONS.md`, `tools/check_ci_doc.py`
 for the count of CI steps stated here, in `CONTRIBUTING.md` and in `SECURITY.md`, and
-`tools/check_pyc_staleness.py` for the `__pycache__` behaviour `docs/OPERATIONS.md` describes, and
-`tools/check_canary_pack.py` for the canary list and verdicts in `tools/canaries/lab-pack/README.txt`) is written, applies cleanly
+`tools/check_pyc_staleness.py` for the `__pycache__` behaviour `docs/OPERATIONS.md` describes,
+`tools/check_canary_pack.py` for the canary list and verdicts in `tools/canaries/lab-pack/README.txt`,
+`tools/check_release_notes.py` for the release-notes claims withdrawn on 2026-11-10, and
+`tools/check_self_contained_doc.py` for `docs/SELF-CONTAINED.md`) is written, applies cleanly
 to `main`, and is not pushed, because
 this repo's automation token is refused on workflow paths, so it needs a human with `workflow` scope
 (re-measured 2026-11-05; as of that date the token cannot push the patch and nothing in CI invokes this

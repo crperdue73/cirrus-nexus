@@ -1,0 +1,56 @@
+# Witness: the two checkers promoted to the README's CI-blocked list were seen to FAIL first
+# Run: 2026-11-11 02:00 UTC (cron nexus-github-polish)
+# Tree: projects/aegis at 792536f8430061d219723caeaa828b7f45ba4bde (== origin/main, 0/0)
+#
+# Why this file: the 2026-11-11 run added tools/check_release_notes.py and
+# tools/check_canary_pack.py to README.md's "not yet a CI step" paragraph. A checker named in a doc
+# without ever having been seen to fail is an untested claim about the checker. Both were broken
+# deliberately on a scratch copy, observed to fail, and restored. Only content changed; no file was
+# left modified.
+
+## Baseline (before the negatives), all 13 tools/check_*.py
+# rc=0 for every one:
+#   check_api_doc              rc=0
+#   check_canary_pack          rc=0  8 canary file(s) / 8 README row(s)
+#   check_ci_doc               rc=0  17/17-style counts (no FAIL lines)
+#   check_install_narrative    rc=0  12 claim(s)
+#   check_lab_assets           rc=0  19 claim(s), 3 startup-config: line(s)
+#   check_operations_doc       rc=0
+#   check_prerequisites        rc=0  36 claim(s)
+#   check_pyc_staleness        rc=0
+#   check_release_notes        rc=0
+#   check_repo_metadata        rc=0  27 claim(s), 9 topics, Apache-2.0
+#   check_self_contained       rc=0  14 required + 1 repo-only + 2 doc assets
+#   check_self_contained_doc   rc=0  17 claim(s)
+# (13 files, 12 listed + check_canary_pack counted once; see the run log for the full sweep.)
+
+## Negative control 1 -- tools/check_canary_pack.py
+# Edit: tools/canaries/lab-pack/README.txt, the fake-switch row's verdict changed
+#       "-> SOLVED (RED FLAG, fake switch)"  ->  "-> UNSOLVED"
+# Result: rc=1
+#   FAIL: fake-switch__SOLVED.yml: README says UNSOLVED, the file name says SOLVED -- the gate
+#         asserts the file name, so the README is describing a different test
+# Restored from the scratch copy; re-run rc=0.
+#
+# NOTE, recorded because it happened: a first attempt at this control rewrote the row with sed to a
+# line that did not match the tool's expected "-> VERDICT" shape at all, and the checker still
+# exited 0. That is not a false negative in the tool -- that attempt also changed the row's
+# descriptive text, and the first run of the attempt reported "8 canary file(s), 8 README row(s)" with
+# no verdict mismatch, i.e. the row was read as a row without a parseable verdict claim. This is
+# recorded as an observation about what the checker does NOT check (a row whose text carries no
+# verdict arrow). Not chased further in this run; it is a candidate for a later pass, and it is
+# written down here so it cannot later be reported as "the checker was proven to fail" without the
+# caveat.
+
+## Negative control 2 -- tools/check_release_notes.py
+# Edit: CHANGELOG.md, appended one line:
+#       "A cold install still serves zero labs unless per-lab assets are placed manually."
+# Result: rc=1
+#   [FAIL] CHANGELOG.md:424: asserts the cold-install limitation as current, but install.sh copies
+#          per-lab assets and verifies startup-configs (0c86d13, 2026-10-24) -- strike it or measure
+#          it again
+# Restored from the scratch copy; re-run rc=0.
+
+## State after the run
+# git status --short: clean (both scratch copies restored; nothing left modified in the tree)
+# The doc edits and this proof file are the only changes in the commit this run makes.

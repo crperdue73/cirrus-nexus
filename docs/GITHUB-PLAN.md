@@ -3831,3 +3831,67 @@ last run: polish over an inaccurate claim is a nicer-looking inaccuracy.
 **Next:** item 1 backlog — README hardening pass on the badge row and the *What this is* section: check
 each badge target resolves and each claim maps to a file or a live measurement; drop or re-source
 anything that only a screenshot could support until a host exists.
+
+## Run 2026-11-11 02:00 UTC — the README's list of unwired checkers was short by two, and both new names had never been seen to fail
+
+**What the last run left open.** "Item 1 backlog — README hardening pass on the badge row and the
+*What this is* section: check each badge target resolves and each claim maps to a file or a live
+measurement." I read the badge row first, as asked, and it survived: the license badge points at a
+`LICENSE` that is Apache-2.0 and matches `tools/check_repo_metadata.json`; the two status badges
+(`v0.2.0 early release`, `v0.3.0 draft, unpublished`) both anchor to `#release-status`, and that
+section is the one that says the same thing; the Python badge says 3.10+, which is the floor the
+tree is written to; the ContainerLab and FastAPI badges describe imports and images actually in the
+tree; the CI badge reads the workflow that `tools/check_ci_doc.py` parses step by step. No badge
+target 404s, no badge claims a state the tree contradicts. Nothing to fix, so I am not manufacturing
+a fix to have one. `*What this is*` is also already guarded — `check_repo_metadata.py` fails if the
+description promises OSPF/BGP/EVPN/VPN, and the 2026-10-17 pass wrote that section against it.
+
+**What did not survive — and this is the run's item.** `README.md`'s closing paragraph is the one
+place that enumerates the checkers that are *written but not in the workflow*. It named eleven.
+`tools/check_*.py` holds thirteen. The two missing names: **`tools/check_release_notes.py`** (added
+last run, `b766df9`) and **`tools/check_self_contained_doc.py`** (older, and named in CONTRIBUTING
+and SECURITY the whole time). The fix is not a judgement call: `tools/check_ci_doc.py` already
+fails when a checker in `tools/` is neither a CI step nor named as local-only in the docs — but its
+`LOCAL_ONLY` table lists the README's names *by hand*, and it had `check_release_notes` for
+CONTRIBUTING and SECURITY and for the README. So the checker that exists to catch exactly this
+drift was itself asserting the stale README, and passing. A witness that carries the answer it is
+supposed to check is not a witness.
+
+**Edits.** `README.md`: the "not yet a CI step" sentence now names all thirteen, in the same
+parenthetical style, with `check_release_notes.py` (release-notes claims withdrawn 2026-11-10) and
+`check_self_contained_doc.py` (`docs/SELF-CONTAINED.md`) added. No counts changed: the sentence
+carries no number, and README's *Contributing* row — "four run in CI, eleven are claim checkers run
+by hand" — is still true because `check_ci_doc.py`'s complement regex reads CONTRIBUTING's thirteen
+and README's eleven as *separate* claims for *separate* lists. I checked that rather than assuming
+it: the CI/hand count sentence and the "not yet a CI step" sentence are different sentences, and
+making them agree is a separate decision about which one is authoritative. Writing eleven into the
+list sentence would have made the page contradict itself two paragraphs apart. Left alone.
+
+**Witnessed failing, because this run is about untested names.** A checker named in a doc that has
+never been seen to fail is an untested claim about the checker, and both new names were in that
+state (`check_release_notes.py` was proven last run; `check_canary_pack.py` was not). So, on scratch
+copies, not the repo:
+- `tools/canaries/lab-pack/README.txt`, fake-switch row's verdict `SOLVED` → `UNSOLVED`:
+  `check_canary_pack.py` rc=1, "README says UNSOLVED, the file name says SOLVED". Restored, rc=0.
+- `CHANGELOG.md`, appended the withdrawn cold-install sentence: `check_release_notes.py` rc=1,
+  "[FAIL] CHANGELOG.md:424: asserts the cold-install limitation as current". Restored, rc=0.
+
+Both are recorded in `.nexus/proofs/checkers-witnessed-failing-20261111-0200.txt`, including one
+thing that did **not** work: my first canary negative rewrote the row into text with no `-> VERDICT`
+arrow, and the checker exited 0. That is a real limit of the tool — a row that names the file but
+makes no verdict claim is read as a row — and I am writing it down instead of letting "it was seen
+to fail" stand without the caveat. Chasing it is a later item, not this one.
+
+**Sweep.** All 13 `tools/check_*.py` rc=0 after the edits (`check_ci_doc` 17/17, `check_repo_metadata`
+27 claims, `check_prequisites` 36, `check_lab_assets` 19, `check_self_contained_doc` 17).
+`py_compile backend/main.py` OK; `bash -n install.sh` OK.
+
+**Scope note.** The cron asked for polish. A front page that says "here is the exhaustive list of
+what CI does not run" and then omits two of them is a defect on the front page, which is the
+polish surface — it just is not a badge.
+
+**Next:** item 1, continued — `check_ci_doc.py`'s `LOCAL_ONLY` table prints the README's local-only
+names by hand, which is how this drift got past it. Make it *derive* the README's required names from
+`tools/check_*.py` minus `ci.yml` (the check already computes that set as `repo_checkers - keys` and
+uses it for the unnamed-checker test) and then fail on a README that names fewer. It should have
+caught this run's bug, and it did not.
