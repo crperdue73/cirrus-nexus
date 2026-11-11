@@ -3883,7 +3883,7 @@ makes no verdict claim is read as a row — and I am writing it down instead of 
 to fail" stand without the caveat. Chasing it is a later item, not this one.
 
 **Sweep.** All 13 `tools/check_*.py` rc=0 after the edits (`check_ci_doc` 17/17, `check_repo_metadata`
-27 claims, `check_prequisites` 36, `check_lab_assets` 19, `check_self_contained_doc` 17).
+27 claims, `check_prerequisites` 36, `check_lab_assets` 19, `check_self_contained_doc` 17).
 `py_compile backend/main.py` OK; `bash -n install.sh` OK.
 
 **Scope note.** The cron asked for polish. A front page that says "here is the exhaustive list of
