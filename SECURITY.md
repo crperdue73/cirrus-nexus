@@ -70,6 +70,9 @@ claims in `docs/OPERATIONS.md` — unit shape, start_server behaviour, digest sc
 semantics, the image pin, the archived labs — against the files that implement them), and
 `tools/check_api_doc.py` (the route table in `docs/API.md` — the headline count, every row's method,
 path and parameters, and the no-request-bodies claim — against the OpenAPI document the app serves),
+`tools/check_api_exposure.py` (the `docs/API.md` claims the OpenAPI document cannot carry — the ttyd port
+range and its allocator's refusal, the bind address and the `/docs` pages, the `graded`/`error`/`refused`
+sub-status vocabulary, and the terminal URL the response hands back),
 `tools/check_ci_doc.py` (the number of CI checks that `README.md`, `CONTRIBUTING.md` and this file
 each state, and where each checker runs, against `.github/workflows/ci.yml` and the checker files present),
 `tools/check_self_contained_doc.py` (the boundary claims in `docs/SELF-CONTAINED.md` against what

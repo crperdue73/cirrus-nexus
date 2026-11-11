@@ -3966,3 +3966,70 @@ checkers), v0.3.0 tag/Release, Screenshots (needs live host), `.nexus/` public-s
 policy, DELETE-OR-KEEP 10-archive/ + 3 empty lab-definitions dirs + Dockerfile.frr-bgp,
 published security contact, Step 6 installer idempotence fix, 2026-10-31 grading items,
 NO-GRADER/NO-EXPECTED fatal, journal-vs-file logging, topology-type guard.
+
+---
+
+### 2026-11-11 20:00 UTC — DOC-INTEGRITY: `tools/check_api_exposure.py`, the `[info]` line's three surfaces become checked claims
+
+**Item:** the previous entry's "Next" — the parts of `docs/API.md` that `check_api_doc.py` names as
+out of scope. An `[info]` line is honest, but nothing goes red if one of those claims rots. New tool
+`tools/check_api_exposure.py` reads four claim groups off `backend/main.py` and `docs/API.md`:
+
+1. **ttyd port range.** `TTYD_PORT_BASE` / `TTYD_PORT_MAX` at module level versus the `NNNN–NNNN` range
+   the page prints; plus `_allocate_port`'s body (comments stripped) must contain a `raise` carrying
+   the range — that is the sentence "the allocator refuses rather than wrapping onto a port still in
+   use" having a site — and must consult `TTYD_PROCS` / live session ttyd maps before handing a port out.
+2. **Bind + doc pages.** The `os.environ.get("AEGIS_HOST", …)` default must equal what the page states,
+   together with the `AEGIS_HOST` override name. `/docs`, `/redoc`, `/openapi.json` are read off
+   `app.docs_url` / `app.redoc_url` / `app.openapi_url` — **not** off `openapi()["paths"]`, which on this
+   tree carries the 11 `/api` routes only. (First draft used `paths` and failed; a `None` doc_url is what
+   "the page was switched off" actually looks like.) And because the page says the API has no auth, the
+   tool greps the live (non-comment) backend for `Depends(`, `APIKey`, `HTTPBasic`, `OAuth2`, `Security(`
+   — a mounted auth dependency would make that sentence the worst kind of stale. The page must still
+   say it, too, so the claim can't be quietly deleted to pass.
+3. **Sub-status vocabulary.** The literals `GraderResult(status=…)` can actually be given — read off
+   construction sites plus the field default, not off the comment describing them — against the three
+   the page names. Fails both directions: a fourth value in code, or a page value nothing constructs.
+4. **Terminal URL.** `_rewrite_ttyd_urls` must still read the request's `Host` header, and `start_lab`
+   must call it — that is what makes the URL in the response reachable from where the browser is.
+
+**Negative-tested, because a checker that cannot fail is decoration.** On a mutated copy of `docs/API.md`:
+changing `8765–9765` to `8765–9766` produced FAIL on the range. Deleting `` `refused` `` from the
+vocabulary line **passed** — the first draft matched a bare `\berror\b`, which the English word satisfies
+in any paragraph. Tightened to backticked/quoted literals only; re-mutating now fails. That hole was found
+by mutating, not by reading the diff, and it's recorded here rather than quietly fixed.
+
+**Knock-on, and the suite catching me:** dropping a new `tools/check_*.py` in turned
+`check_ci_doc.py` red in four ways — because it derives its expected list from `tools/` and checks
+README/CONTRIBUTING/SECURITY both directions. It named the omissions itself:
+- `CONTRIBUTING.md` step block: added as step 11, steps 12–15 renumbered, secrets line 15→16,
+  "CI does not run steps 4–14" → `4–15`.
+- `README.md`: the local-only parenthetical got the new checker's description;
+  "eleven are claim checkers run by hand" → **twelve**.
+- `SECURITY.md`: added to the list of written-but-not-in-workflow checkers.
+- `check_ci_doc.py`'s own hand-kept `LOCAL_ONLY` list: two rows added (CONTRIBUTING, SECURITY) —
+  and its prose counts in `CONTRIBUTING.md:120` ("nine claim checkers", "steps 4–12") corrected to
+  "twelve claim checkers", `4–16`. Those were stale before this run; the tool said so.
+
+**Measured after:** `git status` clean before edits; all **13** `tools/check_*.py` rc=0 individually
+(loop used `>/dev/null` + `$?`, not a `grep` pipeline — the trap from the last entry); `py_compile`
+on `backend/main.py` and both touched tools; `bash -n install.sh`. Backups via `scripts/safe-backup.sh`
+label `api-exposure-2026-11-11` (README, CONTRIBUTING, docs/API.md) into `.nexus/bundle-archive/` —
+outside the served StaticFiles root.
+
+**Still not proven:** that these pages are *reachable* through a real bind, and that a ttyd port in the
+range actually serves. That needs a running host; the tool says so in its own `[info]` line rather than
+scoring it.
+
+**Next:** measured while writing this line, so it is a fact not a guess — `docs/OPERATIONS.md` mentions
+ttyd at lines 54, 220, 245 but states **no numeric range**, and `frontend/index.html` is the only
+frontend file (no range in it either). So there is nothing stale there to fix. The remaining unchecked
+claim of that family is `OPERATIONS.md`'s "non-colliding ttyd ports" (line 245) — whether the allocator's
+collision-avoidance is described there the way `_allocate_port` now implements it. Check that against the
+function, or, if it holds, take the next reader-facing gap instead: `docs/ADDING-A-LAB.md` has no checker.
+
+**Dad-gated backlog (unchanged, do not start without his word):** ci.yml patch (12→13 checkers),
+v0.3.0 tag/Release, Screenshots (needs live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP
+10-archive/ + 3 empty lab-definitions dirs + Dockerfile.frr-bgp, published security contact,
+Step 6 installer idempotence fix, 2026-10-31 grading items, NO-GRADER/NO-EXPECTED fatal,
+journal-vs-file logging, topology-type guard.

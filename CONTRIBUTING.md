@@ -10,7 +10,7 @@ write the claim.
 
 ## Before you push
 
-Run the same checks CI runs (`.github/workflows/ci.yml` — four of them), plus the eleven claim
+Run the same checks CI runs (`.github/workflows/ci.yml` — four of them), plus the twelve claim
 checkers that are written and verified but **not yet in the workflow** (the lines marked `— local only`; see below):
 
 ```bash
@@ -24,14 +24,15 @@ python3 tools/check_install_narrative.py  # 7. README's account of install.sh   
 python3 tools/check_lab_assets.py         # 8. per-lab startup-configs: copied+found — local only
 python3 tools/check_operations_doc.py     # 9. OPERATIONS.md's claims vs the tree    — local only
 python3 tools/check_api_doc.py            # 10. docs/API.md's route table vs the app   — local only
-python3 tools/check_ci_doc.py             # 11. the docs' count of CI steps vs ci.yml — local only
-python3 tools/check_pyc_staleness.py      # 12. the pycache claims in OPERATIONS.md     — local only
-python3 tools/check_release_notes.py      # 13. release notes vs. withdrawn limitations  — local only
-python3 tools/check_canary_pack.py        # 14. canary pack's README.txt vs the pack    — local only
-# 15. no obvious secrets committed — CI greps the tree for token/key patterns    — in CI
+python3 tools/check_api_exposure.py       # 11. docs/API.md's non-route claims vs the app — local only
+python3 tools/check_ci_doc.py             # 12. the docs' count of CI steps vs ci.yml — local only
+python3 tools/check_pyc_staleness.py      # 13. the pycache claims in OPERATIONS.md     — local only
+python3 tools/check_release_notes.py      # 14. release notes vs. withdrawn limitations  — local only
+python3 tools/check_canary_pack.py        # 15. canary pack's README.txt vs the pack    — local only
+# 16. no obvious secrets committed — CI greps the tree for token/key patterns    — in CI
 ```
 
-**CI does not run steps 4–14 yet.** Adding them means a `ci.yml` change, and this repo's automation token
+**CI does not run steps 4–15 yet.** Adding them means a `ci.yml` change, and this repo's automation token
 has no `workflow` scope — GitHub answers `404` to a write under `.github/workflows/` with this token
 (re-measured 2026-11-03; re-confirmed 2026-11-05, `x-oauth-scopes` = `delete:packages, repo,
 write:discussion, write:packages`), so it takes a human with that scope (see *Changing CI*). Run the local-only steps by
@@ -115,8 +116,8 @@ committed. The two commands answer different questions: the `grep` form is "is m
 right now, in the suffixes we ship most of", the `git grep` form is "is the whole tracked tree clean,
 no suffix filter". Zero output from each is the pass.
 
-Step 11 checks the *counts of CI steps* that this file, `README.md` and `SECURITY.md` all state — "four
-checks in CI", "nine claim checkers", "steps 4–12" — against `.github/workflows/ci.yml` and
+Step 12 checks the *counts of CI steps* that this file, `README.md` and `SECURITY.md` all state — "four
+checks in CI", "twelve claim checkers", "steps 4–16" — against `.github/workflows/ci.yml` and
 against the checker files that actually exist. It exists because those counts are prose about a file in
 the tree, edited by hand every time one is added, and on the day it was written one of them was already
 wrong. It reads the workflow; it does not run it, and it says nothing about whether CI passed.
