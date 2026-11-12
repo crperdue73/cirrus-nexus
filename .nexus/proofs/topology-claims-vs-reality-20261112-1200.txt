@@ -1,0 +1,45 @@
+# Run 265 - ADDING-A-LAB.md topology claims vs. measured loader/linter behaviour
+# host: dept-dragon-tech  date: 2026-11-12T12:04:27Z  HEAD: 34ebc04
+
+## A. doc 106-113 says the loader's 'topology unreadable' guard is EFFECTIVELY UNREACHABLE.
+##    MEASURED: FALSE. The guard DOES fire, and two malformed shapes are SERVED unchecked.
+[labs] REFUSED malformed lab definition 'x3': topology unreadable: x.yml
+[labs] 1 definition(s) skipped; serving 0
+[labs] REFUSED malformed lab definition 'x4': topology unreadable: x.yml
+[labs] 1 definition(s) skipped; serving 0
+nodes: list of STRINGS                         -> served=['x1'] rejected=[]
+nodes: list of MAPPINGS                        -> served=['x2'] rejected=[]
+nodes: MISSING entirely                        -> served=[] rejected=['topology unreadable: x.yml']
+no topology block at all                       -> served=[] rejected=['topology unreadable: x.yml']
+
+##    - topology with no 'nodes'      -> guard fires (rejected)
+##    - no topology block at all      -> guard fires (rejected)
+##    - nodes as list of STRINGS      -> SERVED, accepted
+##    - nodes as list of MAPPINGS     -> SERVED, accepted  (doc 116 claims this is refused -- FALSE)
+
+## B. doc 123: linter answers NO-TOPOLOGY (exit 2) for a lab whose topology is missing.
+##    MEASURED: TRUE.
+STATUS    SEEDED   LAB
+----------------------------------------------------------------------
+NO-TOPOLOGY -        only  (no `topology:` block -- nothing for containerlab to deploy)
+----------------------------------------------------------------------
+labs scanned: 1   SOLVED (red flag): 0
+NOT CHECKED — 1 lab(s) have no topology the linter could read (this is not a pass; nothing about their content was examined):
+   only  (no `topology:` block -- nothing for containerlab to deploy)
+    rc=2
+
+## C. doc 123 also says train/exit-2 covers 'unparseable' and 'defines no nodes'.
+##    MEASURED: TRUE for 'defines no nodes':
+STATUS    SEEDED   LAB
+----------------------------------------------------------------------
+NO-TOPOLOGY -        e  (`topology:` block defines no nodes)
+----------------------------------------------------------------------
+labs scanned: 1   SOLVED (red flag): 0
+NOT CHECKED — 1 lab(s) have no topology the linter could read (this is not a pass; nothing about their content was examined):
+   e  (`topology:` block defines no nodes)
+    rc=2
+
+## SELF-CORRECTION: my first pass reported CLAIM B SOLVED/rc=0. That was my own probe error --
+## the pack held two labs and the SOLVED row was the OTHER one. Isolated above: NO-TOPOLOGY, rc=2.
+## The doc is RIGHT about the linter. The doc is WRONG about the loader guard (A) and the
+## list-of-mappings row (B). Guard is reachable, and list-of-mappings is served, not refused.

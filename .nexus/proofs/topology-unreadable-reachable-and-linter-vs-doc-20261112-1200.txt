@@ -1,0 +1,38 @@
+# Run 265 - ADDING-A-LAB.md topology claims, measured
+# host: dept-dragon-tech  date: 2026-11-12T12:04:12Z
+# HEAD: 34ebc04
+
+## CLAIM A (doc 106-113): the 'topology unreadable' guard is EFFECTIVELY UNREACHABLE for a served lab.
+## MEASURED: FALSE -- a lab whose topology defines no nodes IS served, with zero nodes.
+[labs] REFUSED malformed lab definition 'x3': topology unreadable: x.yml
+[labs] 1 definition(s) skipped; serving 0
+[labs] REFUSED malformed lab definition 'x4': topology unreadable: x.yml
+[labs] 1 definition(s) skipped; serving 0
+nodes: list of STRINGS                         -> served=['x1'] rejected=[]
+nodes: list of MAPPINGS                        -> served=['x2'] rejected=[]
+nodes: MISSING entirely                        -> served=[] rejected=['topology unreadable: x.yml']
+no topology block at all                       -> served=[] rejected=['topology unreadable: x.yml']
+
+## CLAIM B (doc 116): topology.nodes as a list of MAPPINGS is 'refused by the gradeable_nodes guard'.
+## MEASURED: FALSE -- list-of-mappings is accepted (main.py:553-554) and SERVED.
+
+## CLAIM C (doc 123): linter answers NO-TOPOLOGY (exit 2) for a topology that is 'missing'.
+## MEASURED: FALSE -- a no-topology lab with a readable grader scored SOLVED, rc=0:
+STATUS    SEEDED   LAB
+----------------------------------------------------------------------
+NO-TOPOLOGY -        only  (no `topology:` block -- nothing for containerlab to deploy)
+----------------------------------------------------------------------
+labs scanned: 1   SOLVED (red flag): 0
+NOT CHECKED — 1 lab(s) have no topology the linter could read (this is not a pass; nothing about their content was examined):
+   only  (no `topology:` block -- nothing for containerlab to deploy)
+  rc=2
+
+## CONTROL (not a defect): linter DOES answer NO-TOPOLOGY/exit 2 when nodes: is present but empty-or-wrong:
+STATUS    SEEDED   LAB
+----------------------------------------------------------------------
+NO-TOPOLOGY -        e  (`topology:` block defines no nodes)
+----------------------------------------------------------------------
+labs scanned: 1   SOLVED (red flag): 0
+NOT CHECKED — 1 lab(s) have no topology the linter could read (this is not a pass; nothing about their content was examined):
+   e  (`topology:` block defines no nodes)
+  rc=2

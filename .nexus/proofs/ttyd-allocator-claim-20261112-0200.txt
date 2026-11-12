@@ -1,0 +1,5 @@
+== live allocator probe 2026-11-12T02:04:30Z 486214d
+tracked occupied 8765 -> first 8766
+session holds 8767 -> [8765, 8766, 8768, 8769]
+near max -> [9763, 9764, 9765, 8765]
+exhausted raises: no free ttyd port in 8765-9765: every port in the range is in use
