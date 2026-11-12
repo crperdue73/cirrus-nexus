@@ -10,7 +10,7 @@ write the claim.
 
 ## Before you push
 
-Run the same checks CI runs (`.github/workflows/ci.yml` — four of them), plus the twelve claim
+Run the same checks CI runs (`.github/workflows/ci.yml` — four of them), plus the 13 claim
 checkers that are written and verified but **not yet in the workflow** (the lines marked `— local only`; see below):
 
 ```bash
@@ -29,10 +29,12 @@ python3 tools/check_ci_doc.py             # 12. the docs' count of CI steps vs c
 python3 tools/check_pyc_staleness.py      # 13. the pycache claims in OPERATIONS.md     — local only
 python3 tools/check_release_notes.py      # 14. release notes vs. withdrawn limitations  — local only
 python3 tools/check_canary_pack.py        # 15. canary pack's README.txt vs the pack    — local only
-# 16. no obvious secrets committed — CI greps the tree for token/key patterns    — in CI
+python3 tools/check_grading_doc.py        # 16. the lab-verdict rules in GRADING-MODEL.md   — local only
+#     and ADDING-A-LAB.md vs _lab_verdict_passed
+# 17. no obvious secrets committed — CI greps the tree for token/key patterns    — in CI
 ```
 
-**CI does not run steps 4–15 yet.** Adding them means a `ci.yml` change, and this repo's automation token
+**CI does not run steps 4–16 yet.** Adding them means a `ci.yml` change, and this repo's automation token
 has no `workflow` scope — GitHub answers `404` to a write under `.github/workflows/` with this token
 (re-measured 2026-11-03; re-confirmed 2026-11-05, `x-oauth-scopes` = `delete:packages, repo,
 write:discussion, write:packages`), so it takes a human with that scope (see *Changing CI*). Run the local-only steps by
@@ -117,7 +119,7 @@ right now, in the suffixes we ship most of", the `git grep` form is "is the whol
 no suffix filter". Zero output from each is the pass.
 
 Step 12 checks the *counts of CI steps* that this file, `README.md` and `SECURITY.md` all state — "four
-checks in CI", "twelve claim checkers", "steps 4–16" — against `.github/workflows/ci.yml` and
+checks in CI", "13 claim checkers", "steps 4–16" — against `.github/workflows/ci.yml` and
 against the checker files that actually exist. It exists because those counts are prose about a file in
 the tree, edited by hand every time one is added, and on the day it was written one of them was already
 wrong. It reads the workflow; it does not run it, and it says nothing about whether CI passed.
@@ -288,11 +290,12 @@ a pull request:
    Direct pushes to `main` here are the maintainer's, not a contributor's.
 2. **Branch** off `main` with one change on it. `main` is the only active branch; `legacy-orphan-tree`
    is preserved history from the old public tree and is not the place for new work.
-3. **Run the checks** in *Before you push* above (the four CI ones are mandatory; run the six
+3. **Run the checks** in *Before you push* above (the four CI ones are mandatory; run the
    claim checkers too if you touched the README's Prerequisites, its account of what `install.sh` does,
-   the lab assets, `docs/OPERATIONS.md`, `docs/API.md`, the repo metadata, or any count of CI steps),
+   the lab assets, `docs/OPERATIONS.md`, `docs/API.md`, `docs/GRADING-MODEL.md` or
+   `docs/ADDING-A-LAB.md`, the repo metadata, or any count of CI steps),
    in your clone (see *Where to develop*). Paste the real output into the PR's
-   *How it was verified* section — a summary is not evidence. For the secrets grep (step 11), zero
+   *How it was verified* section — a summary is not evidence. For the secrets grep (step 17), zero
    output is the result.
 4. **Open the pull request** using
    [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md). CI runs on the PR.

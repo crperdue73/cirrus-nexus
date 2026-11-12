@@ -1,0 +1,13 @@
+[lab-verdict] COVERAGE SHORTFALL for 'demo-01-two-pcs-and-a-real-switch-unsolved': the grader did not grade declared node(s): sw1
+[lab-verdict] COVERAGE SHORTFALL for 'demo-01-two-pcs-and-a-real-switch-unsolved': the grader did not grade declared node(s): sw1
+[lab-verdict] MISLABELLED RESULT for 'demo-01-two-pcs-and-a-real-switch-unsolved': a result was filed under the wrong node name: sw1
+case1 complete coverage, passed=True (expect True)
+   verdict=True err=''
+case2 MISSING sw1, passed=False (old note said: ordinary fail, never refused)
+   verdict=None err='the grader did not grade declared node(s): sw1'
+case3 MISSING sw1, passed=True (expect None + COVERAGE SHORTFALL)
+   verdict=None err='the grader did not grade declared node(s): sw1'
+case4 mislabelled key (expect None)
+   verdict=None err='a result was filed under the wrong node name: sw1'
+case5 complete coverage, passed=False (expect False, no error)
+   verdict=False err=''

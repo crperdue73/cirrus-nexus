@@ -4097,6 +4097,58 @@ for `API.md` and `check_operations_doc.py` for `OPERATIONS.md`. Measure whether 
 naming rules and the loader's actual acceptance test (globs, asset resolution, grading block shape)
 still agree, or record the one place they don't.
 
+---
+
+## 2026-11-12 14:00 | DOCS | ADDING-A-LAB.md measured: lab-verdict rules were stale, fixed, and now checked | proof=.nexus/proofs/adding-a-lab-verdict-rules-20261112-1400.txt | next=API.md `/docs`+`/redoc` and ttyd port range vs docs/OPERATIONS.md
+
+Took the previous run's "next" item. The loader half of `ADDING-A-LAB.md` held up (globs, one
+subdirectory level, backup-skip filter, `topology_file` relative to `LABS_DIR`, `_GUIDE_MAP` fallback
+order, malformed labs refused individually). The **grading** half did not.
+
+Both `ADDING-A-LAB.md` and `GRADING-MODEL.md` told the reader that the backend checks `nodes`
+coverage only when the grader reports `passed: true`, and that **both shipped graders violated the
+rule**. Measured against `_lab_verdict_passed` as it actually stands: `_missing = _declared - _graded`
+is computed from the returned map **before and independently of** `_passed`, there is no `if _passed`
+guard anywhere in the function (AST: `_passed` assigned line 716, the `_missing` branch line 734, zero
+`_passed`-gated `If` nodes), and a shortfall returns `None` — uncomputable — with a
+`COVERAGE SHORTFALL` log line. The behavioural probe confirms it: a grader missing `sw1` and
+reporting `passed=False` returns `None`, not `False`. So the sentence "scored as an ordinary fail
+instead of being refused" was the opposite of the code, in two reader-facing pages, on the page a
+contributor follows to ship a lab.
+
+What I did **not** do: claim the backend now audits a lab's pass condition. It does not, and should
+not be read that way. Coverage proves every declared node was *reported on*; it cannot prove the
+verdict *required* each one to pass. Both shipped graders grade all their declared nodes and then
+gate on a subset (Demo 1: 3 graded, gates on `pc-a`+`sw1`; Demo 2: 5 graded, gates on 4, omitting
+`r1` from the conjunction while reporting it). That is a design choice, and both pages now say so
+plainly instead of describing it as a bug in the backend.
+
+New tool: `tools/check_grading_doc.py` — 11 claims, read with the AST rather than by grepping prose,
+because the sentence that broke *read as code*. It checks the code side (no `_passed` guard, shortfall
+returns `None`), the doc side (both pages still state both rules and the not-pass-gated caveat), that
+the **retracted** claim has not crept back, and that each shipped grader's `grade_all` iterates every
+node its YAML declares. Six negative controls run, all six caught: reintroducing the retracted claim,
+deleting the coverage wording, deleting the not-pass-gated caveat, re-gating coverage behind `_passed`,
+returning `False` instead of `None`, and dropping `r1` from Demo 2's `grade_all`.
+
+**It caught me before I shipped.** Adding the checker without wiring it in turned `check_ci_doc.py`
+red three ways — missing from `CONTRIBUTING`'s step list, not named local-only, absent from README's
+enumeration. That is exactly the class of omission the suite exists for. Fixed: new step 16, secrets
+grep moved 16→17, counts 12→13 in `CONTRIBUTING.md` and the README table, and `check_grading_doc`
+registered as local-only for both `CONTRIBUTING` and `SECURITY`. Full suite: 14/14 exit 0, graded by
+exit status (not a `grep` pipeline's `rc` — see the standing caution above).
+
+**Caught the docrot in a doc:** that "only-on-pass" note carried a `2026-10-23` measurement date and
+read as audited. It described a function shape that no longer exists. A date on a claim is not a
+re-measurement of it.
+
+**Still not proven:** that a *third-party* grader's pass condition is right — nothing can check intent.
+And no lab was deployed; this is a read of source plus an in-process probe, not a graded session.
+
+**Next:** `docs/API.md` / `check_api_doc.py` one layer down — verify the `/docs` and `/redoc`
+reachability claims, that the ttyd port range agrees between `docs/OPERATIONS.md` and the
+frontend/backend source, and the `refused`/`error` sub-status vocabulary.
+
 **Dad-gated backlog (unchanged, do not start without his word):** ci.yml patch (12→13 checkers),
 v0.3.0 tag/Release, Screenshots (needs live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP
 10-archive/ + 3 empty lab-definitions dirs + Dockerfile.frr-bgp, published security contact,

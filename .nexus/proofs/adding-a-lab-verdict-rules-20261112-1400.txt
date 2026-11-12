@@ -1,0 +1,49 @@
+RUN 2026-11-12 14:00 UTC — ADDING-A-LAB.md / GRADING-MODEL.md lab-verdict rules
+HEAD before: 49df90666d8c10d637defe92017cb6742a832d93
+
+CLAIM UNDER TEST: both pages said the backend checks 'nodes' coverage only when the
+grader reports passed:true, and that both shipped graders therefore violated the rule.
+MEASURED: false. Coverage is computed unconditionally; a shortfall returns None.
+
+--- AST of _lab_verdict_passed (backend/main.py) ---
+_passed assigned at line: [716]
+coverage-missing branch at line: [734]
+any 'if _passed' guard: NONE
+
+--- behavioural probe (stubbed lab; real function) ---
+case1 complete coverage, passed=True (expect True)
+   verdict=True err=''
+case2 MISSING sw1, passed=False (old note said: ordinary fail, never refused)
+   verdict=None err='the grader did not grade declared node(s): sw1'
+case3 MISSING sw1, passed=True (expect None + COVERAGE SHORTFALL)
+   verdict=None err='the grader did not grade declared node(s): sw1'
+case4 mislabelled key (expect None)
+   verdict=None err='a result was filed under the wrong node name: sw1'
+case5 complete coverage, passed=False (expect False, no error)
+   verdict=False err=''
+
+--- checker negative controls (each must FAIL, then restored) ---
+NEG1 add retracted claim to ADDING-A-LAB ->  see transcript
+NEG4 gate coverage behind _passed -> FAIL 'not gated behind if _passed'
+NEG5 shortfall returns False -> FAIL 'returns None (uncomputable)'
+NEG6 drop r1 from demo-02 grade_all -> FAIL 'iterates every declared node (5)'
+
+--- final state ---
+
+11 PASS, 0 FAIL
+
+--- full suite, graded by exit status (not grep rc) ---
+rc=0 tools/check_api_doc.py
+rc=0 tools/check_api_exposure.py
+rc=0 tools/check_canary_pack.py
+rc=0 tools/check_ci_doc.py
+rc=0 tools/check_grading_doc.py
+rc=0 tools/check_install_narrative.py
+rc=0 tools/check_lab_assets.py
+rc=0 tools/check_operations_doc.py
+rc=0 tools/check_prerequisites.py
+rc=0 tools/check_pyc_staleness.py
+rc=0 tools/check_release_notes.py
+rc=0 tools/check_repo_metadata.py
+rc=0 tools/check_self_contained.py
+rc=0 tools/check_self_contained_doc.py

@@ -152,6 +152,7 @@ TOOLS = [
     "check_self_contained_doc",
     "check_pyc_staleness",
     "check_release_notes",
+    "check_grading_doc",
 ]
 
 NUMBER_WORDS = {
@@ -192,14 +193,14 @@ LOCAL_ONLY = [
     (CONTRIBUTING, "check_repo_metadata"),
     (CONTRIBUTING, "check_self_contained_doc"), (CONTRIBUTING, "check_ci_doc"),
     (CONTRIBUTING, "check_pyc_staleness"), (CONTRIBUTING, "check_release_notes"),
-    (CONTRIBUTING, "check_canary_pack"),
+    (CONTRIBUTING, "check_canary_pack"), (CONTRIBUTING, "check_grading_doc"),
     (SECURITY, "check_prerequisites"), (SECURITY, "check_install_narrative"),
     (SECURITY, "check_lab_assets"), (SECURITY, "check_api_doc"),
     (SECURITY, "check_api_exposure"),
     (SECURITY, "check_operations_doc"), (SECURITY, "check_repo_metadata"),
     (SECURITY, "check_self_contained_doc"), (SECURITY, "check_ci_doc"),
     (SECURITY, "check_pyc_staleness"), (SECURITY, "check_release_notes"),
-    (SECURITY, "check_canary_pack"),
+    (SECURITY, "check_canary_pack"), (SECURITY, "check_grading_doc"),
 ]
 
 # README's enumeration of the checkers it says are NOT CI steps. Anchored on the sentence's own

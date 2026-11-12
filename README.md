@@ -472,7 +472,7 @@ platform for its two shipped labs; it is not a finished product. What that means
 | [`docs/RELEASE-NOTES-v0.1.0-draft.md`](docs/RELEASE-NOTES-v0.1.0-draft.md) | release notes for `v0.1.0` — **historical draft**; the tag exists, its GitHub Release was never published (see `v0.2.0`) |
 | [`CONFERENCE.md`](CONFERENCE.md) | booth-operator cheat sheet (install, ports, troubleshooting, reset) — **draft / not maintained**; install & lab-catalog sections corrected to this tree |
 | [`HANDOFF-2026-09-22.md`](HANDOFF-2026-09-22.md) | dated handoff note from a 2026-09-22 demo drive — **historical / not maintained**; counts and lab names in it describe a wider tree than this release (see the banner in the file) |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | the ground rules, and the checks to run before pushing (four run in CI, twelve are claim checkers run by hand) |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | the ground rules, and the checks to run before pushing (four run in CI, 13 are claim checkers run by hand) |
 | [`SECURITY.md`](SECURITY.md) | how to report a vulnerability privately, the threat model (unauthenticated by design), what's in scope, and the automated checks that exist (four in CI, ten by hand, and no more) |
 | [`CHANGELOG.md`](CHANGELOG.md) | what changed, newest first |
 | [`10-archive/topology-audit-2026-06-09.md`](10-archive/topology-audit-2026-06-09.md) | dated 2026-06-09 topology audit — **historical**, describes a pre-release layout (see `docs/OPERATIONS.md` → Archive). Renamed from `SUMMARY-for-Dad.md` on 2026-10-30 |
@@ -553,7 +553,10 @@ cannot carry (the ttyd port range and its allocator, the bind address and the `/
 for the count of CI steps stated here, in `CONTRIBUTING.md` and in `SECURITY.md`, and
 `tools/check_pyc_staleness.py` for the `__pycache__` behaviour `docs/OPERATIONS.md` describes,
 `tools/check_canary_pack.py` for the canary list and verdicts in `tools/canaries/lab-pack/README.txt`,
-`tools/check_release_notes.py` for the release-notes claims withdrawn on 2026-11-10, and
+`tools/check_release_notes.py` for the release-notes claims withdrawn on 2026-11-10,
+`tools/check_grading_doc.py` for the lab-verdict rules in `docs/GRADING-MODEL.md` and
+`docs/ADDING-A-LAB.md` (coverage, result identity, and that neither page still carries the
+retracted "coverage is only checked on pass" claim), and
 `tools/check_self_contained_doc.py` for `docs/SELF-CONTAINED.md`) is written, applies cleanly
 to `main`, and is not pushed, because
 this repo's automation token is refused on workflow paths, so it needs a human with `workflow` scope

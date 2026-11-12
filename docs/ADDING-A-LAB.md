@@ -185,22 +185,24 @@ The **lab-level verdict** — the product's real success condition.
 }
 ```
 
-The backend uses this for the session's `submitted` status, and is supposed to enforce
-two rules on the result — **but only one of them is actually enforced today**
-(`RUN 226` / `227`, re-read 2026-10-23):
+The backend uses this for the session's `submitted` status. `_lab_verdict_passed()`
+enforces two rules on the result, and **both are hard today** (`RUN 226` / `227`,
+re-read against the source 2026-11-12):
 
 - **`nodes` must cover every `gradeable_nodes` entry.** A lab cannot pass while a
-  declared node was never checked. ⚠️ **Not enforced in practice:** the backend
-  checks coverage only when your verdict says `passed: true`, so a verdict that
-  omits a node it should have passed is scored as an ordinary fail instead of being
-  refused — and that fail is indistinguishable from "the student got it wrong."
-  Leave no node out just because the missing one would have failed: compute the
-  verdict over exactly your `gradeable_nodes` and let each result speak. Both
-  shipped graders fail this rule as written — Demo 1 returns `nodes` for all three
-  declared nodes but gates on two of them, and Demo 2 gates on four of five. See
+  declared node was never checked. A missing node makes the verdict
+  **uncomputable** — `None`, not a fail: the session stays `running` and the
+  student's node result comes back with a note that the lab-level result could not
+  be computed and that this is a system fault, not their configuration. See
   [`GRADING-MODEL.md`](GRADING-MODEL.md) → *Consistency checks on a lab verdict*.
 - **each result's `node` field must match the key it is filed under.** A result
   filed under the wrong name makes the verdict *uncomputable*, not passing.
+
+Both checks run on the returned `nodes` map regardless of whether your verdict says
+`passed: true` — there is no "only checked on pass" shortcut left. Neither is a
+substitute for your own verdict, though: coverage says every declared node was
+*reported on*, not that passing required it. **`grade_all()` is where the lab's pass
+condition lives**, and nothing below it reads your intent.
 
 Both shipped graders wrap `grade` with a `_self_identifying` decorator that stamps
 `result["node"] = node` at the point of grading; copy that pattern.
