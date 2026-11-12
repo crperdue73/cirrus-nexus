@@ -4033,3 +4033,72 @@ v0.3.0 tag/Release, Screenshots (needs live host), `.nexus/` public-shipping pol
 10-archive/ + 3 empty lab-definitions dirs + Dockerfile.frr-bgp, published security contact,
 Step 6 installer idempotence fix, 2026-10-31 grading items, NO-GRADER/NO-EXPECTED fatal,
 journal-vs-file logging, topology-type guard.
+
+---
+
+### 2026-11-12 02:00 UTC — DOC-INTEGRITY: the "non-colliding ttyd ports" sentence gets a scope, and a witness that can fail
+
+**Item:** the 2026-11-11 entry's "Next" — `docs/OPERATIONS.md:245`'s "non-colliding ttyd ports" against
+what `_allocate_port` actually implements. Measured before touching anything: `git status` clean at
+`486214d`, HEAD == `origin/main` (`git ls-remote` read, not local `origin/main`, which was not a
+resolvable rev in this clone), all 13 `tools/check_*.py` rc=0, `check_operations_doc.py` at 62 PASS,
+`py_compile` and `bash -n install.sh` rc=0.
+
+**What the live probe found (executed, not reasoned).** `_allocate_port` was imported out of
+`backend/main.py` and called against seeded state (`TTYD_PROCS`, `SESSIONS`, `_PORT_ALLOC`):
+a tracked ttyd on `8765` → first allocation `8766`; a live session holding `8767` →
+`[8765, 8766, 8768, 8769]`; cursor at `MAX-2` → `[9763, 9764, 9765, 8765]` (wraps, correctly, only
+when the wrapped-to port is free); all 1,001 ports occupied → `RuntimeError: no free ttyd port in
+8765-9765`. So the 10-05 claim is true **for ports this process can see**, and the sentence read as if
+that were all ports.
+
+**Where it can collide — the thing the doc did not say.** The skip-set is exactly (a) ports named in a
+registered session's `ttyd` map and (b) keys of `TTYD_PROCS`. A ttyd process this process no longer
+tracks — started outside the app, or whose entry was dropped — is invisible to it. ttyd binds
+`0.0.0.0` (`start_ttyd_process`), so such a port is genuinely occupied on the host; the cursor would
+hand it out and the new ttyd would fail to bind. Nothing sweeps `TTYD_PROCS` except `stop` (pops +
+terminates each of the session's ports) and `start_ttyd_process`, which terminates a stale process on a
+port it is about to reuse. That is why `start_server.py`'s `pkill -f "ttyd.*docker exec"` is part of
+the story rather than an unrelated cleanup step.
+
+**Fix (doc).** The paragraph now names the range and its membership test, states the skip-set as the
+two maps read by name, states the `RuntimeError` and the 1,001-port span, and — the substantive
+addition — scopes the claim: "treat *non-colliding* as *non-colliding within what this process
+tracks*", with the untracked-ttyd failure mode and the `pkill` tie-in spelled out.
+
+**The witness.** Eight checks added to `tools/check_operations_doc.py`, reading `_allocate_port`'s own
+body with comment lines stripped (so a commented-out `raise` cannot satisfy it) and the range off the
+`TTYD_PORT_BASE`/`TTYD_PORT_MAX` module constants — not off the docstring, which is prose. Span count
+is computed (`1,001`) rather than typed twice.
+
+**Six negative controls, each observed to FAIL on a scratch copy, then restored:**
+range `8765–9766` → FAIL on the range check; `TTYD_PROCS` read removed from the allocator → FAIL on the
+skip-set check; `raise` replaced by `return TTYD_PORT_BASE` (silent wrap) → FAIL on the refusal check;
+`RuntimeError` deleted from the doc → FAIL on the refusal-type check; the scope sentence replaced → FAIL;
+the doc naming "the configured range" instead of the numbers → FAIL. Restored: 70 PASS, 0 FAIL.
+
+**Measured after:** all 13 `tools/check_*.py` rc=0 (loop used `>/dev/null` + `$?`); `check_operations_doc.py`
+62 → **70** PASS; `py_compile backend/main.py` + `py_compile tools/check_operations_doc.py` rc=0;
+`bash -n install.sh` rc=0. Backend untouched — the only files changed are `docs/OPERATIONS.md` and its
+checker. Backups in `.nexus/bundle-archive/*.bak-2026-11-12-0204-ttyd-allocator-claim`. Proof:
+`.nexus/proofs/ttyd-allocator-claim-20261112-0200.txt` (the probe transcript, unedited).
+
+**Note for later runs:** `scripts/safe-backup.sh` lives in the *workspace* root, not in the repo, and it
+takes one path at a time — passing it two paths concatenates them into one filename. Recorded here
+because I hit it this run and it silently "succeeded".
+
+**Still not proven:** that a real `ttyd` bind on a handed-out port succeeds. No `ttyd`, `docker` or
+`containerlab` on this box, so the probe is an in-process call against seeded state, which is what the
+claim is about (the allocator's choice), not an end-to-end terminal.
+
+**Next:** `docs/ADDING-A-LAB.md` has no checker. It is reader-facing, it is the page a contributor
+follows to ship a lab, and nothing re-reads it — the same gap `check_api_doc.py` was written to close
+for `API.md` and `check_operations_doc.py` for `OPERATIONS.md`. Measure whether its required files,
+naming rules and the loader's actual acceptance test (globs, asset resolution, grading block shape)
+still agree, or record the one place they don't.
+
+**Dad-gated backlog (unchanged, do not start without his word):** ci.yml patch (12→13 checkers),
+v0.3.0 tag/Release, Screenshots (needs live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP
+10-archive/ + 3 empty lab-definitions dirs + Dockerfile.frr-bgp, published security contact,
+Step 6 installer idempotence fix, 2026-10-31 grading items, NO-GRADER/NO-EXPECTED fatal,
+journal-vs-file logging, topology-type guard.

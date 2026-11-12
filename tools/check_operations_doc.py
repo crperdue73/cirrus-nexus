@@ -127,6 +127,36 @@ def main() -> int:
     check("reaper exits 3 when it cannot ask", re.search(r"exit 3", reaper) is not None)
     check("reaper exits 4 on an unlabelled clab container", re.search(r"exit 4", reaper) is not None)
 
+    main_py_src = read("backend/main.py")
+    # ---- ttyd port allocator -----------------------------------------------
+    # The "Concurrent sessions" section claims non-colliding ports, a named range,
+    # a refusal instead of a wrap, and a scope for what the allocator can see.
+    # Each of those is read off _allocate_port's own body, not off its docstring.
+    alloc_m = re.search(r"\ndef _allocate_port\([^)]*\)[^:]*:\n(.*?)(?=\n(?=\S)|\Z)", main_py_src, re.S)
+    alloc = "" if not alloc_m else "\n".join(
+        l for l in alloc_m.group(1).splitlines() if not l.strip().startswith("#"))
+    base_m = re.search(r"^TTYD_PORT_BASE\s*=\s*(\d+)", main_py_src, re.M)
+    max_m = re.search(r"^TTYD_PORT_MAX\s*=\s*(\d+)", main_py_src, re.M)
+    span = (int(max_m.group(1)) - int(base_m.group(1)) + 1) if (base_m and max_m) else 0
+    check("_allocate_port found in backend/main.py", bool(alloc))
+    check("OPERATIONS prints the ttyd range exactly as the code defines it",
+          span > 0 and f"`{base_m.group(1)}`–`{max_m.group(1)}`" in ops,
+          "the section's range does not match TTYD_PORT_BASE/TTYD_PORT_MAX")
+    check("_allocate_port skips ports held by live sessions and by TTYD_PROCS",
+          "SESSIONS.values()" in alloc and "TTYD_PROCS" in alloc,
+          "the doc says it skips ports in use; the allocator must read both maps")
+    check("_allocate_port raises RuntimeError rather than wrapping onto a live port",
+          "raise RuntimeError" in alloc and "in_use" in alloc)
+    check("OPERATIONS names the refusal type and the span count",
+          "RuntimeError" in ops and f"{span:,}" in ops,
+          f"expected the string {span:,} somewhere in the allocator paragraph")
+    check("OPERATIONS scopes 'non-colliding' to what the process tracks",
+          "non-colliding within what this process" in ops)
+    check("OPERATIONS names start_server.py's pkill as part of the port story",
+          re.search(r"pkill.*ttyd|ttyd.*pkill", ops) is not None)
+    check("_allocate_port is module-level and callable without a request (the claim is testable)",
+          re.search(r"^def _allocate_port\(", main_py_src, re.M) is not None)
+
     # ---- Image pin ---------------------------------------------------------
     pin = read("assets/frr-image.pin")
     check("pin names the shipped Dockerfile hash", "dockerfile_sha256=b3046a70" in pin)

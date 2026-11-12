@@ -246,6 +246,19 @@ distinct container names, non-colliding ttyd ports,
 and each grade reading its own session's containers). No policy refuses a duplicate start; the UI
 avoids them by accident rather than by rule.
 
+**Where the non-colliding ports actually come from — and when they can collide.** `_allocate_port`
+(`backend/main.py`) hands out ports from `TTYD_PORT_BASE`–`TTYD_PORT_MAX` (`8765`–`9765`, inclusive)
+by walking a rotating cursor and **skipping** any port it can see in use: every port named in a
+registered session's `ttyd` map, plus every key in `TTYD_PROCS` (the port → ttyd-process map). It
+**raises `RuntimeError`** when all 1,001 ports are spoken for rather than wrapping onto a live one.
+That covers two sessions started by this process. It does **not** cover a port held by a ttyd process
+this process no longer tracks — a ttyd started outside the app, or one whose process entry was
+dropped. The bind is `0.0.0.0`, so such a port is not free; the cursor would hand it out and the new
+`ttyd` would fail to bind. Nothing sweeps `TTYD_PROCS` except the stop path (`stop` pops and
+terminates each of the session's ports) and `start_ttyd_process`, which terminates any stale process it
+finds on a port it is about to reuse. Treat "non-colliding" as "non-colliding within what this process
+tracks", which is why `start_server.py`'s `pkill` of leftover `ttyd` (above) is part of the story.
+
 **What this costs:** every session consumes its lab's full container set (Demo 1 = 3 nodes, Demo 2 = 5), and each
 switch is a ~0.75 GB image. Nothing caps it — treat "one session per student per lab" as the
 operational convention.
