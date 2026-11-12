@@ -1,0 +1,22 @@
+=== proof: API.md /docs /redoc + response-shape measurement, 2026-11-12 20:00 UTC ===
+
+--- unauthenticated reachability of the three doc pages (TestClient, no headers) ---
+== /docs, /redoc, /openapi.json (with NO auth headers) ==
+/docs 200 text/html; charset=utf-8 1004
+/redoc 200 text/html; charset=utf-8 886
+/openapi.json 200 application/json 5597
+
+== openapi: per-operation declared responses ==
+get ['200', '422']
+post ['200', '422']
+
+--- three-state vocabulary: graded / error / refused ---
+[lab-verdict] COVERAGE SHORTFALL for 'demo-01-two-pcs-and-a-real-switch-unsolved': the grader did not grade declared node(s): pc-a, pc-b, sw1
+HTTP 200 {"session_id":"probe-err-1","node":"n1","grade":{"passed":false,"score":0.0,"feedback":["❌ Grader error: grader exploded"],"competencies":[],"node":"","runtime_digest":"sha256:deadbeef","status":"error"}}
+HTTP 200 {"session_id":"probe-err-1","node":"n1","grade":{"passed":true,"score":1.0,"feedback":["ok","⚠️ The lab-level result could not be computed (the grader did not grade declared node(s): pc-a, pc-b, sw1). Your result above stands. This is a system fault, not something about your configuration."],"compet
+
+--- a grader-returned status=refused renders as 409 ---
+[lab-verdict] COVERAGE SHORTFALL for 'demo-01-two-pcs-and-a-real-switch-unsolved': the grader did not grade declared node(s): pc-a, pc-b, sw1
+lab: demo-01-two-pcs-and-a-real-switch-unsolved nodes: ?
+HTTP 409
+BODY {"detail":"The grader declined: it could not examine the node."}

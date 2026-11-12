@@ -4154,3 +4154,74 @@ v0.3.0 tag/Release, Screenshots (needs live host), `.nexus/` public-shipping pol
 10-archive/ + 3 empty lab-definitions dirs + Dockerfile.frr-bgp, published security contact,
 Step 6 installer idempotence fix, 2026-10-31 grading items, NO-GRADER/NO-EXPECTED fatal,
 journal-vs-file logging, topology-type guard.
+
+---
+
+## 2026-11-12 20:00 | DOCS | API.md `/docs`+`/redoc` measured live, response-shape gap found and stated | proof=.nexus/proofs/api-docs-and-response-shapes-20261112-2000.txt | next=README's "11 routes" claim vs the OpenAPI document's own path count, and the 422-before-handler claim
+
+Took the previous run's "next": the `/docs`/`/redoc` reachability claims and the `refused`/`error`
+sub-status vocabulary — the two surfaces `check_api_doc.py` had printed as out of scope since
+2026-11-10.
+
+**Both of those held, measured not reasoned.** Three doc pages served through `TestClient` with **no
+auth headers**: `/docs` 200 `text/html` 1004 bytes, `/redoc` 200 `text/html` 886 bytes, `/openapi.json`
+200 `application/json` 5597 bytes. The vocabulary matched at every construction site: `GraderResult`
+defaults `status` to `"graded"`, the AST finds exactly three `status=` kwargs (`refused` ×3, `error`
+×1), and a live probe of all three states on a stubbed session returned `409` for a **grader-returned**
+`refused` (proving the route translates the value rather than only its own pre-grade refusals),
+`200 + status:"error"` for a grader that raises, and `200 + status:"graded"` for a real verdict. So
+"all five things" and "a grader that raises is not an HTTP error" are both true of this tree.
+
+**What did not hold is one line in the README.** It sold `/openapi.json` as "the raw OpenAPI 3
+document, **for codegen or an external client**". Measured against `main.app.openapi()`: **all 11
+operations declare a `200` whose schema is empty `{}`**, and `components.schemas` contains only
+`HTTPValidationError` and `ValidationError`. No route declares a `response_model`, so FastAPI emits
+nothing to generate from. `check_api_doc.py` could not catch this — it checks the route table and
+parameters, which *are* carried; the payloads are not. `check_api_exposure.py` could not either: it
+verified `docs_url`/`redoc_url`/`openapi_url` were *set in config*, which they are, so it passed 11/11
+while the codegen promise was false.
+
+**Fix (docs).** The README table row now says what the document is, and a short paragraph under it
+states the gap in numbers: 11 schema-less `200`s, two validation schemas only, *Try it out* fine,
+parameter lists fine, a generated client typing every response as "anything". `docs/API.md`'s
+known-gap paragraph was a single item (non-`200` codes) and is now two, the second being the response
+shapes — including the `200`s. The page's **opening promise** was the more misleading sentence:
+"so nothing here can drift silently" is now scoped to *route table and parameters*, with the response
+shapes and raised codes named as living outside that safeguard.
+
+**The witness.** `check_api_exposure.py` gained claim 5 (5 checks): it builds the real OpenAPI
+document and asserts the schemas, then holds both pages to *their own* current sentences. It is
+deliberately two-sided — if someone adds a `response_model`, the gap stops being real and the check
+drops to an `[info]` telling the next run to re-read the pages rather than silently passing.
+
+**Four negative controls, each observed to FAIL on the working tree, then restored:**
+`for codegen` put back in the README → FAIL; the README response caveat deleted → FAIL; the API.md
+second-gap paragraph deleted → FAIL; the unscoped opening promise restored → FAIL. **One of them
+caught me first:** my initial NC3 mutation silently didn't apply (the sentence wraps a line break, so
+the `sed` matched nothing) and I read a clean `0 FAIL` as "the witness holds". A control that never
+mutated the tree cannot pass or fail — it's not evidence. Re-ran it with an assertion that the
+substitution landed; it failed correctly.
+
+**Measured after:** all 14 `tools/check_*.py` exit 0 (graded by exit status, not a `grep` pipeline's
+`rc`); `check_api_exposure.py` 11 → **16** PASS; `py_compile backend/main.py` +
+`py_compile tools/check_api_exposure.py` ok; `bash -n install.sh` ok. `backend/main.py` untouched —
+the only files changed are `README.md`, `docs/API.md` and the checker.
+
+**Still not proven:** that `/docs` is reachable through a *real bind* on a live host, and that Swagger
+UI's *Try it out* actually round-trips against a deployed lab. The probe is `TestClient` against the
+ASGI app: it proves the routes are mounted and unauthenticated, not that a browser on the classroom
+subnet gets through. No server, containers or ttyd on this box.
+
+**Next:** the README's "11 routes" headline and `docs/API.md`'s "11 routes" both rest on a count that
+`check_api_doc.py` derives — good. What nothing derives is the **`422` claim** ("returned before the
+handler runs") and the README's claim that a bad `AEGIS_PORT` "exits with a sentence naming the
+problem, not a traceback" (`:197` area). The former is a FastAPI-behaviour claim that can be probed
+with a request lacking the required query param; the latter needs `run()` called with a poisoned
+`AEGIS_PORT` and its exit path read. Measure both.
+
+**Dad-gated backlog (unchanged, do not start without his word):** ci.yml patch (14 checkers now),
+v0.3.0 tag/Release, Screenshots (needs live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP
+10-archive/ + 3 empty lab-definitions dirs + Dockerfile.frr-bgp, published security contact,
+Step 6 installer idempotence fix, 2026-10-31 grading items, NO-GRADER/NO-EXPECTED fatal,
+journal-vs-file logging, topology-type guard, **add `response_model` to the routes** (would close the
+gap above; it changes the wire contract's documentation and should be Dad's call, not a docs run's).

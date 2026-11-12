@@ -239,6 +239,80 @@ def check_ttyd_url(text, source):
             "start_lab does not call _rewrite_ttyd_urls on the ttyd map")
 
 
+# --- claim 5: the response shapes are absent from the document --------------------------------
+
+def check_response_shapes(api_text, readme_text, spec):
+    """Both pages now say the OpenAPI document carries no response schemas.
+
+    Measured 2026-11-12: all 11 operations declare a `200` whose schema is empty `{}`, and
+    `components.schemas` holds only FastAPI's two validation-error models. The README used to sell
+    `/openapi.json` as "for codegen or an external client", which is a promise a client generator
+    cannot keep against this document. This check reads the document the app actually serves and
+    holds the pages to it — so if a `response_model` is ever added, the "not carried" sentences go
+    red and have to be withdrawn, rather than quietly becoming false the other way.
+    """
+    ops = []
+    empty_200 = 0
+    for path, methods in spec.get("paths", {}).items():
+        for method, op in methods.items():
+            ops.append((method, path, op))
+            schema = (op.get("responses", {}).get("200", {})
+                      .get("content", {}).get("application/json", {}).get("schema"))
+            if schema == {}:
+                empty_200 += 1
+    schemas = sorted((spec.get("components", {}).get("schemas") or {}).keys())
+    declares_response_model = "response_model" in open(BACKEND, encoding="utf-8").read()
+
+    if not ops:
+        bad("the app serves at least one operation", "openapi() returned no paths")
+        return
+
+    # The code side: is the gap real, or has it been closed?
+    gap_is_real = (empty_200 == len(ops) and not declares_response_model)
+    if gap_is_real:
+        if schemas != ["HTTPValidationError", "ValidationError"]:
+            bad("the document's only schemas are FastAPI's two validation errors",
+                f"components.schemas = {schemas}")
+        else:
+            ok("the document's only schemas are FastAPI's two validation errors",
+               f"all {len(ops)} operations declare a schema-less 200")
+    else:
+        info("the response-shape gap has changed shape",
+             f"{empty_200}/{len(ops)} operations schema-less, response_model present={declares_response_model} "
+             "— re-read both pages before trusting their 'not carried' sentences")
+
+    # The doc side, but only claim what is true of the code right now.
+    if gap_is_real:
+        if "not their responses" in readme_text or "but not their responses" in readme_text:
+            ok("the README says the document carries routes and parameters, not responses")
+        else:
+            bad("the README says the document carries routes and parameters, not responses",
+                "the sentence that made /openapi.json honest is gone")
+
+        if re.search(r"for codegen", readme_text):
+            bad("the README no longer sells /openapi.json as ready for codegen",
+                "found 'for codegen' while no response schema exists")
+        else:
+            ok("the README no longer sells /openapi.json as ready for codegen")
+
+        if "The response *shapes*, including the `200`s" in api_text or \
+           "The response *shapes*, including the" in api_text:
+            ok("API.md names the response shapes as a second, separate gap")
+        else:
+            bad("API.md names the response shapes as a second, separate gap",
+                "the page still implies only the non-200 codes are missing")
+
+        # The page's opening promise must be scoped to what is actually guarded.
+        if re.search(r"nothing here can drift silently", api_text):
+            bad("API.md no longer claims the whole page can't drift",
+                "found the old unscoped promise in the opening paragraph")
+        else:
+            ok("API.md no longer claims the whole page can't drift")
+    else:
+        info("doc-side response-shape claims not asserted",
+             "the gap this check was written against is gone; the pages need a re-read, not a pass")
+
+
 # --- main --------------------------------------------------------------------------------------
 
 def main():
@@ -270,6 +344,18 @@ def main():
     check_bind_and_docs(text, source, doc_urls)
     check_substatus(text, source)
     check_ttyd_url(text, source)
+
+    # the document the app actually serves, for claim 5
+    spec_proc = subprocess.run(
+        [sys.executable, "-c",
+         "import json, sys; sys.path.insert(0, %r); import main; print(json.dumps(main.app.openapi()))"
+         % os.path.join(ROOT, "backend")],
+        capture_output=True, text=True, cwd=ROOT)
+    if spec_proc.returncode != 0:
+        die("could not build the OpenAPI document: " + (spec_proc.stderr or "").strip()[-200:])
+    readme_path = os.path.join(ROOT, "README.md")
+    readme_text = open(readme_path, encoding="utf-8").read() if os.path.isfile(readme_path) else ""
+    check_response_shapes(text, readme_text, json.loads(spec_proc.stdout))
 
     info("NOT checked here (needs a live server, not this tree)",
          "whether /docs, /redoc and the ttyd ports are reachable through a real bind — "

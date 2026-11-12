@@ -320,9 +320,18 @@ written by hand, so they cannot drift from the code:
 
 | page | what it is |
 |------|------------|
-| `/docs` | Swagger UI — every route, its parameters, and a *Try it out* button |
-| `/redoc` | the same schema as reference documentation |
-| `/openapi.json` | the raw OpenAPI 3 document, for codegen or an external client |
+| `/docs` | Swagger UI — every route and its parameters, with a *Try it out* button |
+| `/redoc` | the same document as reference documentation |
+| `/openapi.json` | the raw OpenAPI 3 document |
+
+**The OpenAPI document carries the routes and their parameters, but not their responses.**
+Measured on this tree: all 11 operations declare a `200` whose schema is empty `{}`, and the only
+schemas in `components` are `HTTPValidationError` and `ValidationError` — FastAPI generates nothing
+else because no route declares a `response_model`. So *Try it out* works and the parameter lists are
+right, but a client generated from this document will type every response as "anything", and the
+`grade` payload below is described by this README rather than advertised by the schema. The status
+table in [`docs/API.md`](docs/API.md) has the same standing: it is read out of the handler bodies,
+not out of the document.
 
 ```
 http://localhost:8000/docs

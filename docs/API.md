@@ -2,8 +2,10 @@
 
 AEGIS exposes **11 routes** on one FastAPI app (`backend/main.py`). This page is a reader's
 reference to them; the app also generates its own documentation from the same route table at
-`/docs` (Swagger UI), `/redoc` and `/openapi.json`, so nothing here can drift silently — if this page
-and `/openapi.json` disagree, the running app is right and this page is a bug.
+`/docs` (Swagger UI), `/redoc` and `/openapi.json`, so the **route table and parameters** cannot drift
+silently — if this page and `/openapi.json` disagree on a route or a parameter, the running app is right
+and this page is a bug. Two things live outside that safeguard and are stated in full at the end of
+*Status codes*: the response shapes, and the codes a handler raises.
 
 Everything below was read out of the tree, not written from memory: the route list, the parameter
 lists and their `in`/`required` flags come from the app's own OpenAPI document
@@ -183,11 +185,22 @@ A **grader that raises** is not an HTTP error at all. `submit` returns `200` wit
 "error"` and the digest it was attempted against — an attributable read of a failure, kept distinct from
 both a verdict and a refusal.
 
-**This table is not in `/openapi.json`, and that is a known gap.** Measured on this tree: every
-operation's declared `responses` are `200` and `422` only. The 404/409/500s are raised by
-`HTTPException` inside handler bodies, which FastAPI does not turn into documented responses unless the
-route declares them. Clients get the codes — they just aren't advertised. `tools/check_api_doc.py`
-reads this table against the handlers' `raise` sites, so it cannot go stale the way the route table would.
+**Two things are not in `/openapi.json`, and both are known gaps.** Measured on this tree:
+
+1. **Non-`200` codes.** Every operation's declared `responses` are `200` and `422` only. The
+   404/409/500s are raised by `HTTPException` inside handler bodies, which FastAPI does not turn into
+   documented responses unless the route declares them. Clients get the codes — they just aren't
+   advertised.
+2. **The response *shapes*, including the `200`s.** All 11 operations declare a `200` whose schema is
+   empty `{}`, and `components.schemas` holds only `HTTPValidationError` and `ValidationError` — no
+   route declares a `response_model`, so FastAPI has nothing to emit. The `grade` object, the lab
+   records and the session records described below come from the handler bodies. A client generated
+   from the document sees the routes and the parameters; it does not see the payloads.
+
+This page's opening promise is scoped accordingly: the **route table and parameter lists** cannot
+silently drift from the app — `tools/check_api_doc.py` re-derives them from `main.app.openapi()` and
+fails in both directions — and the **status table** is read against the handlers' `raise` sites. The
+response shapes are the one part no tool re-derives, because the document does not carry them.
 
 ---
 
