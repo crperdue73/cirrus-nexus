@@ -5,6 +5,69 @@ All notable changes to AEGIS are recorded here. This project ships two labs
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — week of 2026-11-13
+
+This week **changes what the linter does**, so unlike the last two windows it is not purely documentation.
+`tools/lint_lab_pack.py` gained three verdict fixes; each one was a case where the tool returned a
+confident answer it had not earned. Nothing a learner *runs* changed: no lab's verdict moved, and the two
+shipping labs still lint `UNSOLVED`, `rc=0`.
+
+Measured on the base commit (`8a4120c`, 2026-11-13 22:00 UTC):
+
+```
+git describe --tags                  → v0.2.0-88-g8a4120c
+git rev-list --count v0.2.0..HEAD    → 88   (32 non-merge this week)
+git diff --stat 110b4ec..HEAD      → 57 files, +4666 / −141
+tools/lint_lab_pack.py (both labs)   → rc=0
+```
+
+**No tag was cut and no GitHub Release was published for this window.** Notes are drafted in
+[`docs/RELEASE-NOTES-v0.3.2-draft.md`](docs/RELEASE-NOTES-v0.3.2-draft.md) and await the operator's call.
+A tag is **still defensible and still not urgent**: the linter changes affect a local audit tool, not the
+product. Two windows now sit unreleased underneath this one (`v0.3.0` draft, week of 2026-10-30 — which
+contains real fixes — and `v0.3.1` draft, week of 2026-11-06). Cutting this week alone would strand or
+misnumber those.
+
+### Changed
+- **`lint_lab_pack.py`: an unclassifiable lab no longer exits 0** (`7d0aa30`). A lab the tool could not
+  classify was reported as a passing blank. It now says so and sets a failing exit code.
+- **`lint_lab_pack.py`: a grader that raises on import is no longer read as `NO-GRADER`, rc 0** (`9b6a557`).
+  An import-time exception was being folded into "this lab has no grader" — a benign-looking verdict for
+  a real breakage.
+- **`lint_lab_pack.py`: `NO-TOPOLOGY` is its own verdict** (`0933c08`). A lab whose topology cannot be
+  read was being reported as `UNSOLVED`, which asserts the learner has not solved it. Unreadable is not
+  unsolved.
+- **`lint_lab_pack.py` reads the router maps the graders actually expose** (`313dcaf`), and canaries'
+  graders are resolved **in the pack, not in this tree** (`0498da2`); the canary gate now exercises
+  `NO-GRADER` and `NO-EXPECTED` as live cases rather than describing them.
+- **`tools/lint_lab_pack.py` — 252 lines changed** over the window; this is the file that moved.
+
+### Fixed
+- **`docs/SELF-CONTAINED.md` said its checker pins 16 claims; the checker pins 19** (`37a6ef9`), and the
+  anchor count is now **derived from the page rather than typed** (`4b16fda`) — the same failure mode
+  the page exists to catch.
+- **The README said the OpenAPI document carried response schemas; it does not** (`84f79ea`). The lab-verdict
+  rules in `ADDING-A-LAB.md` and `GRADING-MODEL.md` were corrected against the loader, with
+  `tools/check_grading_doc.py` added to hold them (`1972e4d`).
+- **The ttyd "non-colliding ports" claim is now scoped to what the allocator can see** (`34ebc04`,
+  measured in `49df906`) rather than stated as an absolute.
+- **`docs/API.md`'s status-code table is read against the handlers' raise sites** (`67e36fc`), and the
+  claims the OpenAPI document cannot carry are now checked separately (`486214d`).
+- **The README's local-only checker list is derived** instead of hand-kept, and names all 13 unwired
+  checkers rather than 11 (`5c55649`, `7d687e4`).
+- **The journald claim was false.** The journal is empty; the log is `/var/log/aegis.log` (`875dfd1`).
+  The checker now reads the unit (`ac13095`) instead of trusting the sentence.
+- **`install.sh` Step 6 re-install nests the app tree** (not idempotent) — measured and written down,
+  **left unfixed as a behaviour call for the operator** (`fe72bdf`).
+- **A limitation withdrawn 2026-11-10 was already fixed on 2026-10-24** (`b766df9`), with the missing
+  checker added.
+
+### Known, not fixed
+- **The CI workflow patch is still not applied.** This token is refused on `.github/workflows/`. What CI
+  runs today is unchanged. Unchanged from last week; still needs a human with `workflow` scope.
+- **`install.sh` is not idempotent** (see above). Behaviour call, not a bug I should silently change.
+- **Topology-as-list crashes lab reload** — repro written for the operator (`269bc4c`); not fixed.
+
 ## [Unreleased] — week of 2026-11-06
 
 This week changed **no shipped behaviour**: every commit below is a document made to match the tree, or a
