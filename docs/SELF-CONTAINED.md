@@ -47,7 +47,7 @@ have passed it.
 ## What this page itself is measured against
 
 The two sections above are claims *about a Python file*, so they are checked the same way README's
-Prerequisites are: `tools/check_self_contained_doc.py` pins 16 of them — each `fails if` bullet (by the
+Prerequisites are: `tools/check_self_contained_doc.py` pins 19 of them — each `fails if` bullet (by the
 rule that implements it), the separate-count promise, the suffix set the developer-path rule actually
 scans, the allowlist, the pin's `tarball`/`UNPINNED` state, the pull table against `install.sh`'s
 pre-pull loop, and the two installer facts below. Both directions are checked: a rule the page says

@@ -4258,3 +4258,42 @@ tag/Release, Screenshots (needs live host), `.nexus/` public-shipping policy, DE
 installer idempotence fix, 2026-10-31 grading items, NO-GRADER/NO-EXPECTED fatal, journal-vs-file
 logging, topology-type guard, `response_model` on the routes, **and the stashed 422-row edit above —
 commit it as-is or drop it, but it should not sit unattributed.**
+
+## 2026-11-13 14:00Z — the doc that counts its own checker said 16; the checker pins 19
+
+Small, measured, one number. `docs/SELF-CONTAINED.md` said "`tools/check_self_contained_doc.py` pins **16** of
+them" — of "the two sections above", i.e. the `fails if` bullets and the limitations. The tool's own
+`DOC_ANCHORS` list has **19** entries, and every one of the 19 is present in the doc (ran the list out of the
+source and matched it against the page: 19/19 found, 0 missing). The page also said "pins 16 of them — each
+`fails if` bullet … the separate-count promise, the suffix set … the allowlist, the pin's `tarball`/`UNPINNED`
+state, the pull table …, and the two installer facts below" — a list that plainly runs past 16. Corrected to
+19. This is the page that governs a checker whose whole job is "a claim the prose states must still be true of
+the tool", so a wrong count on that page is exactly the class of defect it exists to catch.
+
+**Checked and left alone (already true).** The same page's "`tools/check_self_contained.py` … 14 required
+install files present" is the *behaviour* line, not a claim count — it says 15/2 in the worklog and 14/1/2 now
+because the tool reports three buckets (required 14, repo-only 1, linked doc assets 2); the doc does not quote
+those numbers, so nothing there to fix. The page's CI sentence ("runs on every push and PR in CI") still matches
+`ci.yml:26`, and its three "local-only claim checks" wording (README says four in CI, 13 by hand) is
+`check_ci_doc.py`'s job and exits 0.
+
+**Self-check on the number I just wrote.** A count in prose is a claim that nothing derives. It is pinned in
+one direction now: `check_self_contained_doc.py` fails (rc=2, "anchor(s) gone") if `DOC_ANCHORS` is *reworded*,
+but renaming an anchor keeps it present, and nothing stops someone adding a 20th anchor without touching the
+page. Measured: adding a dummy 20th anchor keeps the check at rc=0. Not fixed here — it needs a check that
+counts `DOC_ANCHORS` against the page's stated number, which is a code change to a claim checker, not a docs
+edit; recorded as the next item rather than half-done.
+
+**Ran:** all 14 `tools/check_*.py` exit 0 (graded by exit status); `tools/check_self_contained.py` and
+`check_self_contained_doc.py` re-run after the edit (rc=0, 17 claim(s)); `bash -n install.sh` ok. One file
+changed: `docs/SELF-CONTAINED.md`. Backup at `.nexus/bundle-archive/SELF-CONTAINED.md.bak-2026-11-13-1401-manual`.
+
+**Next:** make the 19 self-derivable — `check_self_contained_doc.py` should read the count out of its own
+`DOC_ANCHORS` and compare it to the number the page states, so neither can drift; then re-run it with a
+mutated anchor count as the witness.
+
+**Dad-gated backlog (unchanged, do not start without his word):** ci.yml patch (15 checkers), v0.3.0 tag/Release,
+Screenshots (needs live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP items (10-archive/, 3 empty
+lab-definitions dirs, Dockerfile.frr-bgp), published security contact, Step 6 installer idempotence fix,
+2026-10-31 grading items, NO-GRADER/NO-EXPECTED fatal, journal-vs-file logging, topology-type guard,
+`response_model` on the routes, and the stashed 422-row edit (commit as-is or drop it).
