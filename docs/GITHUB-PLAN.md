@@ -4225,3 +4225,36 @@ v0.3.0 tag/Release, Screenshots (needs live host), `.nexus/` public-shipping pol
 Step 6 installer idempotence fix, 2026-10-31 grading items, NO-GRADER/NO-EXPECTED fatal,
 journal-vs-file logging, topology-type guard, **add `response_model` to the routes** (would close the
 gap above; it changes the wire contract's documentation and should be Dad's call, not a docs run's).
+
+## 2026-11-13 12:00Z — the two claims nothing derived (422 row, AEGIS_PORT sentence)
+
+Executed yesterday's `next=` — both halves, measured, neither a defect.
+
+**422.** `main.app.openapi()` declares a 422 on exactly 7 of the 11 operations; the 4 parameterless ones
+(`GET /api`, `GET /api/labs`, `GET /api/sessions`, `POST /api/labs/reload`) declare `200` only. Live on a
+TestClient: `POST /api/sessions/start` with no query → `422` naming `query/lab_id`;
+`POST /api/sessions/{id}/submit` with no query → `422` naming `query/node`; all four parameterless routes
+→ `200`. So the row's current wording is true and the earlier "every route" was false.
+
+**AEGIS_PORT.** `python3 backend/main.py` with `AEGIS_PORT=not-a-number` → `rc=1`, one stderr sentence,
+no traceback; `0` and `70000` → `rc=1`, "must be between 1 and 65535". Claim holds.
+
+**Tree hygiene, and my own error.** At the start of this run the tree was dirty: `docs/API.md` and
+`tools/check_api_doc.py` carried an *uncommitted, unattributed* 422-row correction ("every route" → "the
+7 routes that declare a parameter", plus a new check 5). I did not make it in this session, and nothing in
+`logs/nexus-forward.log` claims it — **self-citing or not, an uncommitted edit with no log line is a rumor
+in the tree.** I stashed it (`UNATTRIBUTED 2026-11-13 pre-run`, recoverable) and measured the claims
+against a clean `84f79ea`, which is why (A) above is a real measurement of the shipped wording, not of a
+patch. First probe also crashed on missing `httpx2` and I read `head`'s rc as the process's; re-ran
+properly. Proof: `.nexus/proofs/422-row-and-port-claims-measured-20261113-1200.txt`.
+
+**Next:** the README's `/openapi.json` `/docs` accessibility is now the last unmeasured reader-facing
+claim that needs a live host (parameter lists and *Try it out* were probed at ASGI level). Don't
+re-measure 422 or AEGIS_PORT.
+
+**Dad-gated backlog (unchanged, do not start without his word):** ci.yml patch (15 checkers), v0.3.0
+tag/Release, Screenshots (needs live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP items
+(10-archive/, 3 empty lab-definitions dirs, Dockerfile.frr-bgp), published security contact, Step 6
+installer idempotence fix, 2026-10-31 grading items, NO-GRADER/NO-EXPECTED fatal, journal-vs-file
+logging, topology-type guard, `response_model` on the routes, **and the stashed 422-row edit above —
+commit it as-is or drop it, but it should not sit unattributed.**

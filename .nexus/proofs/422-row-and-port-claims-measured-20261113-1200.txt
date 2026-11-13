@@ -1,0 +1,49 @@
+PROOF — the 422 row and the AEGIS_PORT sentence, measured
+2026-11-13 12:00Z | tree @ 84f79ea (clean, local==origin not re-checked this run) | run: nexus-morning-plan
+
+WHAT WAS ASKED
+Yesterday's GITHUB-PLAN "Next" named two claims nothing in the tree derives:
+  (a) README: docs/API.md's 422 claim "returned before the handler runs" / which routes can answer 422;
+  (b) README ~line 443 area: a bad AEGIS_PORT "exits with a sentence naming the problem, not a traceback".
+
+MEASUREMENT HARNESS (stated because it is not the shipping env)
+  Venv /tmp/v422 with fastapi 0.162.5 + starlette TestClient (httpx2) + pyyaml.
+  The maintenance host's system python has no httpx2, so TestClient refuses there — this run is
+  ASGI-level, on a real venv-pinned FastAPI, NOT a live bind on a deployed host.
+
+(A) 422 — HOLDS, measured three ways
+  1. Document: main.app.openapi() -> exactly 7 operations declare a 422:
+       GET /api/labs/{lab_id}, GET /api/labs/{lab_id}/guide, GET /api/labs/{lab_id}/topology,
+       GET /api/sessions/{session_id}, POST /api/sessions/start, POST /api/sessions/{session_id}/stop,
+       POST /api/sessions/{session_id}/submit
+     The 4 parameterless ones declare 200 only: GET /api, GET /api/labs, GET /api/sessions,
+     POST /api/labs/reload. Count 7 + 4 = 11 operations. Matches docs/API.md note 1.
+  2. Live: POST /api/sessions/start with no query -> 422 {"type":"missing","loc":["query","lab_id"],...}
+           POST /api/sessions/xyz/submit with no query -> 422 loc ["query","node"]
+  3. Control (the 4 parameterless): GET /api 200, GET /api/labs 200, GET /api/sessions 200,
+     POST /api/labs/reload 200 — none answers 422. So "every route" (the old wording) was false and
+     the current wording ("the 7 routes that declare a parameter") is true.
+  "before any handler runs": evidenced by the body shape — the reply is FastAPI's validation envelope
+  naming query/lab_id, not any handler-produced `detail` string; start's handlers never execute on a
+  missing param (no session id, no container). Credited as such, not as a stronger claim.
+
+(B) AEGIS_PORT — HOLDS, measured on the real entry point (python3 backend/main.py)
+  AEGIS_PORT=not-a-number -> rc=1, stderr: [aegis] AEGIS_PORT must be a whole number, got 'not-a-number'.
+                                Unset AEGIS_PORT to use the default 8000.
+  AEGIS_PORT=0            -> rc=1, stderr: [aegis] AEGIS_PORT must be between 1 and 65535, got 0.
+  AEGIS_PORT=70000        -> rc=1, stderr: [aegis] AEGIS_PORT must be between 1 and 65535, got 70000.
+  No traceback on stdout or stderr in any case; non-zero exit in all three. Sentence + rc, as claimed.
+
+MY ERROR, STATED
+  The first probe crashed because I imported TestClient on a host without httpx2 and misread the
+  venv-less traceback as the port result; rc=0 printed per-iteration was `head`'s status, not the
+  process's. Re-ran with the process status read directly and stdout/stderr separated. The rc values
+  above are the process's.
+
+GREEN AFTER: all 15 tools/check_*.py rc=0; py_compile backend/main.py ok; bash -n install.sh ok.
+  No code changes. Working tree may be dirty from earlier sessions; see the note in GITHUB-PLAN.
+
+LIMIT: no live bind, no /docs through a browser, no containerlab deploy. This proves documents and
+process exit paths, not a deployed host.
+
+NOT COMPLETE — Dad's word alone.
