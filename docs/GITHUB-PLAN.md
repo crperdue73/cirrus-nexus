@@ -4297,3 +4297,50 @@ Screenshots (needs live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP 
 lab-definitions dirs, Dockerfile.frr-bgp), published security contact, Step 6 installer idempotence fix,
 2026-10-31 grading items, NO-GRADER/NO-EXPECTED fatal, journal-vs-file logging, topology-type guard,
 `response_model` on the routes, and the stashed 422-row edit (commit as-is or drop it).
+
+## 2026-11-13 20:00Z — the count is derived now, so the page and the anchor list cannot drift alone
+
+Picked up the 14:00 run's own next line, which was precise and correct: the page said "pins 19", the tool
+held 19, and nothing read either number. `check_self_contained_doc.py` failed if an anchor was *reworded*
+(it must still be present) but passed at rc=0 when a dummy 20th anchor was added with the page untouched —
+so adding an anchor put the page one number behind in silence. Measured before editing, at `37a6ef9`
+(`git status` clean, HEAD == `origin/main`): 19 anchors, 17/17 claims PASS, all 14 checkers rc=0.
+
+**The change: one new claim, `1b`.** It reads the count out of `len(DOC_ANCHORS)` — this source, not a
+literal — and requires `docs/SELF-CONTAINED.md` to state it in its `pins N of them` sentence. The success
+line now prints the pinned count as well, so a run says the number it just verified. Docstring bullet
+added, since the tool documents what it pins and the count is now one of those things.
+
+**Witness, four trees, each a `/tmp` copy** (a check never seen to fail is not known to work):
+
+| mutation | result |
+|---|---|
+| anchor 19 → 20, page still says 19 | rc=1, FAIL — `DOC_ANCHORS has 20 entries; page says '19'` |
+| page knocked back to **16**, tool holds 19 | rc=1, FAIL — reproduces the bug fixed at 14:00 |
+| `pins N of them` reworded away | rc=1, FAIL — `<no 'pins N of them' sentence>` |
+| clean copy (control) | rc=0, PASS — `19 entries; page says '19'` |
+
+The second row is the one worth keeping: the check now catches the *original* defect, not just new drift.
+
+**After:** 18/18 claims PASS on the clean tree; all 14 `tools/check_*.py` rc=0; `py_compile` rc=0 over
+`backend/main.py` and `tools/*.py`; `bash -n install.sh` rc=0. `git status` showed exactly one modified
+file before the commit. Backup of the pre-edit tool at
+`.nexus/bundle-archive/check_self_contained_doc.py.bak-2026-11-13-2000-count` (git-ignored).
+
+**What this does *not* fix, said plainly.** It pins the count, not the claim that the anchored statement is
+*implemented* — that is claims 2–6's job for the bullets they name, and they are unchanged. And the page's
+"the two sections above" framing is prose; the check pins the number it uses, not its scope.
+
+**Next:** the honest candidate is the page section `## What this page itself is measured against` itemising
+what is pinned — with six claim groups now in the tool, that paragraph is itself a list no checker reads
+(it names "each `fails if` bullet … the pull table … and the two installer facts", while claim 1b and the
+pin-state claim are not mentioned). Either the paragraph becomes measured, or it is rewritten to stop
+enumerating. Second choice, unchanged and static-checkable: `install.sh`'s assertions vs the README's
+prerequisites list.
+
+**Dad-gated backlog (unchanged, do not start without his word):** ci.yml patch (15 checkers), v0.3.0
+tag/Release, Screenshots (needs live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP items
+(10-archive/, 3 empty lab-definitions dirs, Dockerfile.frr-bgp), published security contact, Step 6
+installer idempotence fix, 2026-10-31 grading items, NO-GRADER/NO-EXPECTED fatal, journal-vs-file logging,
+topology-type guard, `response_model` on the routes, and the stashed 422-row edit (commit as-is or drop it —
+it is still `stash@{0}`).
