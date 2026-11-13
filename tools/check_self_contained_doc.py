@@ -16,7 +16,8 @@ So every statement the doc makes is pinned here in both directions:
     where a measurement exists: which files the path rule scans, which suffix set, the
     list of things a cold install pulls);
   * the counts the doc quotes (the success-line numbers) must match what the tool
-    computes from the tree.
+    computes from the tree -- including the number of anchors pinned in this file, which
+    the doc states in prose and which is read from `len(DOC_ANCHORS)` rather than typed.
 
 Two measured boundary facts are asserted here because the doc draws conclusions from
 them and nothing else in the tree ties them down:
@@ -119,6 +120,20 @@ def main():
           "every anchored statement is still in %s" % DOC,
           "all %d anchors found" % len(DOC_ANCHORS) if not absent
           else "anchor(s) gone (re-read the doc, then this list): %s" % "; ".join(absent))
+
+    # --- 1b. The page's own count of these anchors is derived, not typed -----------------
+    #             Until 2026-11-13 the page said "pins 16" while this list held 19, and
+    #             nothing read the number. A count in prose that no code derives goes stale
+    #             in silence -- the exact defect this tool exists to catch, on the page that
+    #             governs it. So the number is read out of this source (len(DOC_ANCHORS)) and
+    #             the page is required to state it. Adding or removing an anchor without
+    #             updating the page now fails here.
+    n_anchors = len(DOC_ANCHORS)
+    m = re.search(r"pins (\d+) of them", doc)
+    claim(m is not None and int(m.group(1)) == n_anchors,
+          "the page states the number of anchors this tool holds (derived from DOC_ANCHORS)",
+          "DOC_ANCHORS has %d entries; page says %r"
+          % (n_anchors, m.group(1) if m else "<no 'pins N of them' sentence>"))
 
     # --- 2. The checks the doc says are run still exist in the tool ---------------------
     for label, pattern in [
@@ -255,6 +270,8 @@ def main():
 
     print("\nself-contained doc OK: %d claim(s) in %s still match %s and the tree."
           % (len(claims), DOC, TOOL))
+    print("  %d anchors pinned; the page states that number, so neither can drift alone."
+          % n_anchors)
     print("NOTE: this checks the doc against the tool's source, not the tool's behaviour;"
           " neither of them installs anything. A cold `sudo ./install.sh` remains the only"
           " proof the install path works.")
