@@ -47,13 +47,32 @@ have passed it.
 ## What this page itself is measured against
 
 The two sections above are claims *about a Python file*, so they are checked the same way README's
-Prerequisites are: `tools/check_self_contained_doc.py` pins 19 of them — each `fails if` bullet (by the
-rule that implements it), the separate-count promise, the suffix set the developer-path rule actually
-scans, the allowlist, the pin's `tarball`/`UNPINNED` state, the pull table against `install.sh`'s
-pre-pull loop, and the two installer facts below. Both directions are checked: a rule the page says
-exists must still exist, and a limitation the page says the tool has must still be true. If this page is
-reworded, the anchor is gone and the check fails on purpose — re-read, re-measure, update in the same
-commit.
+Prerequisites are: `tools/check_self_contained_doc.py` holds **18 claims** against this page and that
+tool, and `pins 19 of them` — that is, requires 19 verbatim phrases of this page to still be here, and
+reads both numbers out of its own claim list and its own anchor list rather than trusting this
+sentence. Both directions are checked: a tool rule the page says exists must still exist, and a
+limitation the page says the tool has must still be true. If this page is reworded, the anchor is gone
+and the check fails on purpose — re-read, re-measure, update in the same commit.
+
+What each claim covers, in the tool's own numbering (kept in the tool's source, not enumerated here —
+this paragraph used to list them, and that list was itself unchecked prose, wrong in both directions at
+once: it claimed coverage of rules that no claim reads, and it omitted two claims that exist. The run
+command below prints all 18 lines with a PASS/FAIL and the measured detail behind each one, so read it
+there rather than here):
+
+| claim | what it holds still |
+|---|---|
+| 1, 1b | every anchor phrase is present, and the count in the sentence above is derived from the tool's `DOC_ANCHORS`, not typed |
+| 2 | each `fails if` bullet is backed by a rule that still exists in the tool — nothing else |
+| 3 | the install set and the repo-only (`LICENSE`) set are still separate lists with separate counts |
+| 4 | the limitations still hold, measured: the suffix set the developer-path rule skips, the allowlist that exempts this page, the working-tree walk with no git call, and the pin's `tarball`/`UNPINNED` state |
+| 5 | the pull table below lists exactly the images `install.sh`'s pre-pull loop pulls |
+| 6 | the two installer facts below — the `SUDO_USER` gap, with its remedy *executed* rather than quoted, and the systemd unit that hard-codes `aegis` |
+
+Scoped plainly: claim 1 reads this page; claim 2 reads the tool's source; claims 3–6 read the tool,
+`install.sh`, and `assets/frr-image.pin`. **No claim runs `install.sh`, and no claim checks that a
+rule the tool *has* is one the page actually lists** — a `fails if` bullet added to the tool but never
+written on this page leaves the count alone and passes. Claim 2 catches the reverse only.
 
 Practically: `python3 tools/check_self_contained_doc.py` — exit 0 holds, 1 a claim is now false,
 2 it could not run. It reads the tool's source; it does not run it. Like

@@ -17,7 +17,8 @@ So every statement the doc makes is pinned here in both directions:
     list of things a cold install pulls);
   * the counts the doc quotes (the success-line numbers) must match what the tool
     computes from the tree -- including the number of anchors pinned in this file, which
-    the doc states in prose and which is read from `len(DOC_ANCHORS)` rather than typed.
+    the doc states in prose and which is read from `len(DOC_ANCHORS)` rather than typed,
+    and the number of claims this file makes, read from the claim list it builds (claim 7).
 
 Two measured boundary facts are asserted here because the doc draws conclusions from
 them and nothing else in the tree ties them down:
@@ -134,6 +135,16 @@ def main():
           "the page states the number of anchors this tool holds (derived from DOC_ANCHORS)",
           "DOC_ANCHORS has %d entries; page says %r"
           % (n_anchors, m.group(1) if m else "<no 'pins N of them' sentence>"))
+
+    # --- 1c. The page's count of *claims* is derived too ---------------------------------
+    #             Added 2026-11-14. The "measured against" section used to enumerate which
+    #             rules the tool pins, and that enumeration was unchecked prose: it named
+    #             coverage that no claim reads, and omitted claim 1b and the pin-state claim,
+    #             while the tool reported 18 claims. The enumeration is gone (see the table it
+    #             was replaced with), but it is now replaced by a number, and a number in prose
+    #             is the same defect -- so this compares it to len(claims) AFTER the last claim
+    #             is appended. It is evaluated below, at the end, not here; the append loop above
+    #             simply defines the helper. See clause 7.
 
     # --- 2. The checks the doc says are run still exist in the tool ---------------------
     for label, pattern in [
@@ -258,6 +269,16 @@ def main():
     claim(unit is not None and "User=aegis" in unit and "SERVICE_USER" in install,
           "the unit hard-codes User=aegis while SERVICE_USER is configurable",
           "unit has User=aegis; installer sets SERVICE_USER default 'aegis'")
+
+    # --- 7. The page's stated number of claims == the number this tool makes -------------
+    #          Evaluated last, so `claims` is complete. Reads the count out of the page's
+    #          "holds **N claims**" sentence; one source of truth, one direction each way.
+    n_claims = len(claims)
+    mc = re.search(r"holds \*\*(\d+) claims\*\*", doc)
+    claim(mc is not None and int(mc.group(1)) == n_claims,
+          "the page states the number of claims this tool makes (derived from the claim list)",
+          "this tool made %d claim(s); page says %r"
+          % (n_claims, mc.group(1) if mc else "<no 'holds **N claims**' sentence>"))
 
     bad = [c for c in claims if not c[0]]
     for ok, label, detail in claims:
