@@ -6,6 +6,15 @@
 > of the repository on 2026-10-30 — `06-lock-it-down.yml`, id `lab-03-lock-it-down`), outside `lab-definitions/`, so the loader never serves it. This file is
 > kept because `docs/OPERATIONS.md` cites it as the in-tree source for the Net Eng I capstone's point
 > numbers; read it as history, not as a lab you can run here.
+>
+> **Scrubbed 2026-11-14.** Two sentences in this guide described a product that does not exist,
+> and a reader of the file alone had no way to know. Kept for the record, corrected here: it called
+> the exercise **"auto-graded"** — this release has no capstone grader, and the guide's own
+> "What's Checked" column describes steps a person performs. And it closed on a signature that means
+> nothing to a reader. The seven-part connectivity table in Part 5 was **checked, not changed**: it
+> really does run 7 `ping` commands (5 via IPv4, 2 via IPv6) plus one `traceroute`, which is what the
+> rubric's 10-point row means by "7 ping tests". The rubric's 15 / 30 / 15 / 15 / 10 / 5 / 10 still
+> sum to 100, and `docs/OPERATIONS.md` still derives the capstone figures from them.
 
 **Duration:** 90 min | **Difficulty:** Intermediate  
 **Prerequisites:** Lab 01 — Crossing Subnets, Lab 02 — The Switch in the Middle
@@ -283,7 +292,7 @@ from Lab 02.
 | SW1 SVI | 15 | br0 IP, running-config |
 | SW1 Port Security | 10 | eth3-eth6 shutdown |
 | PC Config | 5 | PC-A and PC-B IPv4 + gateway |
-| Connectivity | 10 | All 7 ping tests pass |
+| Connectivity | 10 | All 7 ping tests pass (Part 5) |
 
 **💡 Tip:** This is the exact format of the capstone. Nail this lab and the
 capstone is review, not a challenge.
@@ -299,9 +308,9 @@ capstone is review, not a challenge.
 | SSH | Configured on RTR | Configured on RTR |
 | IPv6 | SLAAC on PCs | SLAAC on PCs + Neighbor Discovery |
 | Port security | Unused port shutdown | Same + conceptual security |
-| Grading | Instructor review | Auto-graded (100 pts) |
+| Grading | Instructor review | Out of 100 pts — not auto-graded by any grader in this tree |
 | Weight | Practice (low stakes) | Assessment (70% = pass) |
 
 ---
 
-*Lab 03 — Lock It Down. Nail this, and the capstone is yours. 🐞🔒💍*
+*Lab 03 — Lock It Down. Nail this, and the capstone is yours.*

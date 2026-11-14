@@ -186,6 +186,38 @@ def main() -> int:
     check("lab-03 guide names 192.168.12.0/24", "192.168.12.0/24" in guide)
     check("lab-03 guide states the 70% pass mark", "70%" in guide)
 
+    # Added 2026-11-14. The guide is historical, so it is not read line by line — but the one
+    # thing it got wrong was a status word, and that is checkable without running anything: it called
+    # the capstone "auto-graded". No grader for it exists in this tree. The claim may not reappear as
+    # a live statement. Both files keep a dated "Corrected 2026-11-14" block that *quotes* the bad
+    # wording on purpose (that is the point of a correction), so the scan runs on the text with the
+    # blockquote corrections stripped first — otherwise the witness would fail on its own evidence.
+    def without_corrections(text: str) -> str:
+        return "\n".join(l for l in text.splitlines() if not l.lstrip().startswith(">"))
+
+    guide_live = without_corrections(guide)
+    ops_live = without_corrections(ops)
+    check("lab-03 guide does not claim the exercise is auto-graded",
+          re.search(r"(?<!not )(?<!never )\bauto-graded", guide_live, re.I) is None,
+          "the guide says 'auto-graded' outside its correction block, about a lab whose "
+          "grader is not in this tree (a negated mention — 'not auto-graded' — is allowed)")
+    check("lab-03 guide's comparison table does not offer an 'Auto-graded' cell",
+          re.search(r"\|\s*Auto-graded", guide_live, re.I) is None)
+    check("lab-03 guide carries no emoji signature (it read as an internal marker)",
+          re.search(r"🐞|💍", guide_live) is None)
+
+    # The seven-ping figure is a real count, not a rounding: 7 `ping` rows in Part 5 (5 IPv4,
+    # 2 IPv6) and one `traceroute`. Both docs quote seven, so the table must still produce seven.
+    pings = re.findall(r"^\|\s*[^|]*\|\s*`ping\b", guide, re.M)
+    traceroutes = re.findall(r"^\|\s*[^|]*\|\s*`traceroute\b", guide, re.M)
+    check("lab-03 connectivity table really runs 7 pings (the number both docs quote)",
+          len(pings) == 7, f"the table has {len(pings)} `ping` rows")
+    check("the traceroute in Part 5 is not counted as a ping",
+          len(traceroutes) == 0,
+          f"{len(traceroutes)} traceroute row(s) sit inside the connectivity table")
+    check("OPERATIONS says seven pings and the guide agrees",
+          re.search(r"seven ping tests", ops_live, re.I) is not None)
+
     # Sum the guide's own rubric table.
     rubric = re.findall(r"^\|\s*([^|]+?)\s*\|\s*(\d+)\s*\|", guide, re.M)
     pts = {name.strip(): int(v) for name, v in rubric}

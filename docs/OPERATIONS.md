@@ -311,6 +311,12 @@ format of the capstone rather than as the capstone. Summed from that table as sh
 The three figures sum to **100**, and they are **arithmetic over the shipped table** — `tools/check_operations_doc.py`
 re-parses that table and fails if this section ever quotes a number the guide does not produce.
 
+> **Corrected 2026-11-14.** The guide's closing table called the capstone "auto-graded (100 pts)" and
+> the guide signed off with an internal-looking emoji signature; both are gone, because no grader for
+> the capstone exists in this tree. The seven-ping figure above was **re-checked against the guide's
+> Part 5 table and is correct** — 7 `ping` rows (5 IPv4, 2 IPv6), plus a `traceroute` that is not one
+> of them. It is now enforced by `tools/check_operations_doc.py`, which counts the rows.
+
 > **Corrected 2026-11-05.** This section previously read "Subnetting 27 / Device Config 67 /
 > Connectivity 6" and attributed them to the guide as numbers "read directly" from it. The guide says
 > no such thing: its rows are 15 / 75 / 10, and no in-tree file ever contained 27, 67 or 6 as a

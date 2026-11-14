@@ -20,6 +20,53 @@ unverifiable claims, no screenshots of a build that isn't here.
 
 ## Backlog (one item per polish run)
 
+- [x] **The one student guide still in the tree told a reader the capstone is "auto-graded" and signed
+      off with an internal emoji marker — both scrubbed, and the counts around them checked rather than
+      assumed** (2026-11-14 20:00). `lab-guides/lab-03-lock-it-down.md` is the only file in `lab-guides/`.
+      It is not a runnable lab here (its definition and grader were quarantined 2026-09-30 and archived
+      out 2026-10-30), it carries a historical banner to that effect, and `docs/OPERATIONS.md` cites it
+      as the in-tree source for the capstone's point numbers — so it is *read*, by contributors, and its
+      wrong statements are not inert.
+      **Measured before writing anything.** Read the file end to end (307 lines) instead of trusting its
+      banner: `grep -i 'auto-grad\|grader\|instructor'` → the comparison table's `Grading` row read
+      `Auto-graded (100 pts)` for the capstone column. No grader for lab-03 or the capstone exists in
+      this tree (`ls lab-definitions/` → two `grader_*.py`, both for the shipped labs; the quarantine and
+      the archived `06-lock-it-down.yml` are outside the loader's glob), and the guide's own rubric's
+      `What's Checked` column describes steps a person performs ("hostname, domain name, RSA key…"). So
+      the cell asserted a capability the repo does not have. The closing line ended `🐞🔒💍` — a marker
+      that reads as internal shorthand to any outside reader.
+      **What changed.** (1) The `Grading` cell now reads `Out of 100 pts — not auto-graded by any grader
+      in this tree`. (2) The emoji signature is gone. (3) A dated `Scrubbed 2026-11-14` block in the
+      guide states both, so the correction is visible from the file rather than only from git history.
+      (4) `docs/OPERATIONS.md` gets the matching dated note under its capstone section.
+      **One thing I got wrong mid-run, recorded rather than tidied.** My first pass also "fixed" the
+      rubric's `All 7 ping tests pass` to `All 5`, on the belief that Part 5 ran five pings and two
+      traceroutes. The checker I wrote to enforce it failed on its third assertion and it was right:
+      Part 5's connectivity table has **7** `ping` rows (5 IPv4, 2 IPv6) and the single `traceroute` sits
+      *outside* the table, in its own section. The `7` was true all along; I had counted by reading fast.
+      Both files were restored to seven before commit. That is the whole argument for writing the witness
+      first and believing it over the prose — including my own.
+      **The witness.** Five checks added to `tools/check_operations_doc.py`'s capstone block: the guide
+      must not claim `auto-graded` (outside a `>`-quoted correction block — the correction *quotes* the
+      bad wording on purpose, and a witness that fails on its own evidence is useless), its comparison
+      table must offer no `Auto-graded` cell, it must carry no `🐞`/`💍` marker, the connectivity table
+      must really produce **7** `ping` rows and **0** `traceroute` rows, and `OPERATIONS.md` must still
+      say "seven ping tests".
+      **Controls, run both ways.** Clean tree → `76 PASS, 0 FAIL`, rc=0. Re-injecting the original
+      `Auto-graded (100 pts)` cell into a scratch copy → `74 PASS, 2 FAIL` (the claim check and the table
+      check), rc=1; restored → 76/76. A check that has never been seen to fail is not known to work.
+      **Ship checks after the edit:** `py_compile backend/main.py` ok; `bash -n install.sh` ok;
+      **all sixteen** `tools/check_*.py` rc=0 (`check_operations_doc.py` now 76 PASS); `check_self_contained.py`
+      → "14 required install files present…"; CI's secret scan run verbatim as `ci.yml` runs it
+      (its six `--include` suffixes, its exact pattern) → rc=1, no output. `git diff --stat` = 3 files,
+      +50/−3. Product code, graders, topologies and `install.sh` untouched. Backups in
+      `.nexus/bundle-archive/lab-03-lock-it-down.md.bak-2026-11-14-2001-pre-histfix` + a pre-edit sha256
+      (`b1d3eac5…2378`), both git-ignored.
+      NOT COMPLETE — Dad's word alone. | proof=file read + checker run both ways (76/76, then 74/2 on re-injection)
+      | next=the two `docs/assets/README.md`-adjacent loose ends, or the `HANDOFF-2026-09-22.md` re-read:
+      it is linked from the README as historical and its banner lists three specific falsehoods, but the
+      body has never been checked claim-by-claim the way this guide just was. Standing blocks below unchanged.
+
 - [x] **`docs/API.md`'s status-code table was the one part of that page nothing re-read — it is now read
       against the handlers' own `raise` sites, and the page was corrected where it was wrong** (2026-11-10 02:00).
       Picked up the open thread `check_api_doc.py` left itself (its `[info]` line named four surfaces as
