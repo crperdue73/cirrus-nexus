@@ -1,0 +1,51 @@
+2026-11-14 12:00 UTC - Selina - GITHUB-PLAN run
+
+CLAIM UNDER TEST (docs/SELF-CONTAINED.md, "What this page itself is measured against"):
+  "The two sections above are claims about a Python file, so they are checked the same way
+   README's Prerequisites are"
+and (same page, Practicality paragraph):
+  "Like tools/check_prerequisites.py and tools/check_repo_metadata.py it is not wired into CI"
+
+MEASURED FIRST (not assumed):
+  1. tools/check_prerequisites.py sets README = "README.md" and targets this repo's README;
+     its own docstring says it "does not parse Markdown prose". So "checked the same way" was
+     false in method: check_self_contained_doc.py reads a different document, and the two
+     tools compare different things. The comparison had no witness anywhere in the tree.
+  2. .github/workflows/ci.yml ran exactly 1 tools/check_*.py: check_self_contained.py.
+     The three tools the page calls local-only by name (self_contained_doc, prerequisites,
+     repo_metadata) are, today, all absent from CI - so that sentence is TRUE, but nothing
+     held it; adding one to CI would have made the page wrong in silence.
+
+FIX:
+  docs  - the "checked the same way" comparison is replaced by what is actually true: the
+          tool reads the file this page describes; the CI sentence now names the three
+          local-only tools as the complete set and states that check_prerequisites.py reads
+          README.md and does not parse this page.
+  tool  - new claim 8, two directions, one source each:
+          (a) reads check_prerequisites.py + check_repo_metadata.py and requires their README
+              targets and the "does not parse Markdown prose" sentence to still be there;
+          (b) parses .github/workflows/ci.yml and requires none of the three named local-only
+              tools to appear in it.
+
+WITNESS (four /tmp copies - a check never seen to fail is not known to work):
+  M1 prereq tool's README target changed to docs/PREREQUISITES.md -> rc=1
+     "check_prerequisites.py: does NOT read README = \"README.md\""
+  M2 "does not parse Markdown prose" reworded out               -> rc=1 "... sentence: GONE"
+  M3 ci.yml gains a check_prerequisites.py step                  -> rc=1
+     "ci.yml runs 2 checker(s): check_prerequisites.py, check_self_contained.py"
+  M4 clean copy (control)                                       -> rc=0, 21 claims
+
+IN-RUN CATCH: adding claim 8 made the page's "holds 18 claims" stale; claim 7 (added
+2026-11-13 for exactly this) failed immediately - "this tool made 20 claim(s); page says '18'".
+Page updated to 20; now 21/21 PASS.
+
+AFTER: all 14 tools/check_*.py rc=0; py_compile rc=0 (backend/main.py, the tool);
+bash -n install.sh rc=0; git status showed exactly the two files. Backups at
+.nexus/bundle-archive/{SELF-CONTAINED.md,check_self_contained_doc.py}.bak-2026-11-14-1200-scope
+(git-ignored). No code, installer, lab, grader, topology or CI change.
+
+LIMIT: claim 8 reads those checkers' source text, not their behaviour; it proves the page's
+grouping sentence still describes what those files say, not that a run passes. ci.yml is read
+as text (no workflow execution here).
+
+NOT COMPLETE - Dad's word alone.

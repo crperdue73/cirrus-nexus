@@ -46,8 +46,8 @@ have passed it.
 
 ## What this page itself is measured against
 
-The two sections above are claims *about a Python file*, so they are checked the same way README's
-Prerequisites are: `tools/check_self_contained_doc.py` holds **18 claims** against this page and that
+The two sections above are claims *about a Python file*, and the tool that holds them reads that file:
+`tools/check_self_contained_doc.py` holds **20 claims** against this page and that
 tool, and `pins 19 of them` — that is, requires 19 verbatim phrases of this page to still be here, and
 reads both numbers out of its own claim list and its own anchor list rather than trusting this
 sentence. Both directions are checked: a tool rule the page says exists must still exist, and a
@@ -78,7 +78,9 @@ Practically: `python3 tools/check_self_contained_doc.py` — exit 0 holds, 1 a c
 2 it could not run. It reads the tool's source; it does not run it. Like
 `tools/check_prerequisites.py` and `tools/check_repo_metadata.py` it is **not** wired into CI: adding
 it means a workflow change, and this repo's automation token is refused on `.github/workflows/`
-(re-measured 2026-11-03), so that takes a human with `workflow` scope. Until it is, it is a check you
+(re-measured 2026-11-03), so that takes a human with `workflow` scope. Those three are the only
+`tools/check_*.py` this page calls local-only by name; `tools/check_prerequisites.py` reads
+`README.md` and the installer with one targeted search per claim, and does not parse this page. Until it is, it is a check you
 run before you change this page or the tool — not a gate.
 
 Two facts about the installer that this page leans on, written down because they are the concrete form

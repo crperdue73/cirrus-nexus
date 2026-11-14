@@ -51,6 +51,20 @@ DOC = "docs/SELF-CONTAINED.md"
 TOOL = "tools/check_self_contained.py"
 INSTALL = "install.sh"
 
+# Claim 8: the page groups itself with two other local-only checkers by name, so their
+# targets are read out of their own sources rather than assumed. `\"README.md\"` is the
+# module constant each of those tools sets; PREREQ_LIMIT is the sentence that makes the
+# page's old "checked the same way" comparison false -- check_prerequisites.py reads
+# patterns of README.md, it does not read this page or run any Markdown parser.
+PREREQ_TOOL = "tools/check_prerequisites.py"
+METADATA_TOOL = "tools/check_repo_metadata.py"
+PREREQ_TOOL_NAME = "check_prerequisites.py"
+METADATA_TOOL_NAME = "check_repo_metadata.py"
+PREREQ_TARGET = 'README = "README.md"'
+METADATA_TARGET = '"README.md"'
+PREREQ_LIMIT = "does not parse Markdown prose"
+CI_WORKFLOW = ".github/workflows/ci.yml"
+
 
 def read(rel):
     path = os.path.join(ROOT, rel)
@@ -269,6 +283,41 @@ def main():
     claim(unit is not None and "User=aegis" in unit and "SERVICE_USER" in install,
           "the unit hard-codes User=aegis while SERVICE_USER is configurable",
           "unit has User=aegis; installer sets SERVICE_USER default 'aegis'")
+
+    # --- 8. The page's "checked the same way" sentence, held in both directions --------
+    #          Added 2026-11-14. The page said these two sections "are checked the same way
+    #          README's Prerequisites are" -- and nothing held that: claim 2 reads THIS tool's
+    #          source and nothing else, so the sentence is a claim about *other* checkers'
+    #          methods. Measured before writing the claim (not assumed):
+    #            - tools/check_prerequisites.py targets README.md, and its own docstring says
+    #              it "does not parse Markdown prose"; both are read out of that file here, so
+    #              the sentence is rewritten to name what those two tools actually read rather
+    #              than to compare methods.
+    #            - the "not wired into CI" sentence names exactly those two tools; the workflow
+    #              is parsed here and every check it runs must be some other tools/check_*.py,
+    #              so adding check_prerequisites.py to CI fails here instead of silently making
+    #              the page wrong about three tools at once.
+    #          One source per direction: the first reads those two tools' sources, the second
+    #          reads ci.yml. Neither trusts this page.
+    prereq = read(PREREQ_TOOL) or ""
+    meta = read(METADATA_TOOL) or ""
+    claim(PREREQ_TARGET in prereq and PREREQ_LIMIT in prereq
+          and METADATA_TARGET in meta,
+          "the two tools the page groups itself with still read what the page says they read",
+          "check_prerequisites.py: %s; its 'does not parse Markdown prose' sentence: %s; "
+          "check_repo_metadata.py: %s"
+          % ("reads %s" % PREREQ_TARGET if PREREQ_TARGET in prereq else "does NOT read %s" % PREREQ_TARGET,
+             "present" if PREREQ_LIMIT in prereq else "GONE",
+             "reads %s" % METADATA_TARGET if METADATA_TARGET in meta else "does NOT read %s" % METADATA_TARGET))
+    ci = read(CI_WORKFLOW)
+    ci_tools = re.findall(r"tools/(check_[a-z0-9_]+\.py)", ci) if ci is not None else []
+    claim(ci is not None and ci_tools and not (
+              {PREREQ_TOOL_NAME, METADATA_TOOL_NAME} & set(ci_tools)),
+          "CI runs none of the three tools the page calls local-only by name",
+          "%s is missing" % CI_WORKFLOW if ci is None
+          else "ci.yml runs %d checker(s): %s; the page names %s and %s as local-only"
+               % (len(ci_tools), ", ".join(sorted(set(ci_tools))) or "none",
+                  PREREQ_TOOL_NAME, METADATA_TOOL_NAME))
 
     # --- 7. The page's stated number of claims == the number this tool makes -------------
     #          Evaluated last, so `claims` is complete. Reads the count out of the page's
