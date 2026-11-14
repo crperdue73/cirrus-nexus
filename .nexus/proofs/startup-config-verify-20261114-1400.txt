@@ -1,0 +1,9 @@
+== control: both shipped labs intact
+LOG   Lab startup-configs verified present in <tmp>
+-- exit=0 (block ends with a log/warn, so 0 is expected either way)
+== mutation A: sw2.cfg removed from Demo 2 (path nested '/assets/')
+WARN  lab asset missing after install: <tmp>/lab-definitions/srl-demo2-unsolved/assets/sw2.cfg (topology demo-02-two-switches-one-router-unsolved.yml) — that lab will be refused at startup
+-- exit=0 (block ends with a log/warn, so 0 is expected either way)
+== mutation B: Demo 1 topology names 'sw1.cfg' (the shape install.sh's cp -r actually leaves)
+WARN  lab asset missing after install: <tmp>/lab-definitions/srl-demo-unsolved/sw1.cfg (topology demo-01-two-pcs-and-a-real-switch-unsolved.yml) — that lab will be refused at startup
+-- exit=0 (block ends with a log/warn, so 0 is expected either way)

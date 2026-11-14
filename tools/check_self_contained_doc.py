@@ -44,6 +44,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -112,6 +113,16 @@ DOC_ANCHORS = [
     "`sudo -E` is only for the case where you are already `root`",
     "always add yourself to the `docker` (and `clab_admins`) group afterwards",
     "re-login before the new group membership applies",
+    # Claim 9. Until 2026-11-14 the doc described the installer's `startup-config` verify
+    # block as evidence -- "copies them explicitly and verifies ..." -- and nothing read it.
+    # Measured, the block checks `<lab dir>/<path>`, the directory holding the topology, while
+    # the copy it is verifying puts assets in `<lab dir>/assets/`; the page's own "what it does
+    # not check" section says no claim here reads shell logic, so the block sat outside every
+    # guard while being cited as one. Claim 9 lifts it out of install.sh and runs it.
+    "it\n  verifies every `startup-config:` a shipped topology names",
+    "the lab's own directory, not against an `assets/` subdirectory",
+    "the check and the copy disagree",
+    "the intact tree passes partly because `cp -r lab-definitions`",
 ]
 
 
@@ -318,6 +329,85 @@ def main():
           else "ci.yml runs %d checker(s): %s; the page names %s and %s as local-only"
                % (len(ci_tools), ", ".join(sorted(set(ci_tools))) or "none",
                   PREREQ_TOOL_NAME, METADATA_TOOL_NAME))
+
+    # --- 9. The installer's `startup-config` verify block, EXECUTED ----------------------
+    #          Added 2026-11-14. The page cited this block as the reason the untracked-asset bug
+    #          cannot recur, while also saying (correctly) that nothing here reads shell logic.
+    #          Both cannot stand. The block's body is extracted from install.sh verbatim -- no
+    #          copy lives in this file, so the claim breaks the day someone edits it -- and run
+    #          against a temporary tree built from the labs this repo ships. `lab-definitions/`
+    #          is copied in first, exactly as Step 6 does, so the fixtures are this tree's real
+    #          files and not hand-written ones. The mutation is the bug itself: remove one asset
+    #          and the block must name that lab and must not report success.
+    block = re.search(
+        r"# Verify, rather than assume, that the configs the shipped topologies name.*?\n"
+        r"(?P<body>(?:[ \t]*#.*\n|[ \t]*\n|[ \t]*[^#\n].*\n)+?)"
+        r"(?=# start_server\.py resolves its own path)", install)
+    if block is None:
+        claim(False, "the installer's startup-config verify block still runs (executed)",
+              "the verify block is gone from %s" % INSTALL)
+    else:
+        prelude = 'log()  { echo "LOG   $1"; }; warn() { echo "WARN  $1"; }\n'
+        result = {}
+        try:
+            with tempfile.TemporaryDirectory(prefix="aegis-claim9-") as tmp:
+                labs = os.path.join(tmp, "lab-definitions")
+                subprocess.run(["cp", "-r", os.path.join(ROOT, "lab-definitions"), tmp],
+                               check=True, capture_output=True, timeout=60)
+                script = os.path.join(tmp, "verify-block.sh")
+                with open(script, "w", encoding="utf-8") as fh:
+                    fh.write("#!/usr/bin/env bash\nset -uo pipefail\n" + prelude + block.group("body"))
+
+                def run_tree():
+                    env = {"PATH": "/usr/bin:/bin", "AEGIS_DIR": tmp}
+                    out = subprocess.run(["bash", script], capture_output=True, text=True,
+                                         env=env, timeout=120)
+                    return (out.stdout + out.stderr).strip()
+
+                clean = run_tree()
+                # What the shipped topologies name, read from the tree (not from the doc).
+                named = []
+                for lab in sorted(os.listdir(labs)):
+                    labdir = os.path.join(labs, lab)
+                    if not os.path.isdir(labdir):
+                        continue
+                    for f in sorted(os.listdir(labdir)):
+                        if f.endswith(".yml"):
+                            for p in re.findall(r"^\s*startup-config:\s*(\S+)",
+                                                read(os.path.join("lab-definitions", lab, f)) or "", re.M):
+                                named.append((labdir, p))
+                victim = next(((labdir, p) for labdir, p in named
+                               if os.path.isfile(os.path.join(labdir, p))), None)
+                if victim is None:
+                    claim(False, "the installer's startup-config verify block still runs (executed)",
+                          "no asset named by a shipped topology exists at its named path — "
+                          "the fixture is not the tree Step 6 copies")
+                else:
+                    target = os.path.join(victim[0], victim[1])
+                    held = target + ".held"
+                    os.rename(target, held)
+                    mutated = run_tree()
+                    os.rename(held, target)
+                    result.update(clean=clean, mutated=mutated, named=named,
+                                  victim="%s/%s" % (os.path.basename(victim[0]), victim[1]))
+        except (OSError, subprocess.SubprocessError) as exc:
+            claim(False, "the installer's startup-config verify block still runs (executed)",
+                  "could not run it: %s" % exc)
+        if result:
+            # The intact tree must log success and warn about nothing; the mutated one must
+            # warn by name about the asset that was removed and must not log success. A block
+            # that warned unconditionally would satisfy the second half alone, so both halves
+            # are required.
+            ok = ("LOG" in result["clean"] and "WARN" not in result["clean"]
+                  and "WARN" in result["mutated"] and result["victim"] in result["mutated"]
+                  and "LOG" not in result["mutated"])
+            claim(ok, "the installer's startup-config verify block still runs (executed)",
+                  "intact tree -> %s; %s removed -> %s (%d startup-config path(s) named by "
+                  "shipped topologies)"
+                  % (result["clean"].replace("\n", " | ") or "<no output>",
+                     result["victim"],
+                     result["mutated"].replace("\n", " | ") or "<no output>",
+                     len(result["named"])))
 
     # --- 7. The page's stated number of claims == the number this tool makes -------------
     #          Evaluated last, so `claims` is complete. Reads the count out of the page's

@@ -33,9 +33,15 @@ that is trusted beyond its reach is worse than no guard:
 - **It cannot notice an untracked file on the machine that ran it.** The mirror image of the same
   blind spot, and it has bitten this repo: until 2026-10-24 the per-lab `assets/` folders existed on
   the development host but were never copied by the installer, so a cold install served an empty lab
-  catalog while every local run looked healthy. `install.sh` now copies them explicitly and verifies
-  every `startup-config:` a shipped topology names exists under `/opt/aegis`, warning by name if one
-  does not — the verification the CI check cannot perform lives in the installer instead.
+  catalog while every local run looked healthy. `install.sh` now copies them explicitly, and it
+  verifies every `startup-config:` a shipped topology names — but it resolves that path against
+  the lab's own directory, not against an `assets/` subdirectory. Measured here on 2026-11-14 by
+  running the block against a temporary tree: strip one shipped asset and it warns by name (good);
+  lay an asset at the lab root instead of in `assets/` and the same path is reported missing. So
+  the check and the copy disagree, and the intact tree passes partly because `cp -r lab-definitions`
+  in Step 6 above the per-lab pass happens to carry the whole tree anyway. This is still the
+  installer's own verification, the one thing anything CI runs cannot perform — and claim 9 below
+  now executes this block for those two cases instead of letting this sentence stand unread.
 
 The one path this guard does not exercise at all is the pinned-tarball restore in `install.sh`:
 `assets/frr-image.pin` ships its re-pinned Dockerfile fingerprint with `layers_sha256` and `tarball`
@@ -47,8 +53,8 @@ have passed it.
 ## What this page itself is measured against
 
 The two sections above are claims *about a Python file*, and the tool that holds them reads that file:
-`tools/check_self_contained_doc.py` holds **20 claims** against this page and that
-tool, and `pins 19 of them` — that is, requires 19 verbatim phrases of this page to still be here, and
+`tools/check_self_contained_doc.py` holds **21 claims** against this page and that
+tool, and `pins 23 of them` — that is, requires 23 verbatim phrases of this page to still be here, and
 reads both numbers out of its own claim list and its own anchor list rather than trusting this
 sentence. Both directions are checked: a tool rule the page says exists must still exist, and a
 limitation the page says the tool has must still be true. If this page is reworded, the anchor is gone
@@ -57,7 +63,7 @@ and the check fails on purpose — re-read, re-measure, update in the same commi
 What each claim covers, in the tool's own numbering (kept in the tool's source, not enumerated here —
 this paragraph used to list them, and that list was itself unchecked prose, wrong in both directions at
 once: it claimed coverage of rules that no claim reads, and it omitted two claims that exist. The run
-command below prints all 18 lines with a PASS/FAIL and the measured detail behind each one, so read it
+command below prints all 21 lines with a PASS/FAIL and the measured detail behind each one, so read it
 there rather than here):
 
 | claim | what it holds still |
@@ -68,11 +74,13 @@ there rather than here):
 | 4 | the limitations still hold, measured: the suffix set the developer-path rule skips, the allowlist that exempts this page, the working-tree walk with no git call, and the pin's `tarball`/`UNPINNED` state |
 | 5 | the pull table below lists exactly the images `install.sh`'s pre-pull loop pulls |
 | 6 | the two installer facts below — the `SUDO_USER` gap, with its remedy *executed* rather than quoted, and the systemd unit that hard-codes `aegis` |
+| 9 | the installer's `startup-config` verify block, lifted out of `install.sh` and **run** against a temporary tree: it must log clean on the intact labs and warn by name on a removed asset |
 
 Scoped plainly: claim 1 reads this page; claim 2 reads the tool's source; claims 3–6 read the tool,
-`install.sh`, and `assets/frr-image.pin`. **No claim runs `install.sh`, and no claim checks that a
-rule the tool *has* is one the page actually lists** — a `fails if` bullet added to the tool but never
-written on this page leaves the count alone and passes. Claim 2 catches the reverse only.
+`install.sh`, and `assets/frr-image.pin`; claim 9 executes one block of `install.sh` in a shell and
+reads nothing else from it. **No claim runs `install.sh`, and no claim checks that a rule the tool
+*has* is one the page actually lists** — a `fails if` bullet added to the tool but never written on
+this page leaves the count alone and passes. Claim 2 catches the reverse only.
 
 Practically: `python3 tools/check_self_contained_doc.py` — exit 0 holds, 1 a claim is now false,
 2 it could not run. It reads the tool's source; it does not run it. Like

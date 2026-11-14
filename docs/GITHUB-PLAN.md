@@ -4457,3 +4457,50 @@ tag/Release, Screenshots (needs live host), `.nexus/` public-shipping policy, DE
 installer idempotence fix, 2026-10-31 grading items, NO-GRADER/NO-EXPECTED fatal, journal-vs-file
 logging, topology-type guard, `response_model` on the routes, and the stashed 422-row edit (commit as-is
 or drop it — still `stash@{0}`).
+
+## 2026-11-14 14:00Z — claim 9: the installer's startup-config verify block, executed
+
+Picked up the `next=` from 10:00Z: *"Either a claim lifts the installer's verify block and runs it against
+a temp tree (the 2026-11-03 pattern: execute, don't quote), or the page stops describing the installer's
+verification as if it backed this page."* Took the first branch.
+
+**Measured first** (commit `5ee3064`, clean tree, HEAD == origin/main, all 14 checkers rc=0, `bash -n
+install.sh` rc=0). The verify block sits at `install.sh:226-244`: it reads `startup-config:` lines out of
+each shipped topology and tests `-f "${_topo_dir}/${_cfg}"`, where `_topo_dir` is the directory holding
+the `.yml`. The copy it is verifying (`copy_lab_assets`, :211-223) writes to
+`${AEGIS_DIR}/lab-definitions/<lab>/assets/`. So the two paths only agree when the topology's
+`startup-config:` value itself contains `assets/`, which is true of all three shipped lines — the check
+passes on the intact tree, and it would report a false miss for an asset genuinely delivered at the lab
+root. Ran it by hand before writing anything: control clean, one asset removed → warns by name, asset at
+lab root with `startup-config: sw1.cfg` → warns by name ("missing") even though the file is right
+there beside the topology. Evidence saved in `.nexus/proofs/startup-config-verify-20261114-1400.txt`;
+`cp -r lab-definitions` in Step 6 is what actually carries nested assets, the per-lab pass is redundant
+for the two shipped labs. Recorded, not fixed — the fix is an installer change and stays Dad-gated.
+
+**Changed:**
+- `docs/SELF-CONTAINED.md` — the untracked-asset bullet no longer presents the verify block as clean
+  backing. It now states what the block resolves against, that the check and the copy disagree, that the
+  intact tree passes partly because Step 6's whole-directory copy carries the tree anyway, and it is
+  bounded to "the installer's own verification" rather than any CI claim. The claim table gains a row 9
+  and the "scoped plainly" paragraph says claim 9 executes one block of `install.sh` in a shell.
+- `tools/check_self_contained_doc.py` — new claim 9 plus 4 anchors (23 total). It extracts the block body
+  verbatim from `install.sh` between the two comment sentinels (no copy in the tool — editing the
+  installer breaks the claim), `cp -r`s this tree's `lab-definitions/` into a temp dir exactly as Step 6
+  does, and runs the block twice: intact → must log success and warn about nothing; one named asset
+  renamed away → must warn by name about that path and must not log success. Both halves required, so a
+  block that warned unconditionally fails. Claim 7's derived counts picked up the new claim and anchors
+  and the page was updated in the same commit (21 claims, 23 anchors, "prints all 21 lines").
+
+**Not done, deliberately:** the installer itself is untouched — the block still tests the topology
+directory rather than `assets/`, `copy_lab_assets` still cannot fail the install (`|| warn`), and nothing
+here runs a real `sudo ./install.sh`. Claim 9 proves the block behaves on a temp tree, not that a cold
+install works.
+
+**Verified after:** `python3 tools/check_self_contained_doc.py` → 22/22 PASS, rc=0; all 14
+`tools/check_*.py` rc=0; `bash -n install.sh` rc=0.
+
+**next=** The doc still says the pinned-tarball restore branch "is unproven by any check or by any recent
+install" — and that is the one line on the page claim 4 only half-holds (it reads the pin's
+`tarball`/`UNPINNED` state, never the load-and-verify branch). Either lift `install.sh`'s pin-verify
+branch and execute it against the shipped `UNPINNED` pin to prove it refuses cleanly (same pattern as
+claim 9, in scope, statically checkable), or cut the sentence down to what claim 4 measures.
