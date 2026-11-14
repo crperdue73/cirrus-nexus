@@ -4410,3 +4410,50 @@ tag/Release, Screenshots (needs live host), `.nexus/` public-shipping policy, DE
 installer idempotence fix, 2026-10-31 grading items, NO-GRADER/NO-EXPECTED fatal, journal-vs-file
 logging, topology-type guard, `response_model` on the routes, and the stashed 422-row edit (commit as-is
 or drop it — still `stash@{0}`).
+
+### 2026-11-14 12:00 — the "checked the same way" sentence, held both ways
+
+**Chosen because** yesterday's note named it as the next honest candidate of the same class: a
+sentence comparing this page's guard to *other* checkers' methods, held by nothing.
+
+**Measured before writing anything.** `tools/check_prerequisites.py` sets `README = "README.md"` and
+targets this repo's README; its docstring says it *"does not parse Markdown prose"*. So "checked the
+same way README's Prerequisites are" was false in method — different document, different kind of
+comparison — and no claim anywhere read it. Second half, same paragraph: `.github/workflows/ci.yml`
+ran exactly one `tools/check_*.py` (`check_self_contained.py`), so "these three are not wired into CI"
+is true today — but nothing held it, and adding one to CI would have made the page wrong in silence.
+
+**Fixed, in both directions.** The docs sentence now says what is true (this tool reads the file this
+page describes; `check_prerequisites.py` reads `README.md` and not this page; the three local-only
+tools are named as the complete set). Claim 8 reads the two tools' sources for their README targets
+plus the "does not parse Markdown prose" sentence, and parses `ci.yml` to require none of the three
+named local-only tools to appear in it.
+
+**Witness, four `/tmp` copies:**
+
+| mutation | result |
+|---|---|
+| `check_prerequisites.py`-style README target changed | rc=1 — `does NOT read README = "README.md"` |
+| `does not parse Markdown prose` reworded away | rc=1 — `sentence: GONE` |
+| `ci.yml` gains a `check_prerequisites.py` step | rc=1 — `ci.yml runs 2 checker(s): check_prerequisites.py, check_self_contained.py` |
+| clean copy (control) | rc=0 — 21 claims |
+
+**Caught in-run by the previous run's own guard:** adding claim 8 made the page's "holds **18 claims**"
+stale; claim 7 failed immediately (`made 20 claim(s); page says '18'`). Page updated; 21/21 PASS.
+
+**After:** all 14 `tools/check_*.py` rc=0; `py_compile` rc=0; `bash -n install.sh` rc=0; two files
+plus proof. Committed `ec57515`, pushed, `origin/main` at `0/0`. **NOT COMPLETE — Dad's word alone.**
+
+**Next:** `docs/SELF-CONTAINED.md` now makes one more claim of the same family it cannot hold itself —
+it says `install.sh` "now copies [per-lab assets] explicitly and verifies every `startup-config:` a
+shipped topology names exists under `/opt/aegis`", and that verification is the installer's, in shell,
+which is the one thing this page says no claim here reads. Either a claim lifts the installer's verify
+block and runs it against a temp tree (the 2026-11-03 pattern: execute, don't quote), or the page stops
+describing the installer's verification as if it backed this page. Statically checkable, in scope.
+
+**Dad-gated backlog (unchanged, do not start without his word):** ci.yml patch (15 checkers), v0.3.0
+tag/Release, Screenshots (needs live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP items
+(10-archive/, 3 empty lab-definitions dirs, Dockerfile.frr-bgp), published security contact, Step 6
+installer idempotence fix, 2026-10-31 grading items, NO-GRADER/NO-EXPECTED fatal, journal-vs-file
+logging, topology-type guard, `response_model` on the routes, and the stashed 422-row edit (commit as-is
+or drop it — still `stash@{0}`).
