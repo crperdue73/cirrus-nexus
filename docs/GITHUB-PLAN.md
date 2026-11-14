@@ -4344,3 +4344,69 @@ tag/Release, Screenshots (needs live host), `.nexus/` public-shipping policy, DE
 installer idempotence fix, 2026-10-31 grading items, NO-GRADER/NO-EXPECTED fatal, journal-vs-file logging,
 topology-type guard, `response_model` on the routes, and the stashed 422-row edit (commit as-is or drop it —
 it is still `stash@{0}`).
+
+## 2026-11-14 02:00Z — the "measured against" paragraph described coverage that did not exist
+
+Executed the 20:00 run's own `next=`. Measured first, at `0d6f614` (`git status` clean, HEAD ==
+`origin/main` 0/0): `check_self_contained_doc.py` 18/18 PASS rc=0, all 14 `tools/check_*.py` rc=0,
+`bash -n install.sh` rc=0.
+
+**What was wrong.** The section `## What this page itself is measured against` enumerated which rules
+the tool pins — a list that no checker read, because claim 1b pins the anchor *count* and nothing pins
+the *enumeration*. Read against the tool's six claim groups it did not partition them:
+
+- it named claim-2 coverage as "each `fails if` bullet (by the rule that implements it)" and then listed
+  further items in the same breath, so it read as a complete inventory. It was not one.
+- it never mentioned **claim 1b** (the anchor count — the one the 14:00 and 20:00 runs added) or the
+  **pin `tarball`/`UNPINNED` claim**, both of which the tool makes.
+- it said "the suffix set the developer-path rule actually scans, the allowlist" — true, but those are
+  limitations (claim 4), described in the same list as coverage claims (claim 2), which is exactly the
+  conflation this page exists to prevent.
+
+**The fix, docs half.** Replaced the enumeration with the tool's own numbering in a table (1, 1b, 2, 3,
+4, 5, 6), each row saying what the claim reads. And the limit the old paragraph hid, now stated: **no
+claim checks that a rule the tool has is one this page lists** — a `fails if` bullet added to the tool
+but never written on the page adds an anchor-less rule and passes. Claim 2 catches only the reverse
+(page says it, tool lost it). That asymmetry is now in the section instead of being invisible.
+
+**The fix, tool half — claim 7.** A number in prose that nothing derives is the same defect the last two
+runs closed for the anchor count, so it is closed for the claim count too. Claim 7 is evaluated after
+the last claim is appended, reads `len(claims)`, and requires the page's "holds **N claims**" sentence to
+match. The page states 18; the tool makes 18. Docstring bullet added, since the tool documents what it
+pins and the count is now one of those things.
+
+**One thing I got wrong and had to fix in-run, recorded because it is instructive.** My first edit
+deleted the literal `pins 19 of them` phrase to replace it with the claim count — and claim 1b failed
+immediately (`<no 'pins N of them' sentence>`), because that phrase is the hook 1b reads. Correct
+outcome: the page now carries both numbers, each derived (`**18 claims**` by claim 7, `pins 19 of them`
+by 1b), and re-reading the two sentences against each other is what caught it. A doc edit that trips its
+own checker is the checker working.
+
+**Witness, four `/tmp` copies** (a check never seen to fail is not known to work):
+
+| mutation | result |
+|---|---|
+| dummy 19th claim appended, page still says 18 | rc=1 — `made 19 claim(s); page says '18'` |
+| page knocked back to **16**, tool makes 18 | rc=1 — `made 18 claim(s); page says '16'` |
+| `holds **N claims**` reworded away | rc=1 — `<no 'holds **N claims**' sentence>` |
+| clean copy (control) | rc=0 — `made 18 claim(s); page says '18'` |
+
+**After:** 19/19 claims PASS; all 14 `tools/check_*.py` rc=0; `py_compile` rc=0 on `backend/main.py` and
+the tool; `bash -n install.sh` rc=0; `git status` showed exactly the two files before the commit.
+Committed `0d1f10d`, pushed, `origin/main` at `0/0`. Backups at
+`.nexus/bundle-archive/{SELF-CONTAINED.md,check_self_contained_doc.py}.bak-2026-11-14-0200-scope`
+(git-ignored). No code, installer, lab, grader, topology or CI change.
+
+**Next:** the honest candidate is the same class, one level out — `docs/SELF-CONTAINED.md`'s claim
+3–6 rows are now described, but `tools/check_prerequisites.py` and `check_repo_metadata.py` are named on
+this page as "checked the same way" and nothing on this page or in those tools holds that sentence: it
+is a claim about *other* checkers' methods. Either this page stops comparing itself to them by name, or
+one check holds the comparison. Second choice, unchanged and static-checkable: `install.sh`'s
+assertions vs the README's Prerequisites list.
+
+**Dad-gated backlog (unchanged, do not start without his word):** ci.yml patch (15 checkers), v0.3.0
+tag/Release, Screenshots (needs live host), `.nexus/` public-shipping policy, DELETE-OR-KEEP items
+(10-archive/, 3 empty lab-definitions dirs, Dockerfile.frr-bgp), published security contact, Step 6
+installer idempotence fix, 2026-10-31 grading items, NO-GRADER/NO-EXPECTED fatal, journal-vs-file
+logging, topology-type guard, `response_model` on the routes, and the stashed 422-row edit (commit as-is
+or drop it — still `stash@{0}`).
