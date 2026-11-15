@@ -4738,3 +4738,61 @@ STILL DAD-GATED, unchanged: `ci.yml`, v0.3.0 tag/Release, Screenshots, `.nexus/`
 DELETE-OR-KEEP items, security contact, install.sh Step 6 fix, 2026-10-31 grading items,
 NO-GRADER/NO-EXPECTED fatal, journal-vs-file logging, topology-type guard, response_model,
 the stashed 422-row edit, and the srlinux netns mount permission itself.
+
+---
+
+## RUN 2026-11-15 20:00 UTC — the "pre-configured" promise is now a checked claim
+
+**Item: `tools/check_lab_instructions.py` (new) — each shipped lab's `metadata.instructions` against
+that lab's own `startup-config` files.**
+
+Why this, now: the 14:00 run fixed the *guide's* wording ("the IRB arrives pre-configured" → "the IRB
+comes from the switch's start-up commit"). It left the same sentence standing in
+`lab-definitions/srl-demo2-unsolved/demo-02-two-switches-one-router-unsolved.yml` — the YAML
+`instructions` list, which is the step list the app shows a student. Prose was fixed; the claim was not
+made checkable, so the next edit could reintroduce it in either place.
+
+What the tool checks, per shipped lab (the loader's own glob):
+1. every node an instruction line names exists in `topology.nodes`;
+2. any "pre-configured / pre-applied / arrives configured / ships configured" line requires at least
+   one `startup-config` in that lab;
+3. every referenced `startup-config` exists, stays inside the lab directory, and ends with a
+   `commit now`/`commit save` — a config file that never commits applies nothing;
+4. every address the instruction says is pre-applied (`10.0.1.254`, `10.0.2.254`) is in the
+   startup-config text;
+5. a node is not both student-configured by an instruction and startup-configured by the lab.
+
+It does NOT deploy. It cannot tell you the switch *accepted* the commit — the 14:00 host refusal
+(`srbase` netns mount) is exactly the case where the file is right and the runtime is not. That stays
+a dated measurement in the guide; this tool only holds the file-side promise.
+
+**Proven to fail, not just to pass.** Four witnesses against a `/tmp` copy:
+| witness | result |
+|---|---|
+| control (unmodified copy) | rc=0, 10/10 |
+| drop `commit now` from `sw2.cfg` | rc=1 — `sw2 startup-config commits` |
+| `10.0.1.254/24` → `10.0.1.99/24` in `sw1.cfg` | rc=1 — `10.0.1.254 promised pre-applied is in a startup-config` |
+| remove `startup-config:` from the topology | rc=1 — 3 claims (the pre-applied backing + both addresses) |
+| `startup-config: ../../../../etc/hostname` | rc=1 — containment + the address claim |
+
+The first version of the tool passed 8/8 and was wrong: its address regex required `/nn`, and the line
+it was written for writes `(10.0.1.254 and 10.0.2.254)` with no mask. Caught by running it, not by
+reading it. Fixed and re-witnessed.
+
+Also this run: registered in `tools/check_ci_doc.py` (`TOOLS`, both `LOCAL_ONLY` lists) — which turned
+`check_ci_doc.py` red on three counts it exists to catch (README said 14 hand-run checkers, README's
+local-only enumeration omitted the new name, `NUMBER_WORDS` had no "fifteen"). All three fixed;
+`check_ci_doc.py` now 19/19. Counts 14→15 in `README.md`, `CONTRIBUTING.md`, `SECURITY.md`; step 18 in
+CONTRIBUTING's block; "steps 4–17" → "4–18".
+
+Full local sweep after the change: **16/16 checkers rc=0.**
+
+`next=` **`docs/architecture.md`'s `tools/` row still says "the `check_*.py` doc/claim checkers (see
+`SECURITY.md` for the full list)"** — true but now the third place a count could drift; it names no
+count, so low priority. (`lab-definitions/__pycache__/` is NOT an open item: measured this run,
+`.gitignore:20` covers it and `git ls-files | grep __pycache__` is 0 — it only shows up in a `docker
+exec` side-effect, not in the repo.)
+STILL DAD-GATED, unchanged: `ci.yml`, v0.3.0 tag/Release, Screenshots, `.nexus/` policy,
+DELETE-OR-KEEP items, security contact, install.sh Step 6 fix, 2026-10-31 grading items,
+NO-GRADER/NO-EXPECTED fatal, journal-vs-file logging, topology-type guard, response_model,
+the stashed 422-row edit, and the srlinux netns mount permission itself.
