@@ -3,8 +3,16 @@
 ## Objective
 Two computers through a **real** switch. **The PCs ship unconfigured** — your
 job is to address them and prove the path works. The switch (SR Linux) is real
-and its IRB arrives pre-configured (that is deliberate: this lab is about host
-addressing and reaching the switch, not about switch bring-up).
+and its IRB is configured at switch start-up (that is deliberate: this lab is
+about host addressing and reaching the switch, not about switch bring-up).
+
+> ⚠️ **Read this before you conclude you misconfigured something.** The IRB is
+> applied by the switch's own start-up commit, so it is only there if that commit
+> succeeded. On some hosts the switch boots but rejects every commit — including
+> the start-up one — with `Unacceptable syslog configuration` / `Applications have
+> failed: log_mgr`. When that happens `irb0` never gets `10.0.1.254` and no
+> answer you give can pass. That is a host condition, not your config. See
+> **startup commit** below.
 
 ## Topology
 ```
@@ -42,7 +50,7 @@ itself must answer.
 |------|-------|------------------|
 | pc-a | `10.0.1.1/24` on `eth1` AND pings the switch (`.254`) AND PC-B (`.2`) | all reply |
 | pc-b | `10.0.1.2/24` on `eth1` | address present |
-| sw1  | real SR Linux switch, `10.0.1.254/24` up on `irb0.0` | shipped pre-configured |
+| sw1  | real SR Linux switch, `10.0.1.254/24` up on `irb0.0` | the switch's own start-up commit applied it |
 
 **The lab counts as passed when `pc-a` and `sw1` both pass.** PC-B is implied — PC-A cannot
 earn credit without reaching it. *(Added 2026-10-04, run 196: Demo 2's guide
@@ -52,6 +60,33 @@ though the grader has always enforced `pc-a` AND `sw1`.)*
 > Difference from the *shipped* demo-01 (SR Linux): there, the PCs arrive
 > configured and the lab grades with no work. Here they do not, so a cold
 > deploy **fails** until the student addresses PC-A and PC-B.
+
+## The switch's start-up commit
+
+The IRB is not baked into the image. SR Linux applies it as a commit during
+boot, and `log_mgr` verifies rsyslogd before it will accept any commit. That
+verification mounts `sysfs` inside the container's `srbase` network namespace.
+If the runtime does not permit that mount, the commit fails and the switch comes
+up healthy but with **no IRB address** — every port down, nothing answering on
+`.254`.
+
+How to tell it apart from a mistake of your own, on the switch:
+
+```
+# a commit you did not make should succeed if the switch is healthy
+set / interface ethernet-1/3 admin-state enable
+commit now
+```
+
+- **`Commit failed` / `Unacceptable syslog configuration`** — the switch cannot
+  commit at all. The lab is unpassable on this host. Nothing you type changes
+  that. Tell your instructor; the fix is on the host, not in the lab.
+- **commit succeeds** — the switch is fine and a missing `.254` is a real
+  finding to work.
+
+This was measured on 2026-11-15 on the reference build host: `ip netns exec
+srbase mount -t sysfs sysfs /sys` returns *Operation not permitted*, and every
+commit — including a one-line cosmetic one — is rejected by `log_mgr`.
 
 ## Tips
 - The switch check reads `irb0` via `sr_cli`, so a Linux bridge pretending to be

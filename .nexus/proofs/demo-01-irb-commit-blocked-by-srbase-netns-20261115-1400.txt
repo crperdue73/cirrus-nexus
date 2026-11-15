@@ -1,0 +1,40 @@
+PROOF: demo-01 'IRB ships pre-configured' vs. this host — 2026-11-15 14:0xZ
+tree: ad58dcf  origin/main: ad58dcf
+
+== container state ==
+clab-aegis-demo-01-srl-switch-55086cdc-sw1 Up 2 minutes
+
+== root cause: mount inside srbase netns (the log_mgr verification step) ==
+monit (id: 1)
+srbase
+$ ip netns exec srbase mount -t sysfs sysfs /sys
+mount of /sys failed: Operation not permitted
+rc=255
+
+== consequence: every commit is rejected, even a one-line cosmetic change ==
+$ printf "enter candidate\nset / interface ethernet-1/3 admin-state enable\ncommit now\n" | sr_cli
+At line 3: Error in /:
+    Unacceptable syslog configuration
+Error: Failed to revert to pre-commit configuration
+Error: Applications have failed: log_mgr
+Error: Commit failed
+
+== consequence: irb0 has no address, so the switch does not answer on .254 ==
+--- 10.0.1.254 ping statistics ---
+2 packets transmitted, 0 received, 100% packet loss, time 1058ms
+
+
+== what the shipped grader says right now (grade_all, live containers) ==
+passed: False
+  pc-a refused | ⚠️ pc-a: eth1 does not exist on this node — its link is gone (a switch or peer was stopped, or the lab was tor
+  pc-b refused | ⚠️ pc-b: eth1 does not exist on this node — its link is gone (a switch or peer was stopped, or the lab was tor
+  sw1 graded | ❌ sw1: expected real switch IRB 10.0.1.254/24 — 10.0.1.254 not found on irb0.0
+summary: Demo lab 1 could not be graded — pc-a, pc-b could not be examined, so nothing here is a verdict about your configuration. Restart the lab (End Lab, then Start L
+
+== conclusion ==
+The refusal path added 2026-11-15 works: the PCs refuse, sw1 reports an honest FAIL.
+But the guide's premise -- sw1's IRB 'arrives pre-configured' -- does not hold on this
+host: the commit that would install irb0 10.0.1.254/24 is rejected by log_mgr, whose
+rsyslogd verification needs a sysfs mount the srbase netns is not permitted to make.
+That is a host/runtime permission condition, not a lab-definition defect. Nothing in
+a topology YAML can change it.

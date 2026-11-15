@@ -4684,3 +4684,57 @@ topology-type guard. STILL DAD-GATED: `ci.yml` (now sixteen local-only checkers)
 `.nexus/` policy, DELETE-OR-KEEP items, security contact, Step 6 fix, 2026-10-31 grading items,
 NO-GRADER/NO-EXPECTED fatal, journal-vs-file logging, topology-type guard, response_model, the stashed
 422-row edit.
+
+## 2026-11-15 14:00Z — demo-01's "IRB arrives pre-configured": measured false on this host, restated
+
+**Why this one:** the 12:00 run left `next=` = the `srbase` netns mount permission, "the only open
+finding that makes a shipped guide false", with the fallback "if it cannot be fixed on this host,
+restate `lab-guides/demo-01` honestly in the same commit". Docker and containerlab *are* on this box
+(the 02:00 run worked without them), so this run took the measurement first and the docs change second.
+
+**Measured, in this order.**
+
+1. The container `clab-aegis-demo-01-srl-switch-55086cdc-sw1` was `Exited (255)`. Restarted it; it
+   comes up healthy and every one of ~30 SR Linux apps reports running, `log_mgr` included.
+2. **Root cause, directly:** `ip netns exec srbase mount -t sysfs sysfs /sys` →
+   `mount of /sys failed: Operation not permitted`. That mount is what `log_mgr`'s rsyslogd
+   verification needs.
+3. **Consequence:** a commit the *student* did not make — `set / interface ethernet-1/3 admin-state
+   enable`, one line, no syslog anywhere — is rejected: `Error in /: Unacceptable syslog
+   configuration` / `Applications have failed: log_mgr` / `Commit failed`. So it is not `sw1.cfg`
+   and not the lab; the switch cannot commit anything.
+4. `pc-a` pings `10.0.1.254` → 100% loss. `irb0` never got its address.
+5. Live `grade_all()` on the running containers: `pc-a` and `pc-b` **refuse** (the link-gone wording
+   from this morning's fix — it works), `sw1` reports an honest `❌ 10.0.1.254 not found on irb0.0`.
+   Nothing here is silently wrong; the refusal path added at 02:00 holds up on a real deploy.
+
+**Verdict: not fixable in this tree.** Nothing in a topology YAML changes what the `srbase` netns may
+mount. It reproduces outside this repo and on a second independently deployed session (recorded
+02:00). Host/runtime condition.
+
+**The docs defect it exposed.** The served guide asserted the IRB "arrives pre-configured" and the
+rubric row said "shipped pre-configured" — a promise the host can silently break, with a failure mode
+the student cannot distinguish from their own mistake. Fixed in
+`lab-definitions/srl-demo-unsolved/demo-01-two-pcs-and-a-real-switch-unsolved.md`:
+- objective now says the IRB is applied by the switch's **start-up commit**, not that it "arrives";
+- a warning box states the failure mode and tells the reader it is a host condition, not their config;
+- new **The switch's start-up commit** section: *why* (log_mgr verifies rsyslogd via a sysfs mount in
+  `srbase`), a one-line commit that distinguishes "switch cannot commit" from "you made a mistake",
+  and the dated measurement;
+- rubric row corrected to "the switch's own start-up commit applied it".
+
+**Verified after:** all 15 `tools/check_*.py` rc=0 (`check_grader_refusals` 26/26,
+`check_grading_doc` 11/11, `check_operations_doc` 76/76, `check_ci_doc` 19/19,
+`check_self_contained` 14/1/2). Evidence: `.nexus/proofs/demo-01-irb-commit-blocked-by-srbase-netns-20261115-1400.txt`.
+
+**Not done, deliberately:** no installer change (Docker/netns permissions are host-level); the guide
+is *restated*, not made solvable — on a host that permits the mount the lab behaves as before.
+
+**next=** the 02:00 run's remaining open finding — the `HANDOFF-2026-09-22.md` verified-claims list is
+now fully dispositioned, so take the next reader-facing doc that no recent run has audited
+(`docs/OPERATIONS.md` was touched at 76/76 today; candidates: `docs/ARCHITECTURE.md`, `docs/API.md`
+is fresh from 2026-11-01 — leave it — or the README lab table against the two shipped labs).
+STILL DAD-GATED, unchanged: `ci.yml`, v0.3.0 tag/Release, Screenshots, `.nexus/` policy,
+DELETE-OR-KEEP items, security contact, install.sh Step 6 fix, 2026-10-31 grading items,
+NO-GRADER/NO-EXPECTED fatal, journal-vs-file logging, topology-type guard, response_model,
+the stashed 422-row edit, and the srlinux netns mount permission itself.
