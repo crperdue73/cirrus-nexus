@@ -160,16 +160,77 @@ def _container_kind(container):
         return ""
 
 
+def _switch_not_examinable(container):
+    """True if a command cannot run in `container` at all (stopped/gone).
+
+    Found live 2026-11-15 on this host: the shipped demo-01 lab was deployed with `sw1`
+    exited (143, a clean SIGTERM six days earlier). Grading that session returned
+
+        ❌ sw1: expected real switch IRB 10.0.1.254/24 — no output from sr_cli: Error
+           response from daemon: ... is not running
+
+    which reads to a student as "you configured the switch wrong." They cannot have: a
+    stopped container ignores every command, and no reconfiguration brings it back. The two
+    Linux hosts in that same session already refused correctly (the RUN 179 path: "its link
+    is gone ... this is not a verdict about your configuration") — the switch path never got
+    that treatment.
+
+    `docker exec` is the actual question the grader asks. Note the kind label is NOT a
+    substitute: containerlab keeps `clab-node-kind` on a stopped container, so `_container_kind`
+    still answers "nokia_srlinux" for one that is not running.
+    """
+    rc, out, err = _exec(container, "true")
+    blob = f"{out} {err}".lower()
+    if rc == 0:
+        return False
+    for phrase in ("is not running", "no such container", "container not found",
+                   "cannot exec", "is restarting", "is paused", "is dead"):
+        if phrase in blob:
+            return True
+    # Unknown failure: fail safe. An unreadable switch is absence of evidence, not a verdict.
+    return True
+
+
+def _refuse_switch_unreadable(node, detail):
+    """A refused switch grade whose reason is that nothing could be read from it."""
+    return {
+        "passed": False,
+        "score": 0,
+        "status": "refused",
+        "feedback": [
+            f"\u26a0\ufe0f {node}: the switch is not running, so it could not be examined "
+            f"({detail}). This is not a verdict about your configuration \u2014 a stopped "
+            f"switch accepts no commands and cannot be reconfigured back to life. "
+            f"Restart the lab (End Lab, then Start Lab) and reconfigure."
+        ],
+        "competencies": [],
+    }
+
+
 def _srl_irb_ok(container, ip):
-    """True if `container` is a REAL SR Linux switch with `ip` on irb0.0."""
+    """True if `container` is a REAL SR Linux switch with `ip` on irb0.0.
+
+    Returns (ok, detail). `ok` is None when the switch could not be examined at all (it is
+    stopped or gone) \u2014 the caller must REFUSE rather than report a failed configuration.
+    """
     kind = _container_kind(container)
     if kind != "nokia_srlinux":
+        # An ABSENT container returns empty output from inspect, so `kind` is "" — the same
+        # thing a genuinely non-SR-Linux node would produce if its label were unreadable.
+        # Distinguish them: if docker will not run a command in there, nothing was examined and
+        # there is no verdict to give. (2026-11-15; a fake switch still fails the line below.)
+        if _switch_not_examinable(container):
+            return None, "the container for this switch does not exist or is not running"
         return False, ("not a real SR Linux switch "
                        f"(clab-node-kind={kind or 'absent'})")
     rc, out, err = _exec(container, "sr_cli 'show interface irb0' 2>&1")
     if rc == 127:
-        return False, "sr_cli not available — node is not an SR Linux switch"
+        return False, "sr_cli not available \u2014 node is not an SR Linux switch"
     if not out:
+        # Empty output is ambiguous: either there is nothing to read (node down) or the
+        # switch answered with nothing. Ask docker whether it can run a command in there.
+        if _switch_not_examinable(container):
+            return None, (err or "no output from sr_cli").strip()
         return False, f"no output from sr_cli: {err}"
     if "sr_cli: not found" in out or "command not found" in out:
         return False, "sr_cli not available — node is not an SR Linux switch"
@@ -195,6 +256,8 @@ def grade(session, node):
     if node in SWITCH_IP:
         ip = SWITCH_IP[node]
         ok, detail = _srl_irb_ok(container, ip)
+        if ok is None:
+            return _refuse_switch_unreadable(node, detail)
         return {
             "passed": ok,
             "score": 1.0 if ok else 0.0,
@@ -273,14 +336,27 @@ def grade_all(session):
     for node in ["pc-a", "pc-b", "sw1"]:
         results[node] = grade(session, node)
     lab_passed = results["pc-a"]["passed"] and results["sw1"]["passed"]
+    # A refusal is not a verdict. Saying "not yet complete" over a session where the switch
+    # was never running invites the student to keep configuring a lab that has no switch in
+    # it. Say which it is. (2026-11-15: the per-node refusal shape already existed for the
+    # hosts; this makes the lab-level summary tell the same story.)
+    refused = [n for n, r in results.items() if r.get("status") == "refused"]
+    if refused:
+        summary = (
+            "Demo lab 1 could not be graded \u2014 %s could not be examined, so nothing here is "
+            "a verdict about your configuration. Restart the lab (End Lab, then Start Lab) and "
+            "reconfigure." % ", ".join(sorted(refused))
+        )
+    else:
+        summary = (
+            "Demo lab 1 PASSES \u2014 pc-a reaches both the real switch and PC-B."
+            if lab_passed
+            else "Demo lab 1 is not yet complete \u2014 see per-node feedback."
+        )
     return {
         "passed": lab_passed,
         "nodes": results,
-        "summary": (
-            "Demo lab 1 PASSES — pc-a reaches both the real switch and PC-B."
-            if lab_passed
-            else "Demo lab 1 is not yet complete — see per-node feedback."
-        ),
+        "summary": summary,
     }
 
 

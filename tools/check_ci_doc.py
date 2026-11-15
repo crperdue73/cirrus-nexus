@@ -158,7 +158,8 @@ TOOLS = [
 NUMBER_WORDS = {
     "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
     "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
-}  # Twelve is far past what these sentences need; past it the doc should use digits,
+    "thirteen": 13, "fourteen": 14,
+}  # Fourteen is far past what these sentences need; past it the doc should use digits,
    # and num() raising KeyError is the signal to stop spelling counts out.
 
 
@@ -201,7 +202,16 @@ LOCAL_ONLY = [
     (SECURITY, "check_self_contained_doc"), (SECURITY, "check_ci_doc"),
     (SECURITY, "check_pyc_staleness"), (SECURITY, "check_release_notes"),
     (SECURITY, "check_canary_pack"), (SECURITY, "check_grading_doc"),
+    (SECURITY, "check_grader_refusals"),
 ]
+
+# SECURITY.md's own count of the checkers it says are not CI steps ("Eleven further claim checkers").
+# It was hand-edited and went stale in the commit that added check_grader_refusals.py: the new tool was
+# listed in README and CONTRIBUTING, the count here still said Eleven, and claim 3 below ("every checker
+# not in ci.yml is named as local-only in the docs") read LOCAL_ONLY, not this sentence — so the tree was
+# green while SECURITY.md called thirteen checkers eleven. Same failure as README's 2026-11-11 list, one
+# file over: a count in prose held by nothing drifts. Derived from the sentence, compared to the tree.
+SECURITY_COUNT = re.compile(r"(\w+) further claim checkers")
 
 # README's enumeration of the checkers it says are NOT CI steps. Anchored on the sentence's own
 # opening and closing words so a reworded paragraph fails loudly instead of parsing as empty.
@@ -411,6 +421,45 @@ def main():
                 "; ".join(f"{t}: doc says {'in CI' if c else 'local only'}, "
                           f"ci.yml says {'in CI' if t in keys else 'not in CI'}"
                           for _, t, c in mismatched))
+
+        # 4c. SECURITY.md's own count AND its names, both derived from that paragraph. Two failures this
+        #     closes: (a) the count ("Eleven further claim checkers") said eleven in the commit that made
+        #     it thirteen, and (b) no claim here read SECURITY.md's names at all, so a checker could be
+        #     absent from the one file a security reader actually opens while claim 3 stayed green.
+        sec_text = open(SECURITY, encoding="utf-8").read()
+        sec_local = [t for t in repo_checkers if t not in keys]
+        m_sc = SECURITY_COUNT.search(sec_text)
+        sec_problems = []
+        if not m_sc:
+            sec_problems.append("count sentence not found (it was reworded — update this tool)")
+        else:
+            try:
+                stated = num(m_sc.group(1))
+            except KeyError:
+                stated = None
+                sec_problems.append(f"cannot read the count {m_sc.group(1)!r}")
+            if stated is not None and stated != len(sec_local):
+                sec_problems.append(f"SECURITY.md says {stated}, the tree has {len(sec_local)}")
+        sec_start = sec_text.find("further claim checkers")
+        sec_end = sec_text.find("— are written")
+        if sec_start == -1 or sec_end == -1 or sec_end < sec_start:
+            sec_problems.append("the enumeration paragraph's span not found")
+        else:
+            sec_names = set(re.findall(r"`tools/(check_[a-z_]+)\.py`",
+                                       sec_text[sec_start:sec_end]))
+            unnamed_sec = [t for t in sec_local if t not in sec_names]
+            if unnamed_sec:
+                sec_problems.append(f"SECURITY.md omits {unnamed_sec}")
+            sec_not_a_checker = sorted(
+                t for t in sec_names
+                if not os.path.isfile(os.path.join(ROOT, "tools", t + ".py")))
+            if sec_not_a_checker:
+                sec_problems.append(f"SECURITY.md names checker(s) not in tools/: {sec_not_a_checker}")
+        if sec_problems:
+            bad("SECURITY.md's count and names == the tree", "; ".join(sec_problems))
+        else:
+            ok("SECURITY.md's count and names == the tree",
+               f"{stated} name(s), derived from its own paragraph")
 
     # 5. the *second* statement of which steps are in CI must agree with the block's own markers.
     #    The block above carries the truth (one `— in CI` marker per line, already cross-checked

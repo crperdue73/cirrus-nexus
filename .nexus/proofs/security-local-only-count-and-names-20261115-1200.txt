@@ -1,0 +1,23 @@
+proof: SECURITY.md's local-only count and names held by nothing — 2026-11-15 12:00Z
+
+tree: ebc9465 + working changes; host dept-dragon-tech
+
+DEFECT (found at run start, uncommitted from the 2026-11-15 02:00 grader-refusal run):
+  15 tools/check_*.py existed, 14 not in ci.yml, and SECURITY.md said 'Eleven further claim checkers'.
+  check_ci_doc claim 3 read LOCAL_ONLY (a hand-kept list), so the tree was green while the
+  security page a reader actually opens called thirteen checkers eleven.
+
+FIX: SECURITY.md count -> Fourteen, and added the two omitted checkers (check_release_notes, check_grading_doc,
+  check_grader_refusals) as named entries. check_ci_doc.py gained claim 4c: parses SECURITY.md's
+  own '\w+ further claim checkers' count AND its names between the opening and '— are written',
+  compares both to tools/check_*.py minus ci.yml. NUMBER_WORDS gained thirteen/fourteen.
+  Knock-on: README + CONTRIBUTING said 13 run by hand -> 14 (the checkers' own complement claim caught it).
+
+WITNESS (/tmp/wit copies):
+  m1 drop check_release_notes from SECURITY.md -> rc=1 "SECURITY.md omits ['check_release_notes']"
+  m2 count Fourteen->Thirteen                  -> rc=1 "SECURITY.md says 13, the tree has 14"
+  m3 count ->Fifteen                           -> rc=1 "cannot read the count 'Fifteen'"
+  ctrl unmodified                              -> rc=0 19/19 claims
+
+AFTER: all 15 tools/check_*.py rc=0; py_compile ok; bash -n install.sh ok.
+NOT COMPLETE - Dad's word alone.

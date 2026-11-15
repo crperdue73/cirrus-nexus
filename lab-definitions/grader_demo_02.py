@@ -203,12 +203,22 @@ def _srl_irb_ok(container, ip):
     """
     kind = _container_kind(container)
     if kind != "nokia_srlinux":
+        # An ABSENT container returns empty output from inspect, so `kind` is "" — the same
+        # thing a genuinely non-SR-Linux node would produce if its label were unreadable.
+        # Distinguish them: if docker will not run a command in there, nothing was examined and
+        # there is no verdict to give. (2026-11-15; a fake switch still fails the line below.)
+        if _switch_not_examinable(container):
+            return None, "the container for this switch does not exist or is not running"
         return False, ("not a real SR Linux switch "
                        f"(clab-node-kind={kind or 'absent'})")
     rc, out, err = _exec(container, "sr_cli 'show interface irb0' 2>&1")
     if rc == 127:
         return False, "sr_cli not available — node is not an SR Linux switch"
     if not out:
+        # Empty output is ambiguous: nothing to read (node down) vs. a switch that answered
+        # with nothing. Ask docker whether it can run a command in there at all.
+        if _switch_not_examinable(container):
+            return None, (err or "no output from sr_cli").strip()
         return False, f"no output from sr_cli: {err}"
     if "sr_cli: not found" in out or "command not found" in out:
         return False, "sr_cli not available — node is not an SR Linux switch"
@@ -217,6 +227,26 @@ def _srl_irb_ok(container, ip):
     if ip in out:
         return False, f"{ip} present but irb0.0 not reported up"
     return False, f"{ip} not found on irb0.0"
+
+def _switch_not_examinable(container):
+    """True if a command cannot run in `container` at all (stopped/gone).
+
+    Same defect as Demo 1, measured live 2026-11-15: a stopped SR Linux node produced
+    "expected real switch IRB 10.0.2.254/24 — no output from sr_cli: ... is not running",
+    a verdict about a configuration nobody read. The kind label cannot stand in for this:
+    containerlab keeps `clab-node-kind` on a stopped container, so `_container_kind` still
+    answers "nokia_srlinux" for one that is not running.
+    """
+    rc, out, err = _exec(container, "true")
+    blob = f"{out} {err}".lower()
+    if rc == 0:
+        return False
+    for phrase in ("is not running", "no such container", "container not found",
+                   "cannot exec", "is restarting", "is paused", "is dead"):
+        if phrase in blob:
+            return True
+    # Unknown failure: fail safe. An unreadable switch is absence of evidence, not a verdict.
+    return True
 
 
 def grade(session, node):
@@ -238,6 +268,19 @@ def grade(session, node):
     if node in SWITCHES:
         ip = SWITCHES[node]
         ok, detail = _srl_irb_ok(container, ip)
+        if ok is None:
+            return {
+                "passed": False,
+                "score": 0,
+                "status": "refused",
+                "feedback": [
+                    f"\u26a0\ufe0f {node}: the switch is not running, so it could not be examined "
+                    f"({detail}). This is not a verdict about your configuration \u2014 a stopped "
+                    f"switch accepts no commands and cannot be reconfigured back to life. "
+                    f"Restart the lab (End Lab, then Start Lab) and reconfigure."
+                ],
+                "competencies": [],
+            }
         if ok:
             return {
                 "passed": True,

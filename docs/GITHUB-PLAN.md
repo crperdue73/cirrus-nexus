@@ -4551,3 +4551,136 @@ install" — and that is the one line on the page claim 4 only half-holds (it re
 `tarball`/`UNPINNED` state, never the load-and-verify branch). Either lift `install.sh`'s pin-verify
 branch and execute it against the shipped `UNPINNED` pin to prove it refuses cleanly (same pattern as
 claim 9, in scope, statically checkable), or cut the sentence down to what claim 4 measures.
+
+---
+
+## RUN 2026-11-15 — a refused switch was reporting a failed config (and a live lab that cannot commit)
+
+**Item:** finish the `HANDOFF-2026-09-22.md` claim verification that started last run, by running the
+shipped graders against a real deployed lab instead of only reading YAML. That surfaced a grader defect.
+
+### The defect, measured
+
+`sw1` in the demo-01 session on this host had been stopped six days earlier (exit 143, a clean SIGTERM).
+Running the shipped `grader_demo_01_srl.grade_all()` against that session returned:
+
+    ❌ sw1: expected real switch IRB 10.0.1.254/24 — no output from sr_cli: Error response from
+       daemon: container ... is not running
+
+A student reads that as "I misconfigured the switch." They cannot have. `_srl_irb_ok` asked docker for
+`sr_cli` output, got an error on stderr with empty stdout, and `if not out:` turned that into a verdict.
+The two Linux hosts **in the same session** already did the right thing — they refused, with the RUN 179
+wording ("its link is gone … this is not a verdict about your configuration"). The switch path never got
+that treatment. `grader_demo_02.py` had the same defect.
+
+One trap worth recording: `clab-node-kind` survives on a **stopped** container, so `_container_kind()`
+still answers `nokia_srlinux`. The kind label is not a liveness check.
+
+### The fix
+
+- Both graders: `_srl_irb_ok` returns `(None, detail)` when the switch cannot be examined. It decides that
+  by asking docker to run `true` in the container — the read the grader was already making — and matching
+  the error for not-running / no-such-container / cannot-exec / restarting / paused / dead. Unknown
+  failures also refuse: an unreadable switch is absence of evidence, not a verdict.
+- The absent-container case matters too: `docker inspect` returns empty for a missing container, which
+  looked identical to "unreadable kind label" and blamed the config. Now distinguished.
+- Callers return `{"status": "refused", ...}` with student-actionable text ("Restart the lab (End Lab, then
+  Start Lab)").
+- `grade_all()` no longer prints "not yet complete" over a session with a refused node — it says the lab
+  **could not be graded**, names the refused nodes, and gives the same advice.
+
+### The witness
+
+`tools/check_grader_refusals.py` calls the real graders under a fake `docker` in four states and asserts
+the *shape* of each verdict. 26 assertions, both labs.
+
+The control row is the point: **running + wrong IRB must still FAIL and must NOT be refused.** A
+"refuse when unsure" patch that refused everything would fail that row. Before the fix: 18 PASS,
+8 FAIL. After: 26 PASS, 0 FAIL.
+
+Live re-run against the stopped `sw1` now reads:
+
+    Demo lab 1 could not be graded — pc-a, pc-b, sw1 could not be examined, so nothing here is a
+    verdict about your configuration. Restart the lab (End Lab, then Start Lab) and reconfigure.
+
+The cold-deploy path also got a real, non-refused FAIL (pc-a "eth1 has no IPv4 address", sw1 "10.0.1.254
+not found on irb0.0") — proving the refusal did not swallow normal grading.
+
+### Second finding — the shipped lab cannot commit a config on this host
+
+Deploying demo-01 fresh (both a minimal standalone topology and the product's own
+`POST /api/sessions/start`) brings up a healthy SR Linux v26.7.2 switch that **rejects every commit**:
+
+    At line 20: Error in /:  Unacceptable syslog configuration
+    Error: Applications have failed: log_mgr
+    Error: Commit failed
+
+It is not `sw1.cfg`. A one-line commit (`set / interface irb0 subinterface 0 ipv4 address …`) fails the
+same way. `log_mgr` refuses because its rsyslogd verification runs inside the `srbase` netns, where
+`mount -t sysfs sysfs /sys` returns "Operation not permitted" and `ulimit -c` cannot be raised. The
+switch therefore has no IRB and all ports `Admin State: disable`, which makes demo-01 unpassable here.
+
+**Not a lab bug, and not fixable in the lab definition** — nothing in a topology YAML changes what the
+`srbase` netns is permitted to mount. Reproduces outside this repo (`/tmp` probe topology) and on a
+second, independently deployed session.
+
+**Consequence for docs:** `lab-guides/demo-01-*.md` states the IRB "ships pre-configured" and the lab is
+solvable. On this host that is false at runtime. This is the one thing on the handoff's verified-claims
+list that did **not** hold. It is a host/environment condition, so it is recorded here rather than
+edited into the guide on no evidence — but it must be resolved (netns/mount permissions for the srlinux
+container, or a different runtime) before any doc promises a solvable demo-01.
+
+**Cleanup:** verify containers and the `/tmp` probe destroyed; `node_examinable`-era stale containers
+left untouched.
+
+**Verified after:** `python3 tools/check_grader_refusals.py` → 26/26 PASS, rc=0; both graders
+`py_compile` clean; `git status` clean of stray deploy artifacts.
+
+**next=** Run the full `tools/check_*.py` sweep (14 witnesses) against the two modified graders to be
+sure no doc-claim witness quoted the old refusal wording, then fix the srlinux `srbase` netns mount
+permission so demo-01 can actually commit — or restate `lab-guides/demo-01` honestly until it can.
+
+## 2026-11-15 12:00Z — SECURITY.md's local-only count, and its names, held by nothing
+
+**Why this one:** the tree was already dirty from the 02:00 grader-refusal run (both graders, a new
+`tools/check_grader_refusals.py`, README/CONTRIBUTING). Before adding to it, run the sweep that run asked
+for — and it was red: `check_ci_doc` claim 3 FAIL, "every checker not in ci.yml is named as local-only in
+the docs — never mentioned as local-only: ['check_grader_refusals']". That is the transient, expected
+failure of a tool written after the sweep was last run. Opening the file to fix it found the real item.
+
+**The defect.** `SECURITY.md` said *"Eleven further claim checkers"*. There were thirteen not in
+`ci.yml` at that moment (fourteen after the omission below was fixed). Claim 3 could not see it: it reads
+`LOCAL_ONLY`, a hand-kept list, and a count in prose is not a name in a list. Same failure as README's
+2026-11-11 list, one file over — and this file is the one a security reader opens first. Reading the
+paragraph also showed two checkers it never named at all: `check_release_notes.py` and
+`check_grading_doc.py` (both already existed and were already in CI's local-only count elsewhere).
+
+**The fix.**
+- `SECURITY.md`: `Eleven` → `Fourteen`; `check_release_notes.py` and `check_grading_doc.py` added as
+  named entries; `check_grader_refusals.py` added (the paragraph now names all fourteen).
+- `tools/check_ci_doc.py`: new claim **4c** derives the count from SECURITY.md's own
+  `(\w+) further claim checkers` sentence and the names from the span up to `— are written`, then compares
+  both against `tools/check_*.py` minus `ci.yml`. `NUMBER_WORDS` gained `thirteen`/`fourteen` — past those
+  the doc should use digits, and the tool says so by refusing the word.
+- Knock-on, caught by the tool's own complement claim: README ("13 are claim checkers run by hand") and
+  CONTRIBUTING ("plus the 13 claim checkers") both said 13 → 14. The count was wrong in three files; only
+  the SECURITY one had no witness.
+
+**Witness** (`/tmp/wit` copies, four runs): dropping `check_release_notes` from SECURITY.md → rc=1 naming
+it; `Fourteen`→`Thirteen` → rc=1 "says 13, the tree has 14"; `Fifteen` → rc=1 "cannot read the count";
+unmodified control → rc=0, 19/19 claims.
+
+**Verified after:** all 15 `tools/check_*.py` rc=0, `py_compile` rc=0, `bash -n install.sh` rc=0.
+
+**Not done, deliberately:** the 02:00 run's two open findings are untouched — the `srbase` netns mount
+permission (demo-01 cannot commit on this host, so the guide's "solvable" claim is still unbacked at
+runtime) and the decision that follows from it. Both need either host-level permissions or a docs
+restatement, and both are Dad's call.
+
+**next=** the `srbase` netns mount permission first (it is the only open finding that makes a shipped
+guide false), and if it cannot be fixed on this host, restate `lab-guides/demo-01` honestly in the same
+commit. Do not re-measure the SECURITY count, the 422 row, AEGIS_PORT, install.sh Step 6, or the
+topology-type guard. STILL DAD-GATED: `ci.yml` (now sixteen local-only checkers), v0.3.0, Screenshots,
+`.nexus/` policy, DELETE-OR-KEEP items, security contact, Step 6 fix, 2026-10-31 grading items,
+NO-GRADER/NO-EXPECTED fatal, journal-vs-file logging, topology-type guard, response_model, the stashed
+422-row edit.

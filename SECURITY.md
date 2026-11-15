@@ -60,7 +60,7 @@ Problems that break the design above rather than restating it. Examples:
 CI (`.github/workflows/ci.yml`) runs four checks on every push and pull request: the backend
 byte-compiles, `install.sh` is valid shell, the tree is self-contained (a bare clone is installable,
 every shipped grader byte-compiles, no absolute developer paths), and a grep for obvious committed
-secrets. Eleven further claim checkers — `tools/check_prerequisites.py` (the README's Prerequisites
+secrets. Fourteen further claim checkers — `tools/check_prerequisites.py` (the README's Prerequisites
 against `install.sh`), `tools/check_install_narrative.py` (the README's account of what `install.sh`
 installs, builds, pre-pulls and registers, against `install.sh`), `tools/check_lab_assets.py` (the
 README's per-lab startup-config copy-and-verify promise, against `install.sh` and the shipped
@@ -78,9 +78,15 @@ each state, and where each checker runs, against `.github/workflows/ci.yml` and 
 `tools/check_self_contained_doc.py` (the boundary claims in `docs/SELF-CONTAINED.md` against what
 `tools/check_self_contained.py` actually checks), `tools/check_pyc_staleness.py` (the `__pycache__`
 claims in `docs/OPERATIONS.md` — that a stale grader survives a restart, and that a source size change or
-an mtime-second change is what clears it — executed rather than read) and `tools/check_canary_pack.py`
+an mtime-second change is what clears it — executed rather than read), `tools/check_canary_pack.py`
 (the canary list and verdicts in `tools/canaries/lab-pack/README.txt` — the pack's own description of
-itself — against the canary files present and the verdicts their names assert)
+itself — against the canary files present and the verdicts their names assert), `tools/check_release_notes.py`
+(the release-notes claims withdrawn on 2026-11-10 — that a withdrawn limitation is not stated as current),
+`tools/check_grading_doc.py`
+(the lab-verdict rules in `docs/GRADING-MODEL.md` and `docs/ADDING-A-LAB.md` against the code that
+decides them) and `tools/check_grader_refusals.py` (that a node the grader cannot examine is refused
+rather than reported as a failed configuration, and that a running node is still graded — executed
+against both shipped graders under a fake `docker`)
 — are written and verified but **not yet in the workflow**:
 this repo's automation token is refused on workflow paths (re-measured 2026-11-03, re-confirmed
 2026-11-05), so adding them takes
