@@ -60,7 +60,7 @@ Problems that break the design above rather than restating it. Examples:
 CI (`.github/workflows/ci.yml`) runs four checks on every push and pull request: the backend
 byte-compiles, `install.sh` is valid shell, the tree is self-contained (a bare clone is installable,
 every shipped grader byte-compiles, no absolute developer paths), and a grep for obvious committed
-secrets. Fifteen further claim checkers — `tools/check_prerequisites.py` (the README's Prerequisites
+secrets. 16 further claim checkers — `tools/check_prerequisites.py` (the README's Prerequisites
 against `install.sh`), `tools/check_install_narrative.py` (the README's account of what `install.sh`
 installs, builds, pre-pulls and registers, against `install.sh`), `tools/check_lab_assets.py` (the
 README's per-lab startup-config copy-and-verify promise, against `install.sh` and the shipped
@@ -86,10 +86,13 @@ itself — against the canary files present and the verdicts their names assert)
 (the lab-verdict rules in `docs/GRADING-MODEL.md` and `docs/ADDING-A-LAB.md` against the code that
 decides them), `tools/check_grader_refusals.py` (that a node the grader cannot examine is refused
 rather than reported as a failed configuration, and that a running node is still graded — executed
-against both shipped graders under a fake `docker`) and `tools/check_lab_instructions.py` (each shipped
+against both shipped graders under a fake `docker`), `tools/check_lab_instructions.py` (each shipped
 lab's `metadata.instructions` against that lab's own `startup-config` files — a lab that says a node
 "arrives pre-configured" must ship the file that configures it, the file must commit, and every address
-the instructions promise must be in it)
+the instructions promise must be in it) and `tools/check_architecture_doc.py` (the canary-pack row in
+`docs/architecture.md` against the pack on disk — its file and distinct-verdict counts, that every
+verdict the linter can emit has a canary, and that the row does not claim a one-file-per-verdict
+mapping the pack has never had)
 — are written and verified but **not yet in the workflow**:
 this repo's automation token is refused on workflow paths (re-measured 2026-11-03, re-confirmed
 2026-11-05), so adding them takes

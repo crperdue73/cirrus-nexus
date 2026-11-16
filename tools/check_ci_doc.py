@@ -154,6 +154,7 @@ TOOLS = [
     "check_release_notes",
     "check_grading_doc",
     "check_lab_instructions",
+    "check_architecture_doc",
 ]
 
 NUMBER_WORDS = {
@@ -196,7 +197,7 @@ LOCAL_ONLY = [
     (CONTRIBUTING, "check_self_contained_doc"), (CONTRIBUTING, "check_ci_doc"),
     (CONTRIBUTING, "check_pyc_staleness"), (CONTRIBUTING, "check_release_notes"),
     (CONTRIBUTING, "check_canary_pack"), (CONTRIBUTING, "check_grading_doc"),
-    (CONTRIBUTING, "check_lab_instructions"),
+    (CONTRIBUTING, "check_lab_instructions"), (CONTRIBUTING, "check_architecture_doc"),
     (SECURITY, "check_prerequisites"), (SECURITY, "check_install_narrative"),
     (SECURITY, "check_lab_assets"), (SECURITY, "check_api_doc"),
     (SECURITY, "check_api_exposure"),
@@ -205,6 +206,7 @@ LOCAL_ONLY = [
     (SECURITY, "check_pyc_staleness"), (SECURITY, "check_release_notes"),
     (SECURITY, "check_canary_pack"), (SECURITY, "check_grading_doc"),
     (SECURITY, "check_grader_refusals"), (SECURITY, "check_lab_instructions"),
+    (SECURITY, "check_architecture_doc"),
 ]
 
 # SECURITY.md's own count of the checkers it says are not CI steps ("Eleven further claim checkers").

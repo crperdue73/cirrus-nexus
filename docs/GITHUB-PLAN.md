@@ -4796,3 +4796,56 @@ STILL DAD-GATED, unchanged: `ci.yml`, v0.3.0 tag/Release, Screenshots, `.nexus/`
 DELETE-OR-KEEP items, security contact, install.sh Step 6 fix, 2026-10-31 grading items,
 NO-GRADER/NO-EXPECTED fatal, journal-vs-file logging, topology-type guard, response_model,
 the stashed 422-row edit, and the srlinux netns mount permission itself.
+
+## Run 2026-11-16 02:00 UTC — the canary-pack row said "one per verdict"; it has never been that
+
+**Item: `docs/architecture.md`'s canary-pack row, and the first tool that holds it.**
+
+The row read: *"eight files, one per verdict the linter can emit"*. Measured this run against the pack
+on disk: **eight files, seven distinct verdicts.** `SOLVED` carries two — `demo2-shape__SOLVED.yml` and
+`fake-switch__SOLVED.yml` (the switch-modelled-as-a-Linux-PC canary). So the opening clause was false
+about the pack, and the row then contradicted *itself* further along with "two pre-solved on purpose".
+Eight-files and seven-verdicts are both true statements; the 1:1 framing welded them into one that is
+not. A careful reader could catch it. A fast reader took away a mapping that does not exist.
+
+Nothing checked this row. `check_canary_pack.py` holds the pack's own `README.txt` to the pack.
+`check_ci_doc.py` holds the *counts of checkers* across three docs. Neither read architecture.md's
+prose. This is exactly the self-citing failure in the workspace rules: a sentence that was true of a
+smaller pack when written, and stayed authoritative because no tool ever re-read it.
+
+**Changed:**
+- `docs/architecture.md` — the row now states the true shape: eight files covering all seven verdicts,
+  with `SOLVED` named as the one carrying two, and why. Every verdict named, `NO-GRADER` / `NO-EXPECTED`
+  distinguished as "could not examine", not "examined and clean".
+- `tools/check_architecture_doc.py` — **new**, and the first checker for any architecture.md prose.
+  Derives everything from disk (file list, verdict set, the verdicts `lint_lab_pack.py` can assign);
+  transcribes no counts of its own. Checks: file count, distinct-verdict count, that no 1:1
+  file-per-verdict claim survives where a verdict is duplicated, that every exercised verdict is named,
+  that no unemittable verdict is named, and that every verdict the linter can print has a canary.
+- `README.md`, `CONTRIBUTING.md`, `SECURITY.md` — 15 → 16 hand-run checkers; new name in README's
+  enumerated list and SECURITY's list; step 19 in CONTRIBUTING's block. (README's `NUMBER_WORDS` rule
+  says spell counts out only to fifteen, so SECURITY.md's "Sixteen" became digits — the tool saying so.)
+
+**Witnessed failing, not just passing.** Seven scratch copies under `/tmp/archdoc-witness`:
+W0 unmodified → rc=0 (control). W1 the original row restored → rc=1, flagged the 1:1 claim *and* that
+the row names none of the seven verdicts. W2 "eight"→"nine" files → rc=1. W3 "seven"→"six" verdicts →
+rc=1. W4 `noexp__NO-EXPECTED.yml` deleted, row untouched → rc=1 on three counts (file count, verdict
+count, and NO-EXPECTED now uncovered). W5 `nogr__NO-GRADER.yml` renamed `nogr__PASS.yml` → rc=1
+(linter cannot print PASS). W6 a ninth file added under an existing verdict → rc=1. W7 the row deleted
+→ rc=1. All seven fail as intended.
+
+**One thing the witnesses caught in the checker itself:** the first version matched the bare phrase
+"one per verdict", so it failed the *corrected* sentence — which says "…seven verdicts the linter can
+emit, **not** one file per verdict". A checker that fires on its own fix is broken. Added an explicit
+negation guard, then re-witnessed. Measured, not assumed.
+
+Full local sweep after the change: **17/17 checkers rc=0.**
+
+`next=` **the badges are unverified by any tool** — checked this run and all honest (CI badge live and
+serving "passing"; `v0.2.0` is genuinely the newest tag; the Python floor is 3.10 and prose-defended),
+but nothing in `tools/` would catch a badge that went stale, and `check_repo_metadata.py` does not
+cover the README's badge block. That is the next visible surface to put a witness under.
+STILL DAD-GATED, unchanged: `ci.yml` (CI runs 4 checks; 16 checkers are hand-run), v0.3.0 tag/Release,
+Screenshots, `.nexus/` policy, DELETE-OR-KEEP items, security contact, install.sh Step 6 fix,
+2026-10-31 grading items, NO-GRADER/NO-EXPECTED fatal, journal-vs-file logging, topology-type guard,
+response_model, the stashed 422-row edit, and the srlinux netns mount permission itself.

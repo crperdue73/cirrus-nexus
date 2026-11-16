@@ -10,7 +10,7 @@ write the claim.
 
 ## Before you push
 
-Run the same checks CI runs (`.github/workflows/ci.yml` — four of them), plus the 15 claim
+Run the same checks CI runs (`.github/workflows/ci.yml` — four of them), plus the 16 claim
 checkers that are written and verified but **not yet in the workflow** (the lines marked `— local only`; see below):
 
 ```bash
@@ -33,6 +33,7 @@ python3 tools/check_grading_doc.py        # 16. the lab-verdict rules in GRADING
 #     and ADDING-A-LAB.md vs _lab_verdict_passed
 python3 tools/check_grader_refusals.py    # 17. a stopped switch refuses; a running one still grades — local only
 python3 tools/check_lab_instructions.py   # 18. a lab's instructions vs its own startup-configs — local only
+python3 tools/check_architecture_doc.py       # 19. the architecture doc's canary-pack row vs the pack on disk — local only
 # 19. no obvious secrets committed — CI greps the tree for token/key patterns    — in CI
 ```
 
