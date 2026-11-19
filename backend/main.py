@@ -1312,6 +1312,79 @@ def _capability_refusal(lab: LabDef) -> str | None:
             "Redeploy on a substrate built with those daemons enabled.")
 
 
+def _apply_srlinux_startup_config(container_name: str, cfg_path: Path) -> None:
+    """Load a Nokia SR Linux startup-config via sr_cli. Best-effort, logged.
+
+    WHY THIS EXISTS (measured 2026-11-19 on dept-dragon-tech):
+    containerlab applies an SR Linux `startup-config` by running
+    `su -s /bin/bash admin -c '<sr_cli ...>'` inside the node container. On this
+    host that step can NEVER succeed, and it fails SILENTLY -- `containerlab
+    deploy` still reports success, so every lab looks deployed.
+
+    Measured causal chain:
+      1. dept-dragon-tech is an UNPRIVILEGED LXC. Its own uid_map is
+         `0 100000 65536`, so the only uids usable in this entire container
+         tree are 100000..165535 on the host.
+      2. Docker runs INSIDE that LXC, so nested containers inherit the same
+         65,536-uid window (`docker run alpine cat /proc/self/uid_map` confirms
+         `0 100000 65536`).
+      3. SR Linux's `admin` user is uid 166898390 -- far ABOVE that window.
+         `setuid(166898390)` returns EINVAL, `su` prints `su: cannot set user
+         id: Invalid argument`, and the startup-config is never applied.
+      4. The switch then boots with every front-panel port admin-disabled and
+         no irb0, so the lab is dead while the deploy reports success.
+
+    It is NOT a missing account, NOT a bad password, NOT the `nosuid` mount flag:
+    `su srlinux -s /bin/bash -c id` works fine (uid 1002 is in range). Only the
+    out-of-range `admin` uid fails.
+
+    The fix: apply the same config as `srlinux` (uid 1002, in range) using
+    `sr_cli` directly -- no `su`, no `admin`. `sr_cli` needs no privileges the
+    node does not already have.
+
+    The config file itself may contain `enter candidate` / `commit now` lines
+    (the shipped demo-01 asset does). `source` chokes on those mid-file, so they
+    are stripped here and the outer candidate/commit is driven explicitly.
+    """
+    try:
+        body = Path(cfg_path).read_text()
+    except OSError as exc:
+        print(f"[srlinux] startup-config unreadable for {container_name}: {exc}", file=sys.stderr)
+        return
+
+    # Drop lines that only make sense when the file is pasted into a session
+    # whole; we drive candidate mode ourselves.
+    kept = []
+    for line in body.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if stripped in ("enter candidate", "commit now", "commit"):
+            continue
+        kept.append(line)
+
+    if not kept:
+        return
+
+    script = "enter candidate\n" + "\n".join(kept) + "\ncommit now\n"
+    try:
+        result = subprocess.run(
+            ["docker", "exec", "-u", "1002", "-i", container_name, "sr_cli"],
+            input=script, capture_output=True, text=True, timeout=120,
+        )
+    except subprocess.TimeoutExpired:
+        print(f"[srlinux] startup-config timed out for {container_name}", file=sys.stderr)
+        return
+
+    # `sr_cli` reports apply errors on stdout while still exiting 0, so the
+    # exit code alone cannot be trusted. Look for the parser's signature.
+    combined = (result.stdout or "") + (result.stderr or "")
+    if "Parsing error" in combined or "failed" in combined.lower():
+        print(f"[srlinux] startup-config errors on {container_name}: {combined.strip()[:600]}", file=sys.stderr)
+    else:
+        print(f"[srlinux] applied startup-config on {container_name} via sr_cli (uid 1002)")
+
+
 def deploy_lab(lab: LabDef, session_id: str) -> dict:
     """Deploy a ContainerLab topology with a session-unique name, return node info."""
     if not (LABS_DIR / lab.topology_file).exists():
@@ -1376,6 +1449,33 @@ def deploy_lab(lab: LabDef, session_id: str) -> dict:
              "apk add iproute2 iputils -q 2>/dev/null"],
             capture_output=True, timeout=15
         )
+
+    # Apply SR Linux startup-configs that containerlab could not apply itself.
+    # WHY: on this substrate containerlab's SR Linux postdeploy runs
+    # `su -s /bin/bash admin`, and `admin`'s uid is outside this LXC's uid range,
+    # so the apply fails silently while deploy still reports success. See
+    # _apply_srlinux_startup_config for the full measurement.
+    startup_configs = _startup_config_paths(lab.topology_file)
+    for node_name, cfg_rel in startup_configs.items():
+        container_name = containers.get(node_name)
+        if not container_name:
+            continue
+        is_srlinux = subprocess.run(
+            ["docker", "inspect", container_name, "--format",
+             "{{json .Config.Labels}}"],
+            capture_output=True, text=True, timeout=10,
+        )
+        # Read labels as JSON: a --format template cannot address a key
+        # containing a hyphen (`{{.Config.Labels.clab-node-kind}}` is a parse
+        # error), which silently made this capability check never match.
+        try:
+            labels = json.loads(is_srlinux.stdout or "{}") or {}
+        except (ValueError, TypeError):
+            labels = {}
+        if "srlinux" not in str(labels.get("clab-node-kind", "")):
+            continue
+        cfg_path = (LABS_DIR / Path(lab.topology_file).parent / cfg_rel).resolve()
+        _apply_srlinux_startup_config(container_name, cfg_path)
 
     # Ownership is stamped at CREATION time by _prepare_topology (docker
     # labels are immutable after creation on this daemon), so nothing to do
