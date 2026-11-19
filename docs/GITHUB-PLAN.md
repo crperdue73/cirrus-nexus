@@ -4849,3 +4849,53 @@ STILL DAD-GATED, unchanged: `ci.yml` (CI runs 4 checks; 16 checkers are hand-run
 Screenshots, `.nexus/` policy, DELETE-OR-KEEP items, security contact, install.sh Step 6 fix,
 2026-10-31 grading items, NO-GRADER/NO-EXPECTED fatal, journal-vs-file logging, topology-type guard,
 response_model, the stashed 422-row edit, and the srlinux netns mount permission itself.
+
+### 2026-11-19 11:06Z — the badge block gets a witness (executed the previous run's `next=`)
+
+The last run's `next=` was: "the badges are unverified by any tool … that is the next visible surface
+to put a witness under." Done. `tools/check_readme_badges.py` reads the seven badges on README lines
+3–9 and checks each against *this tree*, not against shields.io: the status badge against the newest
+tag `git tag -l` reports, the "v0.3.0 draft, unpublished" badge against the draft notes file existing
+*and* `v0.3.0` not being a tag, the Python floor, containerlab and FastAPI against `backend/main.py`,
+the CI badge against the workflow path it names, and the license badge against `LICENSE`. The two
+things it cannot know (the CI badge's live colour, and whether the named tag was published as a GitHub
+Release) are printed as "confirm on the web", not asserted.
+
+**Witnessed on 8 copies under `/tmp/bw2`** (control C = untouched): C rc=0. S1 stale status badge
+(v0.1.0) rc=1. S2 a real `v0.3.0` tag created → rc=1 twice (status badge stale *and* "unpublished"
+badge now false). S3 draft notes deleted rc=1. S4 `API-FastAPI`→`API-Flask` rc=1. S5 CI badge pointed
+at a workflow that does not exist rc=1. S6 Python floor bumped to 3.13 rc=1. S7 `license-MIT` rc=1.
+S8 `.git` removed rc=1.
+
+**The witnesses caught a hole in the checker itself, again.** The first version's `tags()` did
+`subprocess.run(..., check=True)` inside a `try` that returned `None` on `CalledProcessError` — but the
+*first* iteration returned `[]` on a git that answered with no tags, and a git that refuses a repo
+("dubious ownership" in `/tmp`) raised and was caught: the two tag claims were then skipped with a
+`note:` line and the tool printed **OK**. Measured: S1 and S2 both passed rc=0 against a copy whose
+status badge was wrong. Fixed by making any non-zero git exit `None` and making claim 1 *fail* on
+`None` — a badge that names a release and cannot be checked is not a pass. Re-witnessed: S1 and S2
+now red, S8 (no repo at all) red too.
+
+Same failure as `check_ci_doc`'s SECURITY count on 2026-11-15, one file over: a checker that can be
+satisfied by its own inability to look.
+
+**Also in this run:** `check_ci_doc.py` gained the two `LOCAL_ONLY` entries for the new tool and
+`NUMBER_WORDS` `sixteen`/`seventeen`; SECURITY.md "16 further claim checkers" → 17 and its enumeration
+names the new tool; README's CONTRIBUTING row 16 → 17 and README's local-only paragraph names it;
+CONTRIBUTING line 13 16 → 17, step block gains line 20, "CI does not run steps 4–18" → "4–20".
+
+After: **18/18 checkers rc=0**, `py_compile` rc=0, `bash -n install.sh` rc=0, secrets grep clean.
+Commit `c77e597`, pushed, local == origin 0/0. NOT COMPLETE — Dad's word alone.
+
+`next=` **`README.md` line 174 admits the "Python 3.10+" floor is enforced by nothing** — this run
+found it again from the other side: the new tool checks the badge *against a hardcoded "the floor was
+recorded as 3.10"*, which is exactly the "held by nothing" shape it was written to kill, and it says so
+in its own failure message ("re-measure the floor before changing this badge"). The real item is to
+*measure* the floor — parse the backend and the graders for the newest syntax they actually use, or read
+`install.sh`'s interpreter check — and then let the badge and line 174 both be derived from that
+measurement instead of from a note. Do not re-measure: SECURITY/README/CONTRIBUTING counts (done this
+run, 17), the srbase netns permission (Dad-gated), 422, AEGIS_PORT, Step 6, topology-type guard.
+STILL DAD-GATED, unchanged: `ci.yml` (CI runs 4 checks; 17 checkers are hand-run), v0.3.0 tag/Release,
+Screenshots, `.nexus/` policy, DELETE-OR-KEEP items, security contact, install.sh Step 6 fix,
+2026-10-31 grading items, NO-GRADER/NO-EXPECTED fatal, journal-vs-file logging, topology-type guard,
+response_model, the stashed 422-row edit, and the srlinux netns mount permission itself.
