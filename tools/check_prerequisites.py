@@ -119,11 +119,19 @@ def main():
             if fn.endswith((".yml", ".yaml")):
                 with open(os.path.join(dirpath, fn), encoding="utf-8", errors="replace") as fh:
                     lab_images += re.findall(r"^\s*image:\s*(\S+)", fh.read(), re.M)
-    claim(sorted(set(lab_images)) == ["aegis/frr:latest", "alpine:latest",
-                                      "ghcr.io/nokia/srlinux:latest"],
+    # Switches bind aegis/srlinux:latest, not the upstream base: install.sh Step 7d builds
+    # it from Dockerfile.srlinux on top of ghcr.io/nokia/srlinux:latest to carry the
+    # logmgr `nsenter --net` patch (without it every config commit is rejected under LXC).
+    # Verified live 2026-11-19: demo-01/demo-02 start and grade with these images.
+    claim(sorted(set(lab_images)) == ["aegis/frr:latest", "aegis/srlinux:latest",
+                                      "alpine:latest"],
           "the shipped lab topologies no longer use exactly alpine:latest + "
-          f"ghcr.io/nokia/srlinux:latest + aegis/frr:latest — found {sorted(set(lab_images))}. "
+          f"aegis/srlinux:latest + aegis/frr:latest — found {sorted(set(lab_images))}. "
           "The README's 'the base images are tags, not digests' note names them")
+    # The patched substrate must actually be produced by the installer, or the topologies
+    # reference an image nothing builds.
+    install_has(r"docker build -t aegis/srlinux:latest -f Dockerfile\.srlinux",
+                "the Step 7d build of aegis/srlinux:latest from Dockerfile.srlinux")
     claim(not any("@sha256:" in img for img in lab_images),
           "a shipped topology now pins an image by digest — the README says it does not")
 

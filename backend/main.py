@@ -343,6 +343,23 @@ def _installed_pin() -> dict:
     return {}
 
 
+def _repo_digest_from_registry(repo_digest: str) -> bool:
+    """True when a RepoDigest really came from a registry push, not local synthesis.
+
+    Docker reports `<repo>@sha256:<config-id>` for a never-pushed local image; the
+    repo half then has no registry hostname (no '.', no ':' port, not 'localhost').
+    Such a value is a CONFIG id and is not comparable to the installer's layer-chain
+    pin. (Found 2026-11-19: see _resolve_container_digest for the failure it caused.)
+    """
+    repo = repo_digest.split("@", 1)[0]
+    if "/" not in repo:
+        return False
+    first = repo.split("/", 1)[0]
+    if first == "localhost" or "." in first or ":" in first:
+        return True
+    return False
+
+
 def _resolve_container_digest(container: str) -> str:
     """Resolve the substrate identity of a RUNNING container.
 
@@ -368,6 +385,19 @@ def _resolve_container_digest(container: str) -> str:
             return ""
 
         # Prefer a registry digest for the same image when one exists.
+        #
+        # MEASURED 2026-11-19 (dept-dragon-tech): this branch broke EVERY mixed lab.
+        # A locally-built, never-pushed image still has a non-empty RepoDigests --
+        # Docker synthesises `<name>@<image config id>`, e.g.
+        #     aegis/frr@sha256:45659602383a...   == the .Id, NOT a registry digest
+        # The docstring's claim that this image is local-only with `RepoDigests: []`
+        # was false on this host. Returning that value made a container's identity a
+        # CONFIG-ID while the installer's pin is a LAYER-CHAIN hash, so
+        # `live not in expected` was true for every substrate node and demo-02 refused
+        # to start ("Could not resolve runtime digest") on every attempt.
+        # A registry digest is only comparable to the pin when it really came from a
+        # registry: it must not be the image's own config id, and the repo half must
+        # not be a bare local name with no registry host.
         repo = subprocess.run(
             ["docker", "image", "inspect", image_id,
              "--format", "{{index .RepoDigests 0}}"],
@@ -375,7 +405,12 @@ def _resolve_container_digest(container: str) -> str:
         )
         repo_digest = repo.stdout.strip() if repo.returncode == 0 else ""
         if repo_digest and repo_digest not in ("<no value>", "[]"):
-            return repo_digest
+            _repo_digest_is_real = (
+                not repo_digest.endswith(image_id.split(":", 1)[-1])
+                and _repo_digest_from_registry(repo_digest)
+            )
+            if _repo_digest_is_real:
+                return repo_digest
 
         # Local-only image: cite the transport-invariant layer chain.
         layers_sha = _image_layers_sha(image_id)

@@ -119,11 +119,14 @@ Five things you should know before you start, because they are **not pinned or c
   Docker from your distribution (or from Docker's Ubuntu repository) before running `install.sh` is the
   way around it. (Static reading of Step 2 — no cold install on an Ubuntu host was performed here.)
 
-- **The base images are tags, not digests.** `Dockerfile.frr` is `FROM alpine:latest`; both shipped
-  topologies bind `ghcr.io/nokia/srlinux:latest` for the switches and `alpine:latest` for the PCs;
-  `install.sh` pre-pulls those same two names. All three are `git grep`-able in this tree, and none of
-  them is pinned to a digest here — so a build today and a build next month are not guaranteed to be
-  the same bits. "Latest" of a third-party image is a moving target; pin it if you need reproducibility.
+- **The base images are tags, not digests.** `Dockerfile.frr` is `FROM alpine:latest`; the shipped
+  topologies bind `aegis/srlinux:latest` for the switches and `alpine:latest` for the PCs. `install.sh`
+  pre-pulls `ghcr.io/nokia/srlinux:latest` and `alpine:latest` (Step 7c) and then **builds**
+  `aegis/srlinux:latest` from `Dockerfile.srlinux` on top of that base (Step 7d), so the tag the
+  topologies actually use is a locally built image, not the upstream one. The upstream base and
+  `alpine:latest` are still unpinned by digest — so a build today and a build next month are not
+  guaranteed to be the same bits. "Latest" of a third-party image is a moving target; pin it if you
+  need reproducibility.
   (The locally built router image *is* tracked: `assets/frr-image.pin` records a Dockerfile fingerprint
   and a rootfs layer-chain hash, and `install.sh` verifies both — see [Known
   limitations](#known-limitations-read-these-before-you-rely-on-it).)

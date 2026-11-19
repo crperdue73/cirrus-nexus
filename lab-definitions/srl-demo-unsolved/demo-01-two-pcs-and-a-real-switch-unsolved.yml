@@ -52,7 +52,7 @@ topology:
       - ip link set eth1 up
     sw1:
       kind: nokia_srlinux
-      image: ghcr.io/nokia/srlinux:latest
+      image: aegis/srlinux:latest
       type: ixr-d2l
       startup-config: assets/sw1.cfg
   links:

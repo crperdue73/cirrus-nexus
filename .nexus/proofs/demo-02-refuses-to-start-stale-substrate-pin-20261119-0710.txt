@@ -1,0 +1,99 @@
+DEMO-02 CANNOT START — "Could not resolve runtime digest" — DIAGNOSIS
+Measured 2026-11-19 07:06-07:15Z on dept-dragon-tech (192.168.111.40, LXC)
+
+SYMPTOM (live, through the product)
+  POST /api/sessions/start?lab_id=demo-02-two-switches-one-router-unsolved
+  -> 500 {"detail":"Could not resolve runtime digest from running containers;
+           refusing to start an unattributable session"}
+  Took 88.7s. The leak guard ran correctly: 0 leftover containers after the failure.
+  demo-01 on the SAME host/SAME code started fine.
+
+WHY demo-01 WORKS AND demo-02 DOES NOT
+  demo-01 node images: alpine, alpine, aegis/srlinux
+  demo-02 node images: alpine, alpine, aegis/srlinux, aegis/srlinux, aegis/frr  <-- has an FRR node
+
+  _resolve_runtime_digest_once() only counts a node as "substrate" when
+  `aegis/frr:latest` is in its RepoTags OR _is_aegis_substrate() (the
+  `aegis.frr.dockerfile.sha256` label) matches.
+    - aegis/srlinux:latest: RepoTags has no aegis/frr, and its label is EMPTY
+      (measured: frr_label= ) -> NOT counted as substrate.
+    - aegis/frr:latest: counted. So substrate_digests = {<frr live digest>}, len 1.
+    - demo-01 has no frr node -> substrate_digests empty -> falls to
+      _aegis_less_identity(), which succeeds. That is why demo-01 started.
+
+THE ACTUAL DEFECT — the install record is STALE, so the pin check refuses
+  Measured live layer-chains via the installer's own formula
+  (install.sh:460 -> fmt '{{range .RootFS.Layers}}{{.}} {{end}}' | tr -d ' ' | sha256sum):
+      aegis/frr:latest      -> 4ee85b56cdf31dec22e56daa6ad33740e0909837880adc2f716c655a73c861e1
+      aegis/srlinux:latest  -> f45591bbf046797ce66cd0ae71ad0178ebb6bf8eb53d449d0a41d0ace777ead9
+  What assets/installed-image-id.txt PUBLISHES:
+      installed_layers_sha256   = bb7ef23a07dcb6c6b34e225dd77fa2eb592700975843ad1f1aa0105f49f9220c
+      installed_substrate_digests = bb7ef23a... + f69c7345c8c520ff8bfec7702e9d1cd2bef0fb56ecc68e6d17e1a5aef7432ca5
+  NEITHER live image matches. aegis/frr was rebuilt since the record was written,
+  so `live not in expected` -> return "" -> hard refusal. The refusal is CORRECT
+  behaviour: it is doing exactly what its docstring promises (do not cite a
+  substrate the installer never verified). The record is what is wrong.
+
+  Note the record does already list a SECOND digest (f69c7345...) — the
+  multi-substrate slot exists and is populated. So the design anticipated
+  "frr + one more"; it just never got re-published after the rebuilds.
+
+WHAT I AM NOT DOING
+  Not deleting or hand-editing installed-image-id.txt to make demo-02 pass. Faking
+  the pin would make the refusal stop firing while the citation stayed false — the
+  exact class of lie this file exists to prevent. The honest repair is to re-run the
+  installer's publish step so the record matches what is actually on the host.
+
+FIX APPLIED THIS RUN: none to code. See next= for the one-line honest repair.
+STATUS: BLOCKED, root-caused. NOT complete — Dad's word alone.
+
+--- UPDATE 07:20Z — SECOND, DEEPER CAUSE FOUND (supersedes the "fix" above) ---
+
+I re-published assets/installed-image-id.txt in projects/aegis with the correct live digests
+and re-ran start. IT STILL REFUSED (92.8s, same message). So the stale pin was real but NOT
+the reason demo-02 fails on this host. Measured why:
+
+THE SERVER I WAS TESTING IS NOT THE TREE I WAS EDITING
+  ps: /usr/bin/python3 /opt/aegis/backend/main.py   started Mon 2026-11-16 16:14:24
+  I was editing ~/.openclaw/workspace-selina/projects/aegis (the git repo).
+  /opt/aegis is a SEPARATE, NON-GIT deployment tree. `diff` = 169 differing lines.
+
+CONSEQUENCE (important, and it explains everything)
+  /opt/aegis/backend/main.py contains NEITHER
+    - _apply_srlinux_startup_config  (grep = 0)   <- the 2026-11-19 demo-01 fix
+    - any mention of aegis/srlinux   (grep = 0)   <- the patched substrate
+  So the RUNNING product does not have either of today's fixes. The demo-01 session I
+  verified at 07:06 DID work — because the fix lives in deploy_lab of the repo tree, but
+  the lab-definitions the running server reads point at aegis/srlinux and the image-level
+  patch (Dockerfile.srlinux, baked 2026-11-16T03:23) carries the commit fix REGARDLESS of
+  backend code. That is why commits succeeded with no startup-config helper in sight:
+  the YAML's startup-config was applied by containerlab's own path... and IRB was up.
+  -> I must not claim the repo's _apply_srlinux_startup_config was exercised. It was not.
+
+WHY demo-02 REFUSES ON THE RUNNING SERVER
+  /opt/aegis/assets/installed-image-id.txt has only THREE keys and writes
+      installed_layers_sha256=4ee85b56...   (fresh, matches aegis/frr live)
+  but NO installed_substrate_digests line. _pinned_substrate_digests() then yields the
+  single-element set {4ee85b56...}. demo-02 runs aegis/frr AND aegis/srlinux; srlinux is
+  not the pinned tag and has no aegis.frr label, so it is not counted -> substrate set is
+  {frr} -> len==1 -> `live not in expected` is FALSE... yet it refused.
+  The remaining possibility is _resolve_container_digest returning "" for one container
+  (it returns "" -> immediate refusal on the FIRST pass, no retry). Not yet isolated:
+  the failing deploy is cleaned up before I can inspect it.
+
+REAL DEFECT IN install.sh (measured by reading its write block, lines 440-465)
+  install.sh writes the record with a truncating `{ ... } > file` of exactly three keys.
+  It NEVER writes installed_substrate_digests — but _pinned_substrate_digests() reads that
+  key and its docstring describes a multi-substrate era that install.sh has no code for.
+  Any lab mixing aegis/frr with a second AEGIS-tagged substrate therefore depends on a
+  hand-written key that a real install silently destroys. That is a genuine
+  install/product mismatch, not a docs nit.
+
+NEXT (concrete, next run): install.sh must emit installed_substrate_digests with the
+  frr chain PLUS the srlinux chain when that image exists, so a re-install reproduces the
+  key _pinned_substrate_digests() already requires. Then redeploy /opt/aegis and re-test
+  demo-02 through the running service, which is the only test that counts.
+
+MY ERROR (stated so it is not repeated): I tested a server I had not updated, twice,
+  and nearly recorded a fix that the running product never executed. Check `ps` for the
+  real entry point BEFORE measuring, not after two failed deploys.

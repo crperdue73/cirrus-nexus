@@ -1,0 +1,40 @@
+# 2026-11-16 05:00 UTC — demo-01 (SR Linux) on aegis/srlinux:latest: full clean grade, and a measured defect
+
+## 1. substrate image works on this LXC host
+parent /sys read-only:
+sysfs /sys sysfs ro,nosuid,nodev,noexec,relatime 0 0
+patch present in live switch:
+1
+commit on candidate (was 'Unacceptable syslog configuration' before the patch):
+All changes have been committed. Leaving candidate mode.
+
+## 2. full demo-01 topology deployed fresh (2 pcs + 1 switch, e1-1 + e1-2), lab assets/sw1.cfg applied
+front-panel ports present: 2
+irb0.0:
+    allow-directed-broadcast false
+    address 10.0.1.254/24 {
+        anycast-gw false
+        origin static
+        primary
+        status preferred
+    }
+pc-a 10.0.1.1 -> 10.0.1.254 / 10.0.1.2:
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 1.307/1.685/2.386 ms
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 0.285/0.482/0.826 ms
+
+## 3. REAL grader, unmodified: lab-definitions/grader_demo_01_srl.py grade_all()
+containers: clab-aegis-srlport-full-{pc-a,pc-b,sw1}
+result: passed=True, score=1.0, 6/6 checks, summary='pc-a 3/3, pc-b 2/2, sw1 1/1'
+
+## 4. DEFECT measured on the way: the lab's startup-config is never applied
+- deploy 1 (startup-config = ABSOLUTE path): switch booted with no front-panel port at all (5 links);
+  AFTER manually enabling e1-1 + irb0 it worked, so the config was never loaded.
+- deploy 2 (startup-config = assets/sw1.cfg RELATIVE to the topology, which is what the backend
+  hands containerlab): mounts are correct (/tmp/topology.yml, config dir), and 3 min after boot
+  'info from state interface irb0' is still empty, i.e. assets/sw1.cfg did not land.
+- net effect: a student starts demo-01 and gets a blank switch; driver_demo_01_srl.py does not
+  push the startup config either. The guides tell students the switch 'ships configured'.
+- the graders never catch it: grade_demo_01 grades STUDENT actions, so it passes cleanly on a
+  lab that was configured by hand — exactly what I did in section 2. Passing grade != lab is wired.

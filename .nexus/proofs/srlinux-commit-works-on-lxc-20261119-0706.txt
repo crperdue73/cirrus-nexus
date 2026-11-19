@@ -1,0 +1,46 @@
+AEGIS SR LINUX: CONFIG COMMIT WORKS ON LXC — END-TO-END PROOF
+Measured 2026-11-19 07:00-07:10Z on dept-dragon-tech (192.168.111.40, unprivileged LXC)
+
+WHY THIS MATTERS
+  Before the logmgr netns patch, sr_log_mgr ran `ip netns exec srbase rsyslogd -N2`
+  which remounts sysfs and FAILS on an LXC parent with read-only /sys. It reported
+  "Unacceptable syslog configuration" and REJECTED EVERY CONFIG COMMIT. A student
+  could not change a single switch setting — every SR Linux lab was unusable.
+
+PRODUCT PATH (not hand-built): POST /api/sessions/start?lab_id=demo-01-...
+  session created in 48.7s, 3 nodes running (pc-a, pc-b, sw1), ttyd on 8787/8788/8789
+  sw1 image = aegis/srlinux:latest (patched substrate, see Dockerfile.srlinux)
+
+SWITCH IS ALIVE (not dead as in the 2026-11-18 finding)
+  show interface irb0   -> irb0 is up; irb0.0 up; ip-vrf-1 + mac-vrf-1; 10.0.1.254/24
+  show interface e1-1   -> ethernet-1/1 is up, speed 25G, ethernet-1/1.0 up (bridged)
+
+CONFIG COMMIT — THE PATCH'S WHOLE PURPOSE
+  stdin to sr_cli:
+      enter candidate
+      set / interface ethernet-1/2 admin-state enable
+      commit now
+  OUTPUT: "All changes have been committed. Leaving candidate mode."  rc=0
+  PERSISTED (measured after commit, fresh invocation):
+      info / interface ethernet-1/2   -> admin-state enable
+      show interface ethernet-1/2     -> ethernet-1/2 is up, ethernet-1/2.0 is up
+  => the netns patch is verified in the running lab, not merely present in the image.
+
+NOT A DEFECT (checked, so it is not mistaken for one)
+  ping 10.0.1.254 and 10.0.1.2 from pc-a = 100% loss. CORRECT: demo-01 ships UNSOLVED.
+  `ip -4 addr show eth1` on pc-a and pc-b returns nothing — the student assigns the
+  addresses. The switch side (IRB) is configured and up; the PCs intentionally are not.
+
+IMAGE PROVENANCE
+  docker image inspect aegis/srlinux:latest -> User=user:user, Created 2026-11-16T03:23:48Z
+  in-image: grep -c nsenter logmgr_set_env.sh = 2; .orig-aegis-patch backup present
+
+MY ERRORS THIS RUN (stated so they are not re-learned)
+  1. Tried `docker exec $S sr_cli -d 'enter candidate\nset ...\ncommit now'` — sr_cli
+     rejects embedded newlines ("Parsing error: Newline character is not supported").
+  2. Then tried repeated -d flags, and single-line -d "set / interface ... " — sr_cli
+     takes ONE command string, not a sequence. Correct method is stdin.
+  3. `show / interface ethernet-1/2 admin-state` is not valid show syntax; use
+     `info / interface ...` for config and `show interface ...` for operational state.
+
+STATUS: netns patch VERIFIED end-to-end through the product. NOT "complete" — that is Dad's word.

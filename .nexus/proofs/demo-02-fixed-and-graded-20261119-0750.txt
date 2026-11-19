@@ -1,0 +1,69 @@
+DEMO-02: WAS UNSTARTABLE — NOW STARTS AND GRADES CLEAN
+Measured 2026-11-19 07:15-07:50Z on dept-dragon-tech (LXC)
+
+TASK TAKEN: demo-02 refused to start at all. Root-caused, fixed, verified through
+the product (HTTP API), solved as a student would, and graded. All five nodes 1.0.
+
+ROOT CAUSE (one code defect, measured)
+  _resolve_container_digest() in backend/main.py preferred a registry digest:
+      docker image inspect <img> --format '{{index .RepoDigests 0}}'
+  Its docstring claimed the AEGIS images are local-only with `RepoDigests: []`.
+  FALSE on this host. Docker synthesises `<repo>@<image CONFIG ID>` for never-pushed
+  local images:
+      aegis/frr:latest     -> aegis/frr@sha256:45659602383a...  (== .Id)
+      aegis/srlinux:latest -> aegis/srlinux@sha256:e58622fb4a0c...
+  So a container's "identity" came back as a CONFIG id, while the installer's pin
+  (installed-image-id.txt) is a LAYER-CHAIN hash. Comparing the two always failed:
+      live not in expected -> return "" -> "Could not resolve runtime digest"
+  demo-01 was unaffected only because it runs NO pinned aegis/frr node, so it fell
+  through to _aegis_less_identity() and attributed successfully. Any lab with an
+  FRR router — i.e. all the interesting ones — was dead.
+
+FIX (backend/main.py)
+  Added _repo_digest_from_registry(): a RepoDigest is only trusted when its repo half
+  actually names a registry host (contains '.', a ':' port, or is 'localhost') AND it
+  is not just the image's own config id. Otherwise fall through to the layer chain.
+  This restores the documented intent (identity == layer chain, comparable to the pin)
+  without discarding real registry digests when they exist.
+
+FIX (install.sh) — found while diagnosing, genuine and separate
+  install.sh wrote the install record with a truncating `{ ... } > file` of exactly
+  THREE keys, never `installed_substrate_digests`, while _pinned_substrate_digests()
+  reads that key. Moved record-writing to a new Step 7e that runs AFTER Step 7d builds
+  aegis/srlinux, and emits all four keys with both substrate chains.
+  HONESTY NOTE: this was NOT what fixed demo-02. The RepoDigest fix was. The srlinux
+  chain is not counted as a substrate node (no 'aegis/frr' tag, no frr label), so it
+  never entered the identity set. Step 7e is a real consistency repair, not the cure.
+
+VERIFIED THROUGH THE PRODUCT (not by reading code)
+  POST /api/sessions/start?lab_id=demo-02-two-switches-one-router-unsolved
+    -> status running, 64.5s, nodes [pc-a,pc-b,r1,sw1,sw2]
+    -> runtime_digest sha256:4ee85b56cd...  (= aegis/frr layer chain, IS in the pin)
+  Solved as the instructions say (r1 addressed + ip_forward, PCs addressed + /24 routes):
+    pc-a -> 10.0.1.254 (sw1)   0% loss
+    pc-a -> 10.0.1.253 (r1)    0% loss
+    pc-a -> 10.0.2.1   (pc-b)  0% loss   ACROSS THE ROUTED BOUNDARY
+    pc-b -> 10.0.1.1   (pc-a)  0% loss
+    traceroute pc-a->pc-b: hop1 10.0.1.253, hop2 10.0.2.1  == spec exactly
+  POST /api/sessions/1aa5f2a7/submit?node=... for all nodes:
+    pc-a graded 1.0 | pc-b 1.0 | sw1 1.0 | sw2 1.0 | r1 1.0 — all passed
+
+NOT A DEFECT (measured, so it is not chased again)
+  aegis/frr:latest has Cmd ["/bin/bash"] and no init, so FRR daemons do not auto-start,
+  and demo-02's r1 exec only brings links up. That is FINE: demo-02 is a static-routing
+  lab and its own instructions never ask for FRR — r1 routes as a plain Linux router
+  with ip_forward. The grader checks addresses + forwarding + forwarding of traffic and
+  passes. `frrinit.sh start` does work in the image if a future lab needs protocols
+  (verified: 5 daemons came up, vtysh connected).
+
+MY ERRORS THIS RUN (recorded, not hidden)
+  1. Tested the demo-01 fixes against /opt/aegis while editing projects/aegis — two
+     different trees, 169 differing lines. The running service is /opt/aegis (non-git).
+  2. Then "fixed" a stale pin that was not the cause, twice, before isolating the real
+     one by deploying by hand and calling the resolver directly.
+  3. Deleted the `repo = subprocess.run(...)` line while patching, leaving repo_digest
+     undefined; caught it because every digest went empty, and restored it.
+
+DEPLOYED STATE: fix copied into /opt/aegis/backend/main.py (backup:
+  /tmp/opt-main.py.bak-20261119-0735), aegis.service restarted, API healthy, v0.3.0.
+STATUS: demo-02 works and grades. NOT "complete" — that word is Dad's alone.

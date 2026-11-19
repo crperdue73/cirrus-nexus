@@ -459,11 +459,10 @@ if [[ "${NEED_FRR_BUILD}" -eq 1 ]]; then
     INSTALLED_LAYERS=$(docker image inspect aegis/frr:latest \
         --format '{{range .RootFS.Layers}}{{.}} {{end}}' 2>/dev/null | tr -d ' ')
     INSTALLED_LAYERS_SHA=$(printf '%s' "${INSTALLED_LAYERS}" | sha256sum | awk '{print $1}')
-    {
-        echo "installed_local_image_id=${INSTALLED_IMAGE_ID}"
-        echo "installed_dockerfile_sha256=${INSTALLED_LABEL}"
-        echo "installed_layers_sha256=${INSTALLED_LAYERS_SHA}"
-    } > "${AEGIS_DIR}/assets/installed-image-id.txt" 2>/dev/null || true
+    # NOTE (2026-11-19): the record is written AFTER Step 7d, not here — Step 7d may
+    # build aegis/srlinux, and _pinned_substrate_digests() needs BOTH digests or a lab
+    # that mixes aegis/frr with SR Linux resolves to a pin containing neither.
+    write_install_record=1
 fi
 
 # Step 7b removed 2026-09-20 — it built a substrate the product does not ship.
@@ -504,6 +503,49 @@ if [ -n "${FAILED_IMAGES}" ]; then
     warn "AEGIS is installed, but the labs will NOT start until those images exist."
     warn "Re-run this installer once the registry is reachable, or load them by hand:"
     warn "  docker pull ghcr.io/nokia/srlinux:latest alpine:latest"
+fi
+
+# Step 7d: Build the AEGIS SR Linux substrate image.
+# WHY: the stock ghcr.io/nokia/srlinux image runs syslog config verification via
+# `ip netns exec srbase`, which remounts sysfs and fails with "Operation not
+# permitted" on hosts whose parent exports /sys read-only (e.g. LXC). That makes
+# sr_log_mgr report "Unacceptable syslog configuration" and REJECTS EVERY CONFIG
+# COMMIT -- every SR Linux lab is unusable. We build a patched layer that uses
+# `nsenter --net` instead. See docker/srlinux-logmgr-netns.patch.sh.
+log "Step 7d: Building SR Linux substrate image (aegis/srlinux:latest)..."
+if docker image inspect aegis/srlinux:latest &>/dev/null; then
+    log "  aegis/srlinux:latest — already present"
+elif docker image inspect ghcr.io/nokia/srlinux:latest &>/dev/null; then
+    if docker build -t aegis/srlinux:latest -f Dockerfile.srlinux "${AEGIS_DIR}" &>/dev/null; then
+        log "  built aegis/srlinux:latest"
+    else
+        warn "  FAILED to build aegis/srlinux:latest — SR Linux labs will not commit config"
+    fi
+else
+    warn "  cannot build aegis/srlinux:latest: base image ghcr.io/nokia/srlinux:latest is missing"
+fi
+
+# Step 7e: Publish the installed-substrate record — AFTER the substrates exist.
+# WHY: _pinned_substrate_digests() (backend/main.py) treats installed_substrate_digests as
+# the accepted set. Before 2026-11-19 install.sh wrote only installed_layers_sha256, so any
+# lab mixing aegis/frr with a second AEGIS substrate (demo-02: frr + srlinux) was refused at
+# session start with "Could not resolve runtime digest" — measured on dept-dragon-tech.
+# A re-install silently DROPPED the key the product requires. Publish it explicitly.
+if [[ -n "${write_install_record:-}" ]]; then
+    SUBSTRATE_DIGESTS="sha256:${INSTALLED_LAYERS_SHA}"
+    if docker image inspect aegis/srlinux:latest &>/dev/null; then
+        SRL_LAYERS=$(docker image inspect aegis/srlinux:latest \
+            --format '{{range .RootFS.Layers}}{{.}} {{end}}' 2>/dev/null | tr -d ' ')
+        SRL_SHA=$(printf '%s' "${SRL_LAYERS}" | sha256sum | awk '{print $1}')
+        SUBSTRATE_DIGESTS="${SUBSTRATE_DIGESTS} sha256:${SRL_SHA}"
+    fi
+    {
+        echo "installed_local_image_id=${INSTALLED_IMAGE_ID}"
+        echo "installed_dockerfile_sha256=${INSTALLED_LABEL}"
+        echo "installed_layers_sha256=${INSTALLED_LAYERS_SHA}"
+        echo "installed_substrate_digests=${SUBSTRATE_DIGESTS}"
+    } > "${AEGIS_DIR}/assets/installed-image-id.txt" 2>/dev/null || true
+    log "  install record published: ${SUBSTRATE_DIGESTS}"
 fi
 
 log "Step 8: Creating systemd service..."

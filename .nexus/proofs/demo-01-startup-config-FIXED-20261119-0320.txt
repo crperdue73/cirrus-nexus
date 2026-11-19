@@ -1,0 +1,44 @@
+DEMO-01 DEAD SWITCH — ROOT CAUSE AND FIX
+Measured 2026-11-19 03:00-03:20Z on dept-dragon-tech (192.168.111.40)
+Supersedes: demo-01-startup-config-never-applied-20261118-2315.txt
+
+SYMPTOM
+  Lab deploys, containerlab reports success, switch boots with every
+  front-panel port admin-disabled and no irb0. Lab is dead. Grader may still
+  pass because it grades the student's hand config, not the switch.
+
+ROOT CAUSE (pinned to a syscall)
+  containerlab applies an SR Linux startup-config via
+    su -s /bin/bash admin -c '<sr_cli ...>'
+  1. Host is an unprivileged LXC. /proc/1/uid_map = 0 100000 65536.
+  2. Docker runs inside it; nested containers inherit that 65536-uid window
+     (docker run --rm alpine cat /proc/self/uid_map -> 0 100000 65536).
+  3. SR Linux admin uid = 166898390, far above the window.
+  4. setuid(166898390) -> EINVAL -> "su: cannot set user id: Invalid argument".
+  5. Config never applied. Deploy still says success. Switch is dead.
+
+RULED OUT BY TEST
+  - account exists: getent passwd admin -> uid 166898390
+  - not nosuid: root overlay has no nosuid flag
+  - not PAM: /etc/pam.d/su and pam_srlinux.so present and fine
+  - not caps: CapEff=000001ffffffffff, NoNewPrivs=0
+  - su srlinux -s /bin/bash -c id WORKS (uid 1002 is in range); only admin fails
+  - fork+setuid(166898390)=EINVAL ; fork+setuid(1002)=OK  (direct proof)
+
+FIX (committed f3bab31, backend/main.py)
+  _apply_srlinux_startup_config() called from deploy_lab() once containers run.
+  Applies the config with sr_cli as uid 1002 — no su, no admin.
+  Strips enter candidate / commit now (asset carries them; source chokes).
+  Checks stdout for "Parsing error" because sr_cli exits 0 on parse errors.
+
+SECOND BUG FOUND WHILE FIXING
+  Capability check used {{.Config.Labels.clab-node-kind}} — a Go template parse
+  error on a hyphenated key. It silently never matched, so the first version of
+  this fix did nothing. Now reads {{json .Config.Labels}}. Caught by measuring.
+
+VERIFICATION (fresh deploy through deploy_lab, no hand config, no hands)
+  e1-1 / e1-2 : admin enable, oper up
+  ip-vrf-1, mac-vrf-1 : up ; irb0 10.0.1.254/24 bound, status preferred
+  pc-a -> 10.0.1.254 : 2/2, 0% loss
+  pc-a -> pc-b      : 2/2, 0% loss
+STATUS: FIXED AND VERIFIED

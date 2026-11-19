@@ -1,0 +1,17 @@
+# 2026-11-16 05:00 UTC — srlinux substrate image + sw1 port-name measurement
+
+## host
+systemd-detect-virt: lxc
+sysfs /sys sysfs ro,nosuid,nodev,noexec,relatime 0 0
+
+## patch present in the live switch (image built 2026-11-16 03:20)
+1
+
+## nsenter rsyslogd verification (the thing that used to fail)
+All changes have been committed. Leaving candidate mode.
+
+## switch front-panel ports on a LIVE container
+5
+0
+(names:)
+lo mgmt0@if12 monit_in@if3 gway-2804@if10 mgmt0-0@if11 

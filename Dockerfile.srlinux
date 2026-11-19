@@ -1,0 +1,14 @@
+# AEGIS SR Linux substrate — stock Nokia image + host-compatibility patch.
+#
+# The base image is unmodified upstream. We add exactly one patch:
+#   /opt/srlinux/bin/logmgr_set_env.sh  ->  use nsenter instead of `ip netns exec`
+# so rsyslogd config verification does not fail on hosts whose parent exports
+# /sys read-only (LXC). Without it, every config commit is rejected and every
+# SR Linux lab is dead. Full write-up: docker/srlinux-logmgr-netns.patch.sh
+FROM ghcr.io/nokia/srlinux:latest
+# The upstream image runs as `user:user`; the srlinux bin tree is root-owned,
+# so the patch step must escalate. USER is restored afterwards.
+USER root
+COPY docker/srlinux-logmgr-netns.patch.sh /tmp/aegis-patch.sh
+RUN bash /tmp/aegis-patch.sh && rm -f /tmp/aegis-patch.sh
+USER user:user

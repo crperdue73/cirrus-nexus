@@ -1,0 +1,44 @@
+# 2026-11-16 05:00 UTC — demo-01 SR Linux: does a FRESH deploy or a shared switch port explain 'no front-panel port'?
+
+## host: LXC parent, /sys read-only
+lxc
+sysfs /sys sysfs ro,nosuid,nodev,noexec,relatime 0 0
+
+## the 14h-old deploy (clab-aegis-demo-01-srl-switch-55086cdc-sw1)
+container interfaces: 5 (lo, mgmt0, monit_in, gway, mgmt0-0)
+    oper-state down
+    oper-down-reason lower-layer-down
+
+## control: a FRESH containerlab deploy of the same image, one port
+interfaces:
+lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP> 
+mgmt0@if98       UP             c2:a5:5d:30:e3:88 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+monit_in@if3     UP             aa:ad:e3:f9:a0:00 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+gway-2800@if10   UP             56:4f:d3:48:92:c1 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+mgmt0-0@if11     UP             b2:f4:22:a4:a2:c3 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+gway-2801@if10   UP             96:ce:3b:ee:cd:64 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+irb0-0@if11      UP             9e:bb:4a:34:ed:08 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+e1-1@if100       UP             aa:c1:ab:fc:40:b5 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+
+after enabling e1-1 + irb0 (sr_cli, commit now):
+    admin-state enable
+    allow-directed-broadcast false
+    address 10.0.1.254/24 {
+        anycast-gw false
+        origin static
+        primary
+
+## end-to-end: pc-a 10.0.1.1/24 -> ping 10.0.1.254
+--- 10.0.1.254 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 1.780/1.855/1.911 ms
+
+## real grader_demo_01_srl.grade_all() against the fresh deploy
+(pc-b is stood in by pc-a's container: the probe has one host, so pc-a->pc-b and the pc-b address line MUST fail; every other line is the measurement)
+  pc-a: eth1 10.0.1.1/24 OK, ping 10.0.1.254 OK, ping 10.0.1.2 expected-fail
+  pc-b: 10.0.1.2 not found (stand-in)
+  sw1 : PASSED — real SR Linux switch, irb0.0 up with 10.0.1.254
+
+## what this does and does not prove
+PROVES: the image patch commits on this host; a single-port demo-01 deploy on aegis/srlinux:latest links, brings up the IRB and passes the switch leg of the real grader.
+DOES NOT PROVE: that the 14h-old deploy broke because of port sharing (eth1 is shared between two pc containers, and its switch has no front-panel port at all) or because of the pre-patch image — both are hypotheses with no witness; the containers are left standing, not removed.

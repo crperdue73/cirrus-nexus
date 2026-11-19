@@ -1,0 +1,38 @@
+# 2026-11-18 23:15 UTC — demo-01 ships a DEAD switch: startup-config never applied
+
+## Symptom (student-facing)
+Deploy demo-01 as the backend does, wait 90s, ask the switch:
+  docker exec <sw1> sr_cli "show interface brief"
+  -> ethernet-1/1 admin-state DISABLE, ethernet-1/2 admin-state DISABLE
+  docker exec <sw1> sr_cli "info from state interface irb0"  -> empty
+The lab definition says "its IRB 10.0.1.254/24 ships pre-configured". It does not.
+Every front-panel port is admin-disabled and no IRB exists: PC-A cannot reach the switch.
+
+## Root cause — containerlab post-deploy step fails, silently-ish
+containerlab deploy --debug, node sw1:
+  23:13:48 DEBU copying path /tmp/4087651676 -> /tmp/clab-default-config to container ...-sw1
+  23:13:48 DEBU node sw1. stdout: , stderr: su: cannot set user id: Invalid argument
+  23:13:48 ERRO failed to run postdeploy task for node sw1: command execution error:
+              su: cannot set user id: Invalid argument
+startup-config is CLI format => containerlab applies it in the POST-DEPLOY stage, by running
+`su` to the srlinux user inside the container. That su fails on this host, so the config is
+never pushed. Confirmed: /etc/opt/srlinux/ contains no config.json from our file, and
+assets/sw1.cfg never appears anywhere under the lab dir.
+
+Why su fails here: inside the container the srlinux user is `srlinux:x:1002:1002::/home/srlinux:/usr/sbin/nologin`
+and the container runs as User:0:0. `su -s /bin/bash srlinux -c id` works from root manually
+(uid=1002 resolves fine), so it is not a missing account. It is the same host-compat class as
+the 2026-11-16 logmgr patch: something the LXC parent does not permit. NOT yet pinned to a syscall.
+
+## Why nobody caught it
+The graders grade the STUDENT's actions, and a student who hand-configures the switch passes.
+A passing grade is not evidence the lab was wired. This defect is invisible to grade_all().
+
+## Status
+MEASURED and REPRODUCED tonight with a clean copy (/tmp/sc-test, destroyed after).
+NOT FIXED. Candidate fixes, not yet tried:
+ 1. add `enforce-startup-config: true` / check containerlab's srlinux postdeploy path on this version
+ 2. ship the lab with the switch config pre-baked into the image (no postdeploy su at all)
+ 3. driver-level: push sw1.cfg over sr_cli after boot instead of relying on startup-config
+ 4. pin down the su failure (strace the postdeploy exec) and patch, like logmgr
+Fix must be verified by booting the lab fresh and running the REAL grader with NO hand config.
