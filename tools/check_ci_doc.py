@@ -160,9 +160,10 @@ TOOLS = [
 NUMBER_WORDS = {
     "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
     "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
-    "thirteen": 13, "fourteen": 14, "fifteen": 15,
-}  # Fifteen is far past what these sentences need; past it the doc should use digits,
-   # and num() raising KeyError is the signal to stop spelling counts out.
+    "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16, "seventeen": 17,
+}  # Fifteen was the old stopping point; the doc now counts past it, and the rule it encodes is
+   # "spell it out while the sentence reads naturally, then use digits" — num() raising KeyError is
+   # still the signal to stop spelling counts out.
 
 
 def num(word):
@@ -198,6 +199,7 @@ LOCAL_ONLY = [
     (CONTRIBUTING, "check_pyc_staleness"), (CONTRIBUTING, "check_release_notes"),
     (CONTRIBUTING, "check_canary_pack"), (CONTRIBUTING, "check_grading_doc"),
     (CONTRIBUTING, "check_lab_instructions"), (CONTRIBUTING, "check_architecture_doc"),
+    (CONTRIBUTING, "check_readme_badges"),
     (SECURITY, "check_prerequisites"), (SECURITY, "check_install_narrative"),
     (SECURITY, "check_lab_assets"), (SECURITY, "check_api_doc"),
     (SECURITY, "check_api_exposure"),
@@ -206,7 +208,7 @@ LOCAL_ONLY = [
     (SECURITY, "check_pyc_staleness"), (SECURITY, "check_release_notes"),
     (SECURITY, "check_canary_pack"), (SECURITY, "check_grading_doc"),
     (SECURITY, "check_grader_refusals"), (SECURITY, "check_lab_instructions"),
-    (SECURITY, "check_architecture_doc"),
+    (SECURITY, "check_architecture_doc"), (SECURITY, "check_readme_badges"),
 ]
 
 # SECURITY.md's own count of the checkers it says are not CI steps ("Eleven further claim checkers").

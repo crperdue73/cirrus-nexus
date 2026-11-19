@@ -10,7 +10,7 @@ write the claim.
 
 ## Before you push
 
-Run the same checks CI runs (`.github/workflows/ci.yml` — four of them), plus the 16 claim
+Run the same checks CI runs (`.github/workflows/ci.yml` — four of them), plus the 17 claim
 checkers that are written and verified but **not yet in the workflow** (the lines marked `— local only`; see below):
 
 ```bash
@@ -34,10 +34,11 @@ python3 tools/check_grading_doc.py        # 16. the lab-verdict rules in GRADING
 python3 tools/check_grader_refusals.py    # 17. a stopped switch refuses; a running one still grades — local only
 python3 tools/check_lab_instructions.py   # 18. a lab's instructions vs its own startup-configs — local only
 python3 tools/check_architecture_doc.py       # 19. the architecture doc's canary-pack row vs the pack on disk — local only
+python3 tools/check_readme_badges.py          # 20. the README's badge block vs the tags, draft notes and code — local only
 # 19. no obvious secrets committed — CI greps the tree for token/key patterns    — in CI
 ```
 
-**CI does not run steps 4–18 yet.** Adding them means a `ci.yml` change, and this repo's automation token
+**CI does not run steps 4–20 yet.** Adding them means a `ci.yml` change, and this repo's automation token
 has no `workflow` scope — GitHub answers `404` to a write under `.github/workflows/` with this token
 (re-measured 2026-11-03; re-confirmed 2026-11-05, `x-oauth-scopes` = `delete:packages, repo,
 write:discussion, write:packages`), so it takes a human with that scope (see *Changing CI*). Run the local-only steps by
