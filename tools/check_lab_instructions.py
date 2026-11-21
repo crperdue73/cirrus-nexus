@@ -64,10 +64,16 @@ LABS = ROOT / "lab-definitions"
 # Wording that promises a node's configuration is applied before the student arrives.
 # Kept narrow on purpose: "you must address the switch" is not a claim, and neither is
 # "the IRB is graded". These are the forms that were actually wrong in the tree.
+#
+# 2026-11-21: the honest rewording ("each applies its IRB ... by its own start-up
+# commit") is *also* a promise about topology.nodes.<n>.startup-config, so it is added
+# here. Without it, fixing the wording silently disabled checks 3-4 -- a pass that
+# proves nothing, which is worse than the false claim it replaced.
 PREAPPLIED = re.compile(
     r"pre-?configured|pre-?applied|already configured|arrives? configured|"
     r"ship(?:s|ped)? configured|shipped with .*configured|"
-    r"configured (?:for you|out of the box)",
+    r"configured (?:for you|out of the box)|"
+    r"applies (?:its|their) .*?\bcommit|start-?up commit applied",
     re.IGNORECASE,
 )
 
