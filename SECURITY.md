@@ -60,7 +60,7 @@ Problems that break the design above rather than restating it. Examples:
 CI (`.github/workflows/ci.yml`) runs four checks on every push and pull request: the backend
 byte-compiles, `install.sh` is valid shell, the tree is self-contained (a bare clone is installable,
 every shipped grader byte-compiles, no absolute developer paths), and a grep for obvious committed
-secrets. 17 further claim checkers — `tools/check_prerequisites.py` (the README's Prerequisites
+secrets. 18 further claim checkers — `tools/check_prerequisites.py` (the README's Prerequisites
 against `install.sh`), `tools/check_install_narrative.py` (the README's account of what `install.sh`
 installs, builds, pre-pulls and registers, against `install.sh`), `tools/check_lab_assets.py` (the
 README's per-lab startup-config copy-and-verify promise, against `install.sh` and the shipped
@@ -95,7 +95,10 @@ verdict the linter can emit has a canary, and that the row does not claim a one-
 mapping the pack has never had) and `tools/check_readme_badges.py` (the badge block at the top of
 `README.md` — the status badge against the newest tag in this tree, the "draft, unpublished" release-notes
 badge against the draft file and the tag list, the Python floor, containerlab, FastAPI, the CI workflow
-path and the license)
+path and the license) and `tools/check_adding_a_lab_doc.py` (the grader contract in
+`docs/ADDING-A-LAB.md` — a shipped grader exports `grade` and `grade_all`, `grade()` returns exactly
+the result keys the doc names including the three-state `status`, and the loader's skip rules and
+grader lookup directories match `backend/main.py`)
 — are written and verified but **not yet in the workflow**:
 this repo's automation token is refused on workflow paths (re-measured 2026-11-03, re-confirmed
 2026-11-05), so adding them takes

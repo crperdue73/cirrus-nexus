@@ -165,8 +165,17 @@ Grades **one node**. `session` is the live session dict; `session["nodes"]` is t
                               #   `passed` must not be derived from it (see GRADING-MODEL.md)
     "feedback": [str, ...],   # one line per check; shown to the student verbatim
     "competencies": [str, ...],
+    "status": str,            # optional; "graded" (default) | "error" | "refused" — see below
 }
 ```
+
+The `status` key is part of the contract, not decoration: the backend's
+`GraderResult` carries it as a first-class three-state field (`graded`, `error`,
+`refused`), and `grader_demo_02.py` returns `status: "refused"` from `grade()`
+when a link it needs is missing. Omit it and the result is treated as `graded`.
+Use `"refused"` when the node is unexaminable for a substrate reason (no runtime
+digest, missing link) — the route renders it as HTTP 409 and the same vocabulary
+reaches in-process callers, so a crash and a wrong answer never look alike.
 
 If a check cannot run at all (device unreachable, interface missing), **refuse** —
 return `passed=False` with feedback that names the reason, or raise. The backend

@@ -492,7 +492,7 @@ platform for its two shipped labs; it is not a finished product. What that means
 | [`docs/RELEASE-NOTES-v0.1.0-draft.md`](docs/RELEASE-NOTES-v0.1.0-draft.md) | release notes for `v0.1.0` — **historical draft**; the tag exists, its GitHub Release was never published (see `v0.2.0`) |
 | [`CONFERENCE.md`](CONFERENCE.md) | booth-operator cheat sheet (install, ports, troubleshooting, reset) — **draft / not maintained**; install & lab-catalog sections corrected to this tree |
 | [`HANDOFF-2026-09-22.md`](HANDOFF-2026-09-22.md) | dated handoff note from a 2026-09-22 demo drive — **historical / not maintained**; counts and lab names in it describe a wider tree than this release (see the banner in the file) |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | the ground rules, and the checks to run before pushing (four run in CI, 17 are claim checkers run by hand) |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | the ground rules, and the checks to run before pushing (four run in CI, 18 are claim checkers run by hand) |
 | [`SECURITY.md`](SECURITY.md) | how to report a vulnerability privately, the threat model (unauthenticated by design), what's in scope, and the automated checks that exist (four in CI, ten by hand, and no more) |
 | [`CHANGELOG.md`](CHANGELOG.md) | what changed, newest first |
 | [`10-archive/topology-audit-2026-06-09.md`](10-archive/topology-audit-2026-06-09.md) | dated 2026-06-09 topology audit — **historical**, describes a pre-release layout (see `docs/OPERATIONS.md` → Archive). Renamed from `SUMMARY-for-Dad.md` on 2026-10-30 |
@@ -587,7 +587,11 @@ and
 `tools/check_self_contained_doc.py` for `docs/SELF-CONTAINED.md`,
 and `tools/check_readme_badges.py` for the badge block at the top of this file — the status badge
 against the newest tag in the tree, the "v0.3.0 draft, unpublished" badge against the draft notes and
-the tag list, the Python floor, containerlab, FastAPI, the CI workflow path, and the license) is written, applies cleanly
+the tag list, the Python floor, containerlab, FastAPI, the CI workflow path, and the license),
+and `tools/check_adding_a_lab_doc.py` for `docs/ADDING-A-LAB.md`'s grader contract (that a shipped
+grader exports `grade` and `grade_all`, that `grade()` returns exactly the result keys the doc names
+— including the three-state `status` — and that the loader's skip rules and grader lookup directories
+match the source) is written, applies cleanly
 to `main`, and is not pushed, because
 this repo's automation token is refused on workflow paths, so it needs a human with `workflow` scope
 (re-measured 2026-11-05; as of that date the token cannot push the patch and nothing in CI invokes this
