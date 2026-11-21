@@ -7,7 +7,8 @@ Every claim here is read off this tree, not aspirational. Paths are relative to 
 
 ## In one paragraph
 
-A single Linux host runs one FastAPI process (`backend/main.py`) on `:8000`. That process
+A single Linux host runs one FastAPI process (`backend/main.py`) on `:8000` by default
+(`AEGIS_HOST` / `AEGIS_PORT` override that). That process
 serves a static student page (`frontend/index.html`), discovers lab topologies from
 `lab-definitions/`, drives **containerlab** to deploy real containers, wires a **ttyd**
 terminal into each node, and grades a student's configuration by inspecting the **live**
@@ -25,7 +26,7 @@ flowchart TB
         iframe["ttyd iframe per node"]
     end
 
-    subgraph server["backend/main.py — FastAPI (:8000)"]
+    subgraph server["backend/main.py — FastAPI (:8000, AEGIS_PORT-overridable)"]
         catalog["lab catalog + loader<br/>(cached in memory)"]
         sessions["session lifecycle<br/>deploy / stop / reconcile"]
         grader["grader runner"]

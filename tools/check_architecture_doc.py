@@ -109,6 +109,47 @@ def find_row(text):
     return None
 
 
+def check_port_claim(text, failures, notes):
+    """The listen port: if the server honours AEGIS_PORT, the doc must say so.
+
+    2026-11-21: architecture.md stated the server runs on ":8000" twice, flatly,
+    with no mention of the override. The code has read AEGIS_PORT since 2026-10-04
+    (run 190) precisely so a deployer can move the port off a busy 8000 without
+    editing source. README and OPERATIONS both say "8000 (AEGIS_PORT overrides)";
+    only the architecture doc asserted a fixed port. Derived here from the source,
+    not transcribed: if `os.environ.get("AEGIS_PORT"` is present, the doc must name
+    AEGIS_PORT; if it is absent, the doc must NOT (or it is describing a feature
+    the code does not have).
+    """
+    which = None
+    for name in ("main.py",):
+        cand = os.path.join(ROOT, "backend", name)
+        if os.path.isfile(cand):
+            which = cand
+            break
+    if which is None:
+        notes.append("backend/main.py not found -- skipped the port-claim cross-check")
+        return
+    with open(which, encoding="utf-8") as fh:
+        src = fh.read()
+    code_reads_port = 'os.environ.get("AEGIS_PORT"' in src or "os.environ.get('AEGIS_PORT'" in src
+    doc_names_port = "AEGIS_PORT" in text
+    if code_reads_port and not doc_names_port:
+        failures.append(
+            "the server reads AEGIS_PORT from the environment, but docs/architecture.md "
+            "never mentions it -- the doc states a fixed port the code does not have"
+        )
+    elif code_reads_port:
+        notes.append("AEGIS_PORT override documented (code reads it)")
+    elif doc_names_port:
+        failures.append(
+            "docs/architecture.md names AEGIS_PORT, but backend/main.py does not read it "
+            "-- the doc describes a knob the code no longer has"
+        )
+    else:
+        notes.append("no AEGIS_PORT on either side (consistent)")
+
+
 def check():
     failures = []
     notes = []
@@ -139,6 +180,9 @@ def check():
 
     with open(DOC, encoding="utf-8") as fh:
         text = fh.read()
+
+    check_port_claim(text, failures, notes)
+
     row = find_row(text)
     if row is None:
         return [
