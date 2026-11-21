@@ -48,14 +48,14 @@ only one of them is a pass condition.
   ping targets, but gives `pc-b` the full `1.0` for its single address check — a node with
   one check can be worth more than a node with three. Demo 2 gives every node `0.5` for its
   address plus `0.5` for its reachability targets, but *which* targets a node is asked about
-  differs by node: `pc-a` is asked for four (two local plus two across the router), `pc-b`
+  differs by node: `pc-a` is asked for three (two local plus one across the router), `pc-b`
   for one. The number is per-node, per-lab credit — do not compare it across nodes or across
   labs, and do not treat it as a percentage of the exercise.
 - **The lab verdict does not read `score` at all.** A session becomes `submitted` only when
   the grader's `grade_all()` returns `passed: true`, and both shipped `grade_all()`s are
   built out of the per-node `passed` flags (`pc-a`/`pc-b`/`sw1` in Demo 1;
-  `pc-a`/`pc-b`/`sw1`/`sw2`/`r1` in Demo 2 — see the Coverage section below for the one lab
-  whose lab-level condition ignores a node it grades). A node at `score: 1.0` in one lab and
+  `pc-a`/`pc-b`/`sw1`/`sw2`/`r1` in Demo 2 — see the Coverage section below, which names
+  the one gap the backend cannot audit). A node at `score: 1.0` in one lab and
   `score: 0.5` in another can be equally "done".
 - **A refusal or an error carries `score: 0.0`.** That zero is the absence of a
   measurement, not a measurement of zero — the same reason `status` exists. Never read it as
@@ -121,12 +121,12 @@ Before trusting `grade_all()["passed"]`, the backend checks:
    > condition is expressed.** Coverage verifies that every declared node was
    > *reported on*; it does not verify that your verdict *required* each one to
    > pass. A grader can grade all five nodes, return all five results, and still
-   > compute `passed` from two of them — that is a sound-looking verdict the
-   > backend will accept and cannot audit. Two shipped graders do exactly that
-   > shape (Demo 1 gates on `pc-a` and `sw1` of three; Demo 2 on four of five,
-   > omitting `r1` from the conjunction while reporting it). That is a design choice
-   > worth knowing, not an enforcement gap — say what your lab requires, and
-   > require it.
+   > compute `passed` from a subset of them — that is a sound-looking verdict the
+   > backend will accept and cannot audit. Demo 1 did exactly that until 2026-09-21's
+   > fix, gating on `pc-a` and `sw1` of three. **Demo 2 gates on all five**: its
+   > `lab_passed = e2e and real_switches and router_ok`, where `e2e` is `pc-a`+`pc-b`,
+   > `real_switches` is `sw1`+`sw2` and `router_ok` is `r1` — every node it grades is
+   > in the conjunction. Say what your lab requires, and require it.
 2. **Identity** — each result's `node` field must equal the key it is filed under.
    A mislabelled result makes the verdict uncomputable (`RUN 227`).
 
