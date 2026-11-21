@@ -80,6 +80,107 @@ def vkey(tag):
     return tuple(int(p) for p in re.findall(r"\d+", tag))
 
 
+# --- the Python floor, derived from the code that has to run ------------------------------- #
+#
+# The floor is set by the NEWEST language feature an annotation actually uses, because
+# backend/main.py carries no `from __future__ import annotations`: every annotation in a `def`
+# signature or a class body is evaluated when the module is imported, so a form the interpreter
+# does not know is not a style problem, it is an ImportError-and-dead-service problem.
+#
+# Forms considered, and the version that first evaluates them (PEP numbers as the authority):
+#   PEP 585 builtin generics  `list[str]`  -> 3.9   (3.8: TypeError, 'type' not subscriptable)
+#   PEP 604 unions            `X | None`  -> 3.10  (3.9: TypeError on the `|`)
+#   PEP 634 match statement   `match x:`  -> 3.10  (3.9: SyntaxError)
+# `from __future__ import annotations` would defer all of the annotation forms and lower the floor;
+# it is checked because a file that adopts it changes the answer, and a derived floor that ignored
+# it would start overstating the requirement.
+FLOOR_FOR = (("pep604", "3.10"), ("match", "3.10"), ("pep585", "3.9"))
+
+
+def _floor_sources():
+    """Every Python file whose import an installed host would execute.
+
+    backend/main.py plus the graders that the backend imports by path from lab-definitions/.
+    Deliberately NOT tools/: this is the floor for a *user's* install, and the checkers never run
+    on that host.
+    """
+    out = []
+    backend = os.path.join(ROOT, "backend")
+    for root, _dirs, files in os.walk(backend):
+        if "__pycache__" in root:
+            continue
+        for f in files:
+            if f.endswith(".py"):
+                out.append(os.path.join(root, f))
+    labs = os.path.join(ROOT, "lab-definitions")
+    if os.path.isdir(labs):
+        for root, _dirs, files in os.walk(labs):
+            if "__pycache__" in root:
+                continue
+            for f in files:
+                if f.endswith(".py"):
+                    out.append(os.path.join(root, f))
+    return sorted(out)
+
+
+def derived_floor():
+    """The oldest Python that can import this tree, by reading the annotations. None if unreadable."""
+    import ast
+
+    needed = {"pep585": None, "pep604": None, "match": None}
+    parsed = 0
+    for path in _floor_sources():
+        try:
+            src = read(path)
+            tree = ast.parse(src)
+        except (SyntaxError, ValueError):
+            continue
+        parsed += 1
+        deferred = "from __future__ import annotations" in src
+
+        def note(form, lineno):
+            if needed[form] is None:
+                needed[form] = (os.path.relpath(path, ROOT), lineno)
+
+        def annotations_of(node):
+            out = [node.annotation for node in node.args.posonlyargs + node.args.args
+                   + node.args.kwonlyargs if node.annotation]
+            for opt in (node.args.vararg, node.args.kwarg):
+                if opt is not None and opt.annotation:
+                    out.append(opt.annotation)
+            if node.returns:
+                out.append(node.returns)
+            return out
+
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                anns = annotations_of(node)
+            elif isinstance(node, ast.AnnAssign):
+                anns = [node.annotation]
+            else:
+                anns = []
+            if not deferred:
+                for ann in anns:
+                    for sub in ast.walk(ann):
+                        if isinstance(sub, ast.BinOp) and isinstance(sub.op, ast.BitOr):
+                            note("pep604", node.lineno)
+                        elif (isinstance(sub, ast.Subscript) and isinstance(sub.value, ast.Name)
+                              and sub.value.id in ("list", "dict", "set", "tuple", "frozenset", "type")):
+                            note("pep585", node.lineno)
+            if isinstance(node, getattr(ast, "Match", ())):
+                note("match", node.lineno)
+
+    if not parsed:
+        return None
+    floor = "3.7"
+    for form, version in FLOOR_FOR:
+        if needed[form] is not None:
+            where, lineno = needed[form]
+            print(f"  floor: {form} used at {where}:{lineno}")
+            floor = max(floor, version, key=lambda v: tuple(int(p) for p in v.split(".")))
+    return floor
+
+
 def main():
     readme = read(README)
     ci = read(CI) if os.path.exists(CI) else None
@@ -133,19 +234,20 @@ def main():
         fail("README: no 'python X.Y+' badge found")
     else:
         floor = m.group(1)
-        # The floor is a promise about what the code uses. Match it against real syntax usage:
-        # 3.10+ is what the `X | Y` union type and match statements need. Look for those.
-        backend = read(os.path.join(ROOT, "backend", "main.py"))
-        uses_union = re.search(r":\s*\w+\s*\|\s*None\b|\bmatch\s+\w+:", backend) is not None
-        if floor != "3.10":
+        # The floor is a promise about what the code uses, so DERIVE it from the code each run.
+        # Earlier versions of this check compared the badge to the string "3.10" and then asked a
+        # regex whether *some* 3.10 syntax exists — i.e. it was held by a note, and it looked only
+        # at backend/main.py, never at the graders the backend loads. Both are fixed here.
+        floor_found = derived_floor()
+        if floor_found is None:
             fail(
-                f"README: python badge says {floor}+, but the tree's floor was recorded as 3.10 on "
-                f"2026-11-16 — re-measure the floor before changing this badge"
+                "README: the Python floor could not be derived from the tree — no Python under "
+                "backend/ or lab-definitions/ could be parsed; re-measure before trusting the badge"
             )
-        elif not uses_union:
+        elif floor_found != floor:
             fail(
-                "README: python badge says 3.10+, but backend/main.py shows no 3.10-only syntax "
-                "(PEP 604 unions / match) — the floor looks lower than advertised; re-measure"
+                f"README: python badge says {floor}+, but the newest annotation form in the "
+                f"backend and graders needs {floor_found}+ — one of the two is wrong"
             )
 
     # --- 4. 'powered by containerlab' and 'API: FastAPI' are true of the backend ------------ #

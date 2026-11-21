@@ -171,8 +171,13 @@ Five things you should know before you start, because they are **not pinned or c
   whether that is how the number was produced is unknown, and is not asserted here. The same stale
   figure had been repeated in `docs/OPERATIONS.md`, `docs/SELF-CONTAINED.md`, `docs/architecture.md`
   and a comment in `install.sh`; all four are corrected as of this date.
-- **The Python floor is 3.10, and nothing here enforces it.** The `python-3.10+` badge above states it;
-  `install.sh` installs whatever `python3` `apt` gives the host and never checks the version. The floor
+- **The Python floor is 3.10.** The `python-3.10+` badge above states it, and
+  `tools/check_readme_badges.py` now *derives* the floor from the annotations in `backend/` and
+  `lab-definitions/` on every run and fails if the badge disagrees with them, in either direction
+  (as of 2026-11-21 — before that the badge was compared to a note recording "3.10" and to one
+  regex over `backend/main.py` alone, so it was held by a note, not by the code). Note the limit of
+  that: `install.sh` still installs whatever `python3` `apt` gives the host and never checks the
+  version, so the floor is *enforced against the README*, not against the installer. The floor
   comes from *runtime* behaviour, not grammar: `backend/main.py` does **not** start with
   `from __future__ import annotations`, so CPython evaluates every function signature and class-body
   annotation at definition time, and FastAPI and pydantic then evaluate the pydantic model fields. Two
@@ -180,12 +185,15 @@ Five things you should know before you start, because they are **not pinned or c
   - **builtin generics (3.9+).** The pydantic models use `competencies: list[str]`, and there are return
     types like `list[tuple[str, str, str]]`, `set[str]` and `dict[str, bool]`. On 3.8 these raise
     `TypeError: 'type' object is not subscriptable` (PEP 585 landed in 3.9).
-  - **`X | None` unions (3.10+).** Six annotations are written that way — `dict | None` (line 396),
-    `LabDef | None` (675), `str | None` (823), `dict[str, bool] | None` and `str | None` (1244), and
-    `str | None` (1289) — and PEP 604 landed in **3.10**. On 3.9 the import dies with
+  - **`X | None` unions (3.10+).** Six annotations are written that way — `dict | None` (line 431),
+    `LabDef | None` (710), `str | None` (858), `dict[str, bool] | None` and `str | None` (1279), and
+    `str | None` (1324) — and PEP 604 landed in **3.10**. On 3.9 the import dies with
     `TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'`, before the app serves a request.
-    (The six sites were re-measured on 2026-11-02: parsed out of the file with `ast`, the count and the
-    forms match, and the line numbers had drifted by one — they are the numbers a reader lands on now.)
+    (The six sites were re-measured on 2026-11-21: parsed out of the file with `ast`, the count and the
+    forms still match, and the line numbers had drifted again as the file grew — the numbers above are
+    the ones a reader lands on at this commit. `tools/check_readme_badges.py` checks the *count and
+    forms* by derivation; it does not pin these line numbers, because a number in prose is exactly the
+    kind of claim that rots quietly.)
 
   Grammar is not a sufficient test: `ast.parse(..., feature_version=(3, 8))` accepts this file, and so
   does an `ast.parse(..., feature_version=(3, 9))`, because both forms are valid *syntax* there and fail
