@@ -191,8 +191,80 @@ def main() -> int:
     # did not apply to the one lab it applies to. Derive the split from the lab YAMLs.
     _check_digest_gate_split()
 
+    # --- Claim 8: the per-node score WEIGHTS the doc states as fact. GRADING-MODEL.md
+    # says Demo 1 gives pc-a 0.5 for its address and 0.5 for its two pings, but gives
+    # pc-b the FULL 1.0 for its single address check ("a node with one check can be
+    # worth more than a node with three"). That is the sharpest thing a grader author
+    # must understand before copying Demo 1, and it rotted once already (2026-09-28,
+    # both nodes credited 0.5 for the address, so a correct pc-b read as half-done).
+    # Derive the weights from the grader source and compare to the doc's sentence.
+    _check_demo1_score_weights()
+
     _report()
     return 0 if not failures else 1
+
+
+def _check_demo1_score_weights() -> None:
+    """Derive Demo 1's per-node `score` credit and compare to GRADING-MODEL.md.
+
+    Reads lab-definitions/grader_demo_01_srl.py: the address-credit branch is the
+    `if ok:` block inside grade(); pc-a adds 0.5 there, every other linux node
+    adds 1.0; pc-a then adds 0.5 * (reached / len(PING_TARGETS)). The doc claims
+    pc-a's address is 0.5 (not full) and pc-b's single check is the full 1.0.
+    """
+    import re as _re
+
+    grading = read(GRADING)
+    gpath = ROOT / "lab-definitions" / "grader_demo_01_srl.py"
+    if not gpath.is_file():
+        check("Demo 1 score-weight check: grader present", False,
+              f"{gpath} is missing; cannot derive the per-node weights")
+        return
+    src = read(gpath)
+
+    # The address-credit block: `if node == "pc-a":\n  score += 0.5\n else:\n  score += 1.0`
+    m = _re.search(
+        r'if node == "pc-a":\s*\n\s*score \+= ([\d.]+)\s*\n\s*else:\s*\n\s*score \+= ([\d.]+)',
+        src,
+    )
+    if not m:
+        check("Demo 1: address-credit split (pc-a vs other) is derivable", False,
+              'could not find the `if node == "pc-a": score += X else score += Y` block; '
+              'the weight derivation must be updated')
+        return
+    pca_addr = float(m.group(1))
+    pcb_addr = float(m.group(2))
+
+    # The ping term for pc-a: `score += 0.5 * (reached / len(PING_TARGETS))`
+    mp = _re.search(r"score \+= ([\d.]+) \* \(reached / len\(PING_TARGETS\)\)", src)
+    pca_ping_max = float(mp.group(1)) if mp else 0.0
+
+    pca_total = round(pca_addr + pca_ping_max, 3)
+
+    check("Demo 1: pc-a address credit is a fraction (not the full 1.0)",
+          pca_addr == 0.5,
+          f"the grader credits pc-a {pca_addr} for its address; the doc's "
+          "'0.5 for its address plus 0.5 for its two ping targets' expects 0.5")
+    check("Demo 1: pc-a total credit (address + pings) is 1.0",
+          pca_total == 1.0,
+          f"address {pca_addr} + ping-max {pca_ping_max} = {pca_total}; the doc builds "
+          "pc-a out of 0.5 + 0.5")
+    check("Demo 1: pc-b gets the full 1.0 for its single address check",
+          pcb_addr == 1.0,
+          f"the grader credits pc-b {pcb_addr} for its address; the doc says pc-b gets "
+          "'the full 1.0 for its single address check'")
+
+    # The prose that states this, guarded so a rewrite that drops the comparison fails.
+    has_pcb_full = ("`pc-b` the full `1.0`" in grading
+                    or "gives `pc-b` the full `1.0`" in grading)
+    has_uneven = ("one check can be worth more than a node with three" in grading
+                  or "worth more than a node with three" in grading)
+    check("GRADING-MODEL.md still states pc-b's full-1.0 single-check credit",
+          has_pcb_full,
+          "the doc no longer names pc-b's full 1.0 credit; the grader still gives it")
+    check("GRADING-MODEL.md still warns a one-check node can outscore a three-check node",
+          has_uneven,
+          "the doc's 'one check can be worth more than a node with three' warning is gone")
 
 
 def _check_grader_arithmetic() -> None:
