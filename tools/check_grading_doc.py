@@ -226,6 +226,19 @@ def main() -> int:
     # (API misuse), so a refusal can never surface as an exception.
     _check_refusals_are_values_not_raises()
 
+    # --- Claim 12: the doc's lab-verdict / coverage story is TRUE of the shipped code.
+    # GRADING-MODEL.md makes four specific, checkable claims that were hand-read only:
+    #   (a) _lab_verdict_passed computes _missing = _declared - _graded BEFORE and
+    #       independently of _passed (no passed-only branch), returning None on shortfall;
+    #   (b) Demo 1's grade_all iterates its 3 declared nodes and gates lab_passed on a
+    #       SUBSET (pc-a and sw1, not pc-b) -- the historical subset-gate the doc names as
+    #       the one gap the backend cannot audit;
+    #   (c) Demo 2's grade_all iterates its 5 declared nodes and its lab_passed is a
+    #       conjunction in which EVERY graded node appears (pc-a,pc-b,sw1,sw2,r1).
+    # If a grader is later "fixed" to gate on fewer nodes, or Demo 2 drops a node from
+    # its conjunction, the doc's story becomes a lie -- this catches that.
+    _check_lab_verdict_coverage()
+
     _report()
     return 0 if not failures else 1
 
@@ -438,6 +451,130 @@ def _check_refusals_are_values_not_raises() -> None:
     check("GRADING-MODEL.md still states an in-process caller gets a value, not a traceback",
           "never raises" in grading.lower() and "in-process" in grading.lower(),
           "the doc no longer states the refusal-is-a-value / in-process split")
+
+
+def _check_lab_verdict_coverage() -> None:
+    """The doc's lab-verdict/coverage claims must be true of _lab_verdict_passed and both grade_all()s.
+
+    Four measurable facts (see Claim 12 in check()):
+      (a) _missing = _declared - _graded is computed from the returned nodes map BEFORE
+          any _passed use -- i.e. the shortfall `return None` does not sit inside an
+          `if _passed` branch. Proven structurally: the coverage check's body contains a
+          `return None` and is NOT nested under a condition testing _passed.
+      (b) Demo 1 grade_all iterates exactly its declared nodes and gates lab_passed on a
+          SUBSET (pc-a, sw1), leaving pc-b out of the conjunction -- the documented
+          'gap the backend cannot audit'.
+      (c) Demo 2 grade_all iterates all five declared nodes and its lab_passed
+          conjunction references every one of them (pc-a,pc-b,sw1,sw2,r1).
+    """
+    demo1 = ROOT / "lab-definitions" / "grader_demo_01_srl.py"
+    demo2 = ROOT / "lab-definitions" / "grader_demo_02.py"
+    if not (demo1.exists() and demo2.exists()):
+        check("Demo graders present for coverage check", False,
+              f"missing {demo1 if not demo1.exists() else demo2}")
+        return
+
+    # --- (a) coverage computed independently of _passed, before trusting it.
+    tree = ast.parse(read(MAIN))
+    verdict_fn = next((n for n in ast.walk(tree)
+                       if isinstance(n, ast.FunctionDef) and n.name == "_lab_verdict_passed"), None)
+    coverage_ok = False
+    if verdict_fn is not None:
+        seg = ast.get_source_segment(read(MAIN), verdict_fn) or ""
+        has_missing = "_declared - _graded" in seg or "_missing" in seg
+        # The COVERAGE SHORTFALL return-None must exist and must NOT be gated on _passed.
+        shortfall_guard_is_passed_only = False
+        shortfall_present = False
+        for node in ast.walk(verdict_fn):
+            if isinstance(node, ast.If):
+                test = ast.get_source_segment(read(MAIN), node.test) or ""
+                body_has_shortfall = any(
+                    isinstance(x, ast.Return) and isinstance(x.value, ast.Constant)
+                    and x.value.value is None
+                    for x in node.body)
+                if body_has_shortfall and "_missing" in test:
+                    shortfall_present = True
+                    # gate must be the shortfall itself, not `_passed and _missing`
+                    if "_passed" in test:
+                        shortfall_guard_is_passed_only = True
+        coverage_ok = has_missing and shortfall_present and not shortfall_guard_is_passed_only
+    check("coverage shortfall is checked before trusting passed (no passed-only branch)",
+          coverage_ok,
+          "_lab_verdict_passed no longer computes _missing unconditionally; the doc's "
+          "'checked before and independently of _passed' claim is false")
+
+    # --- (b) Demo 1: iterates 3 nodes, gates lab_passed on the pc-a/sw1 subset (not pc-b).
+    d1 = ast.parse(read(demo1))
+    d1_ga = next((n for n in ast.walk(d1)
+                  if isinstance(n, ast.FunctionDef) and n.name == "grade_all"), None)
+    d1_iterates = False
+    if d1_ga is not None:
+        seg = ast.get_source_segment(read(demo1), d1_ga) or ""
+        d1_iterates = ('"pc-a"' in seg and '"pc-b"' in seg and '"sw1"' in seg
+                       and "for node in" in seg)
+    check("Demo 1 grade_all iterates its declared nodes (pc-a, pc-b, sw1)", d1_iterates,
+          "Demo 1 grade_all no longer iterates all three declared nodes")
+
+    d1_subset_gate = False
+    if d1_ga is not None:
+        for node in ast.walk(d1_ga):
+            if isinstance(node, ast.Assign):
+                tgt = ", ".join(ast.get_source_segment(read(demo1), t) or "" for t in node.targets)
+                if tgt.strip() == "lab_passed":
+                    val = ast.get_source_segment(read(demo1), node.value) or ""
+                    # doc says Demo 1 gates on pc-a and sw1 (a subset), NOT pc-b
+                    if 'results["pc-a"]' in val and 'results["sw1"]' in val and 'results["pc-b"]' not in val:
+                        d1_subset_gate = True
+    check("Demo 1 lab_passed gates on the pc-a/sw1 subset (pc-b excluded) -- the documented gap",
+          d1_subset_gate,
+          "Demo 1's lab_passed no longer matches the doc's 'gating on pc-a and sw1 of three' "
+          "description -- if Demo 1 now gates on all three, the doc's named gap must be updated")
+
+    # --- (c) Demo 2: iterates 5 nodes; lab_passed conjunction covers every one.
+    d2 = ast.parse(read(demo2))
+    d2_ga = next((n for n in ast.walk(d2)
+                  if isinstance(n, ast.FunctionDef) and n.name == "grade_all"), None)
+    d2_iterates = False
+    if d2_ga is not None:
+        seg = ast.get_source_segment(read(demo2), d2_ga) or ""
+        d2_iterates = all(f'"{n}"' in seg for n in ("pc-a", "pc-b", "sw1", "sw2", "r1")) \
+            and "for node in" in seg
+    check("Demo 2 grade_all iterates its declared nodes (pc-a, pc-b, sw1, sw2, r1)", d2_iterates,
+          "Demo 2 grade_all no longer iterates all five declared nodes")
+
+    d2_covers_all = False
+    if d2_ga is not None:
+        seg = ast.get_source_segment(read(demo2), d2_ga) or ""
+        # lab_passed = e2e and real_switches and router_ok, where each sub-term is itself
+        # a conjunction over results[...] -- assert all five nodes appear on the RHS of lab_passed
+        lab_passed_rhs = ""
+        for node in ast.walk(d2_ga):
+            if isinstance(node, ast.Assign):
+                tgt = ", ".join(ast.get_source_segment(read(demo2), t) or "" for t in node.targets)
+                if tgt.strip() == "lab_passed":
+                    lab_passed_rhs = ast.get_source_segment(read(demo2), node.value) or ""
+        # the sub-terms (e2e, real_switches, router_ok) must each be built from results[...]
+        # covering all nodes: check the whole function body references all five under results[...]
+        body = seg
+        all_nodes_in_results = all(f'results["{n}"]' in body for n in ("pc-a","pc-b","sw1","sw2","r1"))
+        # and lab_passed must be the conjunction of the three named terms
+        d2_covers_all = (all_nodes_in_results
+                         and "e2e" in lab_passed_rhs
+                         and "real_switches" in lab_passed_rhs
+                         and "router_ok" in lab_passed_rhs)
+    check("Demo 2 lab_passed is a conjunction covering every graded node (e2e+switches+router)",
+          d2_covers_all,
+          "Demo 2's lab_passed no longer requires all five nodes via e2e/real_switches/router_ok")
+
+    # The doc must still name Demo 1's subset gate precisely (pc-a + sw1 of three).
+    # Exact phrase only: a loose 'subset' match is satisfied by unrelated prose
+    # ("compute `passed` from a subset of them"), which hid a removed claim (caught
+    # 2026-11-22 when mutant F passed green).
+    grading = read(GRADING)
+    check("GRADING-MODEL.md still names the Demo 1 subset gate as the unauditable gap",
+          "gating on `pc-a` and `sw1` of three" in grading,
+          "the doc no longer names Demo 1's subset gate ('gating on pc-a and sw1 of three') "
+          "as the unauditable gap")
 
 
 def _check_demo1_score_weights() -> None:
