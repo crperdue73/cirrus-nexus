@@ -151,15 +151,13 @@ to (expected sha256:…, found …), so a grade cannot be cited against it.
 
 **Whose grades this actually applies to.** The check above compares the session's
 identity against the substrate digest the installer published — so it gates grades in
-a lab that runs the pinned `aegis/frr` image, and it is how a rebuilt or swapped
-substrate gets refused. **Both shipped labs are `aegis-less:`** (Demo 1: three alpine
-PCs and a Nokia SR Linux switch; Demo 2: alpine PCs, two SR Linux switches and one
-`aegis/frr` router). For a lab with no `aegis/frr` node, the identity is a hash over
-the images the nodes actually run — it changes when a node's image changes, but it is
-never in the install-verified set, so `resolve_runtime_digest` never returns it on the
-substrate path and grading a demo node falls through to the no-grader path (the
-IP/ping fallback — see the field note in `docs/ADDING-A-LAB.md`). Read this section as
-the rule the digest gate enforces *where it applies*, not as "every grade is gated".
+any lab that runs the pinned `aegis/frr` image, and it is how a rebuilt or swapped
+substrate gets refused. **Of the two shipped labs, one runs that image and one does
+not.** Demo 2 runs an `aegis/frr` router (alpine PCs, two SR Linux switches, and one
+`aegis/frr` router), so its identity is the pinned substrate digest and its grades
+*are* digest-gated — the paragraph above applies to it directly. Demo 1 is
+`aegis-less:` — two alpine PCs and a Nokia SR Linux switch, no `aegis/frr` node — so
+nothing is pinned to verify.
 Measured 2026-10-31: `backend/main.py`, `_resolve_runtime_digest_once`,
 `_pinned_substrate_digests`, `grade_config`.
 

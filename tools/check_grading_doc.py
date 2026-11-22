@@ -185,6 +185,12 @@ def main() -> int:
           not stale_gate,
           f"stale claim(s) present: {stale_gate} — the code gates on r1 too")
 
+    # --- Claim 7: GRADING-MODEL.md's "whose grades this applies to" split. The doc now
+    # says ONE shipped lab runs aegis/frr (Demo 2, digest-gated) and ONE is aegis-less
+    # (Demo 1). It used to say BOTH were aegis-less, which told a reader the digest gate
+    # did not apply to the one lab it applies to. Derive the split from the lab YAMLs.
+    _check_digest_gate_split()
+
     _report()
     return 0 if not failures else 1
 
@@ -263,6 +269,56 @@ def _check_grader_arithmetic() -> None:
               ok_inc and ok_exc,
               f"gate resolves to {sorted(gate_nodes)}; expected include {sorted(must_include)} "
               f"and exclude {sorted(must_exclude)}")
+
+
+def _check_digest_gate_split() -> None:
+    """The shipped labs' substrate split, derived from their YAMLs, vs the doc's claim.
+
+    GRADING-MODEL.md's digest section states which shipped labs a grade is digest-gated
+    for. It said "both shipped labs are aegis-less:" — false: Demo 2 runs an aegis/frr
+    node (the pinned substrate), so its grades ARE gated. A reader relying on that line
+    would think the gate never applies to the demos. Derive each lab's nodes from its
+    topology and check the doc's prose names the aegis/frr lab as gated and the other
+    as aegis-less.
+    """
+    import re as _re
+
+    grading = read(GRADING)
+    aegis_labs: list[str] = []      # labs with an aegis/frr node -> substrate-gated
+    imageless_labs: list[str] = []  # labs with no aegis/frr node -> aegis-less
+    for yml in sorted(ROOT.glob("lab-definitions/*/*.yml")):
+        text = read(yml)
+        images = _re.findall(r"^\s*image:\s*(\S+)", text, _re.M)
+        if not images:
+            continue
+        (aegis_labs if any("aegis/frr" in i for i in images)
+         else imageless_labs).append(yml.parent.name)
+
+    one_gated_one_not = bool(aegis_labs) and bool(imageless_labs)
+    # The doc must (a) no longer claim BOTH are aegis-less, and (b) state the split.
+    claims_both_less = "Both shipped labs are `aegis-less:`" in grading
+    names_split = "one runs that image and one does" in grading
+    check("GRADING-MODEL.md's digest-gate split matches the lab YAMLs",
+          (not claims_both_less) and (names_split if one_gated_one_not else True),
+          "the shipped labs' substrate differs ("
+          f"aegis/frr: {sorted(aegis_labs)}, aegis-less: {sorted(imageless_labs)}), so the "
+          "doc must not say both are aegis-less; it must name the split"
+          if not (claims_both_less or not names_split) else
+          f"doc still says 'Both shipped labs are aegis-less:'={claims_both_less}, "
+          f"names the split={names_split}; labs are aegis/frr={sorted(aegis_labs)} "
+          f"aegis-less={sorted(imageless_labs)}")
+    # A specific trap: the old inventory miscounted Demo 1's PCs. Guard the count too.
+    d1 = ROOT / "lab-definitions" / "srl-demo-unsolved" / "srl-demo-unsolved.yml"
+    d1_ymls = list((ROOT / "lab-definitions" / "srl-demo-unsolved").glob("*.yml"))
+    if d1_ymls:
+        imgs = _re.findall(r"^\s*image:\s*(\S+)", read(d1_ymls[0]), _re.M)
+        n_pc = sum(1 for i in imgs if "alpine" in i)
+        word = {1: "one", 2: "two", 3: "three", 4: "four"}.get(n_pc, str(n_pc))
+        claim = f"Demo 1 is\n`aegis-less:` — {word} alpine"
+        check("GRADING-MODEL.md's Demo 1 alpine-PC count matches the YAML",
+              n_pc <= 4 and (claim in grading or f"{word} alpine PCs" in grading),
+              f"the YAML has {n_pc} alpine node(s) in Demo 1; the doc's 'Demo 1 ... alpine' "
+              f"count does not match (the old text said 'three alpine PCs')")
 
 
 def _report() -> None:
