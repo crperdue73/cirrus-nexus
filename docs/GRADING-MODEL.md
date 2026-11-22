@@ -21,7 +21,10 @@ Neither is a judgment of the student's configuration.
 
 `status` is carried in the response body as well as on the wire, so an in-process
 caller (batch grader, CLI, export) sees the same three-state vocabulary instead of
-an exception to catch.
+an exception to catch. `grade_config` never raises for a refused session: it returns
+a `GraderResult(status="refused")` as a value, so an in-process caller gets a value,
+not a traceback. (The only exceptions it raises are 404s for a session or lab that
+does not exist — API misuse, not a refusal.)
 
 **Why refusals exist:** a submit racing a teardown used to return
 `passed=false, "no output from sr_cli"` — the student was told "wrong" when the

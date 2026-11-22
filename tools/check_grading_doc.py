@@ -217,6 +217,15 @@ def main() -> int:
     # wrong answer. Verify the source keeps the two paths apart.
     _check_grader_error_is_not_a_fail()
 
+    # --- Claim 11: a REFUSAL is a returned value, never a traceback.
+    # GRADING-MODEL.md: "`grade_config` NEVER raises for a refused session: it returns
+    # a GraderResult(status='refused') ... an in-process caller gets a value, not a
+    # traceback." The one thing an in-process caller (batch grader, CLI, export) must
+    # not have to do is wrap grade_config in try/except to survive a refusal. Verify the
+    # refusal paths `return` and the only `raise`s are the 404s for a missing session/lab
+    # (API misuse), so a refusal can never surface as an exception.
+    _check_refusals_are_values_not_raises()
+
     _report()
     return 0 if not failures else 1
 
@@ -368,6 +377,67 @@ def _check_grader_error_is_not_a_fail() -> None:
           'status: "error"' in grading and "not" in grading.lower()
           and "verdict" in grading.lower(),
           "the doc's three-outcome table no longer states the error row's wire shape")
+
+
+def _check_refusals_are_values_not_raises() -> None:
+    """grade_config must RETURN a refusal, never raise one. Only missing session/lab raises.
+
+    GRADING-MODEL.md: 'grade_config NEVER raises for a refused session: it returns a
+    GraderResult(status="refused") ... an in-process caller gets a value, not a
+    traceback.' Derive it from the source of grade_config:
+      (1) every `raise` inside it is an HTTPException with status_code 404
+          (session-not-found / lab-not-found) — API misuse, not a refusal;
+      (2) every refusal PATH returns a GraderResult whose status resolves to "refused"
+          (a bare `return _refused_result()` / `_refused_result_with(...)` / the no-grader
+          fallback), not a `raise`.
+    Measured live 2026-11-22: all five refusal paths (no-digest, substrate-changed,
+    no-node, not-running, no-grader) return status='refused'; the only raises are the
+    two 404s. This check keeps that split true.
+    """
+    src = read(MAIN)
+    tree = ast.parse(src)
+    fn = next((n for n in ast.walk(tree)
+               if isinstance(n, ast.FunctionDef) and n.name == "grade_config"), None)
+    if fn is None:
+        check("grade_config refuses by value, not by raise", False,
+              "grade_config is gone; the 'refusal is a value' claim is unverifiable")
+        return
+
+    # (1) every raise must be HTTPException(404).
+    raises = [n for n in ast.walk(fn) if isinstance(n, ast.Raise)]
+    bad_raises = []
+    for r in raises:
+        seg = ast.get_source_segment(src, r) or ""
+        if "HTTPException" not in seg or "404" not in seg:
+            bad_raises.append((r.lineno, seg[:60]))
+    check("grade_config's only raises are 404 (missing session/lab), never a refusal",
+          not bad_raises,
+          f"non-404 raise(s) found in grade_config: {bad_raises} — a refusal must be "
+          "RETURNED, an in-process caller must not need try/except to survive one")
+
+    # (2) the refusal constructors are used as `return <refusal>(...)`, never `raise`.
+    #   _refused_result(), _refused_result_with(...), _fallback_grade(...) -> status refused.
+    refusal_calls_in_raise = []
+    refusal_returns = 0
+    for r in raises:
+        seg = ast.get_source_segment(src, r) or ""
+        if any(k in seg for k in ("_refused_result", "_fallback_grade")):
+            refusal_calls_in_raise.append((r.lineno, seg[:60]))
+    for n in ast.walk(fn):
+        if isinstance(n, ast.Return) and n.value is not None:
+            seg = ast.get_source_segment(src, n) or ""
+            if any(k in seg for k in ("_refused_result", "_refused_result_with", "_fallback_grade")):
+                refusal_returns += 1
+    check("refusal constructors are returned, not raised (>=4 refusal return sites)",
+          not refusal_calls_in_raise and refusal_returns >= 4,
+          f"raised-as-refusal={refusal_calls_in_raise}, refusal-return-count={refusal_returns}; "
+          "the refusal paths must return a GraderResult value")
+
+    # The doc must still state the in-process-vs-wire split this check guards.
+    grading = read(GRADING)
+    check("GRADING-MODEL.md still states an in-process caller gets a value, not a traceback",
+          "never raises" in grading.lower() and "in-process" in grading.lower(),
+          "the doc no longer states the refusal-is-a-value / in-process split")
 
 
 def _check_demo1_score_weights() -> None:
