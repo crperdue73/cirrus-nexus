@@ -213,8 +213,13 @@ substitute for your own verdict, though: coverage says every declared node was
 *reported on*, not that passing required it. **`grade_all()` is where the lab's pass
 condition lives**, and nothing below it reads your intent.
 
-Both shipped graders wrap `grade` with a `_self_identifying` decorator that stamps
-`result["node"] = node` at the point of grading; copy that pattern.
+Both shipped graders wrap `grade` with a `_self_identifying` decorator that fills
+`result["node"]` with the node being graded **if the grader left it unset**
+(`res.setdefault("node", node)`) — it is a safety net, not a validator: it does
+not overwrite a grader that stamps a *wrong* node. A self-mislabelled result is
+caught downstream by the backend's Identity check (`v["node"] != k`), which
+refuses to compute a verdict from it. Copy the decorator so a bare grade() still
+gets a correct label.
 
 ---
 

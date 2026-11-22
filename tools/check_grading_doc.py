@@ -239,6 +239,14 @@ def main() -> int:
     # its conjunction, the doc's story becomes a lie -- this catches that.
     _check_lab_verdict_coverage()
 
+    # --- Claim 13: the _self_identifying decorator is a SAFETY NET (setdefault), not a
+    # validator, and Identity is what enforces correct labels.
+    # ADDING-A-LAB.md used to say the decorator "stamps result['node'] = node", which
+    # overstates it: the code uses setdefault, so a grader that stamps a WRONG node keeps
+    # it. The correct label is enforced downstream by the Identity check. Witness both
+    # halves so neither the decorator's role nor the Identity check can silently drift.
+    _check_self_identifying_is_a_safety_net()
+
     _report()
     return 0 if not failures else 1
 
@@ -575,6 +583,85 @@ def _check_lab_verdict_coverage() -> None:
           "gating on `pc-a` and `sw1` of three" in grading,
           "the doc no longer names Demo 1's subset gate ('gating on pc-a and sw1 of three') "
           "as the unauditable gap")
+
+
+def _check_self_identifying_is_a_safety_net() -> None:
+    """The decorator FILLS a missing node (setdefault); Identity catches a wrong one.
+
+    ADDING-A-LAB.md used to claim the decorator "stamps result['node'] = node", implying
+    it forces the right label. Measured 2026-11-22: both graders use
+    `res.setdefault("node", node)`, so a grader that returns {"node": "wrong"} keeps it.
+    That is deliberate: the decorator is a net for a bare grade(), and the backend's
+    Identity check (v["node"] != k) is what refuses a mislabelled verdict.
+
+    Derives, per grader file:
+      (1) `_self_identifying` is defined and `grade` is wrapped with it;
+      (2) the wrapper uses `.setdefault("node"` (fill-if-missing), NOT an assignment that
+          would force-overwrite a grader's own choice.
+    And from backend: the Identity check exists (a `v.get("node") != k`-style test feeding
+    a `return None`). And the doc no longer states the force-stamp wording.
+    """
+    graders = [ROOT / "lab-definitions" / "grader_demo_01_srl.py",
+               ROOT / "lab-definitions" / "grader_demo_02.py"]
+    for g in graders:
+        if not g.exists():
+            check(f"{g.name}: _self_identifying uses setdefault (fill-if-missing)", False,
+                  f"file missing: {g}")
+            continue
+        src = read(g)
+        tree = ast.parse(src)
+        fn = next((n for n in ast.walk(tree)
+                   if isinstance(n, ast.FunctionDef) and n.name == "_self_identifying"), None)
+        uses_setdefault = False
+        forces_assign = False
+        wrapped = "grade = _self_identifying(grade)" in src
+        if fn is not None:
+            seg = ast.get_source_segment(src, fn) or ""
+            uses_setdefault = '.setdefault("node"' in seg or ".setdefault('node'" in seg
+            # an assignment `res["node"] = node` would overwrite a grader's own label
+            for n in ast.walk(fn):
+                if isinstance(n, ast.Assign):
+                    for t in n.targets:
+                        if isinstance(t, ast.Subscript):
+                            key = ast.get_source_segment(src, t.slice) if hasattr(t, 'slice') else ""
+                            if key and "node" in key:
+                                forces_assign = True
+        check(f"{g.name}: _self_identifying fills a missing node via setdefault ({'wrapped' if wrapped else 'NOT wrapped'})",
+              uses_setdefault and wrapped and not forces_assign,
+              f"setdefault={uses_setdefault}, wrapped={wrapped}, force-assign={forces_assign}; "
+              "the decorator must FILL a missing node, not force-overwrite a grader's label")
+
+    # backend: the Identity check that actually enforces a correct label.
+    mtree = ast.parse(read(MAIN))
+    verdict_fn = next((n for n in ast.walk(mtree)
+                       if isinstance(n, ast.FunctionDef) and n.name == "_lab_verdict_passed"), None)
+    identity_enforced = False
+    if verdict_fn is not None:
+        # Structural: an `if <..._mislabelled...>:` whose body returns None. That is the
+        # check actually refusing the verdict -- not merely the string appearing somewhere
+        # (a disabled `if False:` still contains the text, so text-matching is not enough;
+        # caught 2026-11-22 by mutant C passing green).
+        for node in ast.walk(verdict_fn):
+            if isinstance(node, ast.If):
+                test = ast.get_source_segment(read(MAIN), node.test) or ""
+                body_returns_none = any(
+                    isinstance(x, ast.Return) and isinstance(x.value, ast.Constant)
+                    and x.value.value is None for x in node.body)
+                if "_mislabelled" in test and body_returns_none:
+                    identity_enforced = True
+    check("backend Identity check refuses a mislabelled result (decorator is not the validator)",
+          identity_enforced,
+          "_lab_verdict_passed no longer refuses a mislabelled node; the decorator alone "
+          "does not enforce identity, so this check is load-bearing")
+
+    # doc must state the setdefault/safety-net semantics, not the force-stamp wording.
+    adding = read(ADDING)
+    stale = 'stamps\n`result["node"] = node`' in adding or 'stamps `result["node"] = node`' in adding
+    fresh = "setdefault" in adding and "safety net" in adding.lower()
+    check("ADDING-A-LAB.md describes the decorator as a setdefault safety net, not a force-stamp",
+          fresh and not stale,
+          f"has-setdefault={('setdefault' in adding)}, has-safety-net={('safety net' in adding.lower())}, "
+          f"still-says-force-stamp={stale}; the doc must not imply the decorator forces the label")
 
 
 def _check_demo1_score_weights() -> None:
