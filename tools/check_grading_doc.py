@@ -209,6 +209,14 @@ def main() -> int:
     # wrong". Fixed in the code; this check keeps the rule true.
     _check_refusals_carry_reassurance()
 
+    # --- Claim 10: the ERROR state renders as HTTP 200 / status=error, not a 500 and
+    # not a fail. GRADING-MODEL.md's three-outcome table says an 'error' is
+    # 'HTTP 200, status: "error" — not a verdict on the student'. That distinction is
+    # the whole reason `status` exists: a grader crash carries passed=False/score=0
+    # exactly like a fail, so a client keying only on `passed` would read a crash as a
+    # wrong answer. Verify the source keeps the two paths apart.
+    _check_grader_error_is_not_a_fail()
+
     _report()
     return 0 if not failures else 1
 
@@ -295,6 +303,71 @@ def _check_refusals_carry_reassurance() -> None:
     check("GRADING-MODEL.md still states the both-halves refusal rule",
           "names the reason" in grading and "not a judgment" in grading.lower(),
           "the doc no longer states the both-halves rule this check enforces")
+
+
+def _check_grader_error_is_not_a_fail() -> None:
+    """A grader crash must surface as status='error' over HTTP 200, never a 500 or a fail.
+
+    GRADING-MODEL.md: an 'error' is 'HTTP 200, status: "error" — not a verdict on the
+    student'. Derive that from the source:
+      (a) grade_config wraps grade() in try/except and the handler returns a
+          GraderResult with status='error' (not a re-raise, which would 500).
+      (b) submit_config raises 409 ONLY for status=='refused'; every other status
+          (graded, error) returns the body with the default 200.
+    If either stops holding, a crash becomes a 500 or an indistinguishable fail.
+    """
+    src = read(MAIN)
+    tree = ast.parse(src)
+
+    grade_config = next((n for n in ast.walk(tree)
+                         if isinstance(n, ast.FunctionDef) and n.name == "grade_config"), None)
+    submit = next((n for n in ast.walk(tree)
+                   if isinstance(n, ast.FunctionDef) and n.name == "submit_config"), None)
+    if grade_config is None or submit is None:
+        check("grade error is status='error' over 200 (functions present)", False,
+              "grade_config or submit_config is gone; the error-state claim is unverifiable")
+        return
+
+    # (a) grade_config: a `try` whose handler (bare except / except Exception) RETURNS a
+    # GraderResult(status="error"). Look for the status="error" keyword in any except body,
+    # and confirm that except does NOT re-raise (a raise => 500).
+    returns_error = False
+    handler_reraises = False
+    for node in ast.walk(grade_config):
+        if isinstance(node, ast.ExceptHandler):
+            seg = ast.get_source_segment(src, node) or ""
+            for c in ast.walk(node):
+                if isinstance(c, ast.Call) and isinstance(c.func, ast.Name) and c.func.id == "GraderResult":
+                    for kw in c.keywords:
+                        if kw.arg == "status" and isinstance(kw.value, ast.Constant) and kw.value.value == "error":
+                            returns_error = True
+                if isinstance(c, ast.Raise):
+                    handler_reraises = True
+    check("grade_config turns a grader crash into status='error' (not a re-raise/500)",
+          returns_error and not handler_reraises,
+          f"returns status='error' in a handler={returns_error}, handler re-raises={handler_reraises}; "
+          "a crash must be a returned value with status='error', not an exception (HTTP 500)")
+
+    # (b) submit_config: the 409 raise is guarded by status == 'refused' only.
+    refuses_only = False
+    for node in ast.walk(submit):
+        if isinstance(node, ast.If):
+            test = ast.get_source_segment(src, node.test) or ""
+            if "status" in test and "refused" in test:
+                # inside this branch there must be a raise (the 409)
+                if any(isinstance(x, ast.Raise) for x in ast.walk(node)):
+                    refuses_only = True
+    check("submit_config renders 409 only for 'refused'; error/graded return 200",
+          refuses_only,
+          "submit_config no longer gates its 409 on status=='refused'; an 'error' could now "
+          "be mis-rendered (409/500) instead of HTTP 200 with status='error' alive in the body")
+
+    # The doc must still state that an error is HTTP 200 / not a verdict.
+    grading = read(GRADING)
+    check("GRADING-MODEL.md still states an error is HTTP 200 and not a verdict",
+          'status: "error"' in grading and "not" in grading.lower()
+          and "verdict" in grading.lower(),
+          "the doc's three-outcome table no longer states the error row's wire shape")
 
 
 def _check_demo1_score_weights() -> None:
