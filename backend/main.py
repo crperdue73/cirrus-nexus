@@ -185,7 +185,8 @@ class GraderResult(BaseModel):
 # path could actually produce — the 409 pre-empted every result construction.)
 REFUSAL_FEEDBACK = [
     "⛔ Refused: this session has no runtime digest, so its state is "
-    "unattributable and cannot be graded. Re-deploy the lab to pin the substrate."
+    "unattributable and cannot be graded. Re-deploy the lab to pin the substrate. "
+    "This is not a verdict about your configuration."
 ]
 
 
@@ -1764,7 +1765,8 @@ def grade_config(session_id: str, lab_id: str, node: str) -> GraderResult:
     # Demo 1 has no r1. Say what is true instead.
     if node not in (session.get("nodes") or {}):
         return _refused_result_with(
-            "This lab has no node '%s' — nothing to grade. The nodes here are: %s."
+            "This lab has no node '%s' — nothing to grade. The nodes here are: %s. "
+            "This is not a verdict about your configuration."
             % (node, ", ".join(sorted((session.get("nodes") or {}).keys())))
         )
 

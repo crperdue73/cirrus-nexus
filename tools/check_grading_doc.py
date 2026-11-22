@@ -200,8 +200,101 @@ def main() -> int:
     # Derive the weights from the grader source and compare to the doc's sentence.
     _check_demo1_score_weights()
 
+    # --- Claim 9: the refusal-vocabulary rule is TRUE of the code, not just stated.
+    # GRADING-MODEL.md's refusal section ends: "Every refusal names the reason AND
+    # states explicitly that it is not a judgment of the student's work. Keep both
+    # halves when you add one." On 2026-11-22 that was false of two shipped shapes:
+    # 'this lab has no node' and the no-runtime-digest REFUSAL_FEEDBACK both named the
+    # reason and stopped, leaving the student to read a refusal as "I did something
+    # wrong". Fixed in the code; this check keeps the rule true.
+    _check_refusals_carry_reassurance()
+
     _report()
     return 0 if not failures else 1
+
+
+def _check_refusals_carry_reassurance() -> None:
+    """Every refusal string in backend/main.py must carry BOTH halves the doc promises.
+
+    GRADING-MODEL.md's refusal section says: "Every refusal names the reason AND
+    states explicitly that it is not a judgment of the student's work. Keep both
+    halves when you add one." Measure that against the source rather than trusting
+    it: collect every refusal feedback string (each `_refused_result_with(...)`
+    argument, `REFUSAL_FEEDBACK`, and the no-grader feedback list in
+    `_fallback_grade`) and require each to contain a reassurance phrase. This is
+    generic on purpose: a NEW refusal added with only its reason fails here, which
+    is exactly the rule the doc asks a contributor to keep.
+    """
+    src = read(MAIN)
+    tree = ast.parse(src)
+
+    def strings(node: ast.AST) -> list[str]:
+        """Every string literal in `node`, each tested on its own.
+
+        Not one concatenation: a feedback list can hold several messages, and the rule
+        applies per message. A list where one entry reassures and another does not must
+        fail — testing the joined blob would let the good entry cover for the bad one
+        (measured: a reason-only message added beside a reassuring one passed a joined
+        check).
+        """
+        out: list[str] = []
+        for x in ast.walk(node):
+            if isinstance(x, ast.Constant) and isinstance(x.value, str):
+                out.append(x.value)
+        return out
+
+    # A message is the CONCATENATION of adjacent literals the compiler fuses, but here
+    # each refusal is built from implicit-adjacent literals in one expression. Group by
+    # the top-level expression: for `_refused_result_with(arg)` take arg's literals as one
+    # message; for a feedback List, take each element's literals as one message.
+    def one_message(node: ast.AST) -> str:
+        return "".join(
+            x.value for x in ast.walk(node)
+            if isinstance(x, ast.Constant) and isinstance(x.value, str)
+        )
+
+    shapes: list[tuple[str, str]] = []
+    for node in ast.walk(tree):
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                and node.func.id == "_refused_result_with" and node.args):
+            shapes.append((f"_refused_result_with@{node.lineno}", one_message(node.args[0])))
+    # REFUSAL_FEEDBACK module constant — each list element is its own message.
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
+                isinstance(t, ast.Name) and t.id == "REFUSAL_FEEDBACK" for t in node.targets):
+            if isinstance(node.value, ast.List):
+                for i, el in enumerate(node.value.elts):
+                    shapes.append((f"REFUSAL_FEEDBACK[{i}]", one_message(el)))
+            else:
+                shapes.append(("REFUSAL_FEEDBACK", one_message(node.value)))
+    # The no-grader feedback list inside _fallback_grade: each element its own message.
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name == "_fallback_grade":
+            for call in ast.walk(node):
+                if isinstance(call, ast.Call):
+                    for kw in call.keywords:
+                        if kw.arg == "feedback" and isinstance(kw.value, ast.List):
+                            for i, el in enumerate(kw.value.elts):
+                                shapes.append((f"_fallback_grade/feedback[{i}]", one_message(el)))
+
+    check("found the refusal shapes to test (>=5)", len(shapes) >= 5,
+          f"only {len(shapes)} refusal string(s) located; the vocabulary changed shape "
+          "and this check no longer sees them — update the walker")
+
+    reassuring = (
+        "not a verdict", "not something about your configuration",
+        "nothing here is a verdict", "not a judgment",
+    )
+    bad = [name for name, text in shapes if not any(p in text.lower() for p in reassuring)]
+    check("every refusal names a reason AND says it is not a judgment", not bad,
+          f"refusal(s) missing the 'not a judgment' half: {bad} — the doc asks for both "
+          "halves in every refusal; add the reassurance, don't drop it")
+
+    # And the doc must still state the rule, or the check above guards a claim nobody makes.
+    grading = read(GRADING)
+    check("GRADING-MODEL.md still states the both-halves refusal rule",
+          "names the reason" in grading and "not a judgment" in grading.lower(),
+          "the doc no longer states the both-halves rule this check enforces")
 
 
 def _check_demo1_score_weights() -> None:

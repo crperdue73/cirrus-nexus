@@ -171,12 +171,12 @@ see *that* a session became unattributable and *what* it changed to.
 
 | situation | message shape |
 |---|---|
-| node the lab doesn't have | `This lab has no node 'r1' — nothing to grade. The nodes here are: …` |
+| node the lab doesn't have | `This lab has no node 'r1' — nothing to grade. The nodes here are: … This is not a verdict about your configuration.` |
 | node stopped / torn down | `Node 'x' is not running, so it could not be examined — this is not a verdict about your configuration.` |
 | node stopped *mid-grade* | `Node 'x' stopped while it was being graded, so the result could not be trusted …` |
 | no grader module | `No grader module for this lab — this lab cannot be graded.` |
 | substrate changed | `The substrate under this session does not match the one it was pinned to …` |
-| no runtime digest | `Refused: this session has no runtime digest, so its state is unattributable …` |
+| no runtime digest | `Refused: this session has no runtime digest, so its state is unattributable … This is not a verdict about your configuration.` |
 
 Every refusal names the reason **and** states explicitly that it is not a judgment
 of the student's work. Keep both halves when you add one.
