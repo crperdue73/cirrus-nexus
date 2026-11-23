@@ -37,6 +37,26 @@ lab-definitions/
 
 ---
 
+## Do NOT `containerlab deploy` a lab file directly
+
+A lab `.yml` is **AEGIS's own schema** — a `metadata:` block plus a `topology:` block —
+not a containerlab-native topology. The backend reads it, strips `metadata:`, and hands
+the `topology:` half to containerlab internally. Handing the file to containerlab
+yourself fails at the first line:
+
+```
+$ containerlab deploy -t demo-01-two-pcs-and-a-real-switch-unsolved.yml
+ERROR  Failed to read topology file: yaml: unmarshal errors:
+       line 1: field metadata not found in type core.Config
+```
+
+That error is **correct** — `metadata` is AEGIS's, not clab's. Deploy a lab the way the
+product does: `POST /api/sessions/start?lab_id=<id>`. If you need to watch raw
+containerlab behaviour, copy the `topology:` block alone into a scratch file and point
+`startup-config` paths at the real `assets/` directory by hand.
+
+---
+
 ## The metadata section
 
 ```yaml
